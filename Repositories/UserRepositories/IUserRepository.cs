@@ -1,0 +1,22 @@
+﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.Enums;
+
+namespace InventoryManagementAPI.Repositories.UserRepositories
+{
+    public interface IUserRepository
+    {
+        Task<User> CreateUserAsync(User user);
+        Task<User?> GetUserByIdAsync(int userId);
+        Task<User?> GetUserByEmailAsync(string email);
+
+        Task<IEnumerable<User>> GetUsersByRoleAsync(UserRoles role);
+        Task<IEnumerable<User>> GetAllUsersAsync();
+
+        Task<bool> UpdateUserAsync(int userId, User updatedUser);
+        Task<bool> UpdateUserRoleAsync(int userId, UserRoles newRole);
+        Task<bool> DeleteUserAsync(int userId);
+
+        Task<bool> UserExistsAsync(int userId);
+        Task<bool> EmailExistsAsync(string email);
+    }
+}
