@@ -118,6 +118,17 @@ namespace InventoryManagementAPI.Controllers
 
         // === Delete === \\
 
-
+        [HttpDelete("DeleteUser/{userId}")]
+        public async Task<ActionResult<object>> DeleteUser(int userId)
+        {
+            var result = await _userService.DeleteUserAsync(userId);
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
+                404 => NotFound(result),
+                500 => StatusCode(500, result),
+                _ => StatusCode(result.StatusCode, result)
+            };
+        }
     }
 }

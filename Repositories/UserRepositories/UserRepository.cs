@@ -51,9 +51,9 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return await _context.Users.FindAsync(userId);
         }
 
-        public async Task<IEnumerable<User>> GetUsersByRoleAsync(string role)
+        public async Task<IEnumerable<User>> GetUsersByRoleAsync(UserRoles role)
         {
-            return await _context.Users.Where(u => u.Role.ToString() == role.ToUpper()).ToListAsync();
+            return await _context.Users.Where(u => u.Role == role).ToListAsync();
         }
 
         public async Task<bool> UpdateUserAsync(int userId, User updatedUser)
