@@ -278,6 +278,15 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
         public async Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetUsersByRoleAsync(UserRoles role)
         {
+            if (!Enum.IsDefined(typeof(UserRoles), role))
+            {
+                return new ApiResponse<IEnumerable<UserResponseDTO>>
+                {
+                    Success = false,
+                    Message = "Invalid User Role",
+                    StatusCode = 400
+                };
+            }
             try
             {
                 var users = await _userRepository.GetUsersByRoleAsync(role);
