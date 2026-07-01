@@ -2,6 +2,7 @@
 {
     public class UpdateProductStockRequestDTO
     {
+        [Range(0, int.MaxValue)]
         public int QuantityInStock { get; set; }
     }
 }

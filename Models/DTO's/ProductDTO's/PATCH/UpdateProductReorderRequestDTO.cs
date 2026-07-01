@@ -2,6 +2,7 @@
 {
     public class UpdateProductReorderRequestDTO
     {
+        [Range(0, int.MaxValue)]
         public int ReorderLevel { get; set; }
     }
 }

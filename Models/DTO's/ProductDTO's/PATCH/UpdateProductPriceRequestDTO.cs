@@ -2,6 +2,7 @@
 {
     public class UpdateProductPriceRequestDTO
     {
+        [Range(0.01, 1000000)]
         public decimal Price { get; set; }
     }
 }

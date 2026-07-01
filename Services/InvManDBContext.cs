@@ -29,6 +29,7 @@ namespace InventoryManagementAPI.Services
             modelBuilder.Entity<Product>().Property(p => p.Created).HasDefaultValueSql("GETDATE()");
             modelBuilder.Entity<User>().Property(u => u.Created).HasDefaultValueSql("GETDATE()");
             modelBuilder.Entity<User>().Property(u => u.LastLogin).HasDefaultValueSql("GETDATE()");
+            modelBuilder.Entity<InventoryMovement>().Property(im => im.Created).HasDefaultValueSql("GETDATE()");
 
 
             modelBuilder.Entity<Product>().HasData(

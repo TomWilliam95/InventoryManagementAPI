@@ -6,8 +6,14 @@ namespace InventoryManagementAPI.Models.CoreModels
     {
         [Key]
         public int ID { get; set; }
+
+        [Required]
+        [StringLength(100)]
         public string Name { get; set; }
+
+        [StringLength(500)]
         public string? Description { get; set; }
+
         public bool IsActive { get; set; }
         public DateOnly Created { get; set; }
         public DateOnly Updated { get; set; }
