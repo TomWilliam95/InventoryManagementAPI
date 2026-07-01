@@ -2,9 +2,11 @@
 {
     public enum MovementType
     {
-        STOCKIN,
-        STOCKOUT,
-        PURCHASE,
-        ADJUSTED
+        StockIn,
+        StockOut,
+        Purchase,
+        Sale,
+        AdjustmentIncrease,
+        AdjustmentDecrease
     }
 }

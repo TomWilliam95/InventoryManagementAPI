@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/users")]
     [ApiController]
     public class UserController : ControllerBase
     {
@@ -30,7 +30,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("GetAllUsers")]
+        [HttpGet]
         public async Task<ActionResult<IEnumerable<UserResponseDTO>>> GetAllUsers()
         {
             var users = await _userService.GetAllUsersAsync();
@@ -44,7 +44,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("GetUserByEmail/{email}")]
+        [HttpGet("email/{email}")]
         public async Task<ActionResult<UserResponseDTO>> GetUserByEmail(string email)
         {
             var user = await _userService.GetUserByEmailAsync(email);
@@ -57,7 +57,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("GetUsersByRole/{role}")]
+        [HttpGet("role/{role}")]
         public async Task<ActionResult<IEnumerable<UserResponseDTO>>> GetUsersByRole(UserRoles role)
         {
             var users = await _userService.GetUsersByRoleAsync(role);
@@ -71,8 +71,9 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
+
         // === Post === \\
-        [HttpPost("CreateNewUser")]
+        [HttpPost]
         public async Task<ActionResult<UserResponseDTO>> CreateNewUser(CreateNewUserRequestDTO newUser)
         {
             var user = await _userService.CreateUserAsync(newUser);
@@ -87,7 +88,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === Put === \\
-        [HttpPut("UpdateUser/{userId}")]
+        [HttpPut("{userId}")]
         public async Task<ActionResult<UserResponseDTO>> UpdateUser(int userId, UpdateUserRequestDTO updatedUser)
         {
             var user = await _userService.UpdateUserAsync(userId, updatedUser);
@@ -102,7 +103,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === Patch === \\
-        [HttpPatch("UpdateUserRole/{userId}")]
+        [HttpPatch("{userId}/role")]
         public async Task<ActionResult<UserResponseDTO>> UpdateUserRole(int userId, UpdateUserRoleRequestDTO newRole)
         {
             var user = await _userService.UpdateUserRoleAsync(userId, newRole);
@@ -118,7 +119,7 @@ namespace InventoryManagementAPI.Controllers
 
         // === Delete === \\
 
-        [HttpDelete("DeleteUser/{userId}")]
+        [HttpDelete("{userId}")]
         public async Task<ActionResult<object>> DeleteUser(int userId)
         {
             var result = await _userService.DeleteUserAsync(userId);

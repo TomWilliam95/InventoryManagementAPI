@@ -2,8 +2,8 @@
 {
     public enum UserRoles
     {
-        STAFF,
-        MANAGER,
-        ADMIN
+        Staff,
+        Manager,
+        Admin
     }
 }

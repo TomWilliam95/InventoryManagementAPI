@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/suppliers")]
     [ApiController]
     public class SupplierController : ControllerBase
     {
@@ -29,7 +29,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("GetAllSuppliers")]
+        [HttpGet]
         public async Task<ActionResult<IEnumerable<SupplierResponseDTO>>> GetAllSuppliers()
         {
             var suppliers = await _supplierService.GetAllSuppliersAsync();
@@ -43,7 +43,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === POST === \\
-        [HttpPost("AddSupplier")]
+        [HttpPost]
         public async Task<ActionResult<SupplierResponseDTO>> AddSupplier(CreateSupplierRequestDTO supplierDTO)
         {
             var createdSupplier = await _supplierService.CreateSupplierAsync(supplierDTO);
@@ -57,7 +57,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === PUT === \\
-        [HttpPut("Edit-Supplier-Details")]
+        [HttpPut("{supplierId}")]
         public async Task<ActionResult<SupplierResponseDTO>> EditSupplierDetails(int supplierId, UpdateSupplierRequestDTO supplierDTO)
         {
             var updatedSupplier = await _supplierService.UpdateSupplierAsync(supplierId, supplierDTO);
@@ -72,7 +72,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === Delete === \\
-        [HttpDelete("Delete-Supplier")]
+        [HttpDelete("{supplierId}")]
         public async Task<ActionResult<SupplierResponseDTO>> DeleteSupplier(int supplierId)
         {
             var deletedSupplier = await _supplierService.DeleteSupplierAsync(supplierId);

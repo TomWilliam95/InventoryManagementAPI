@@ -1,7 +1,9 @@
 using InventoryManagementAPI.Repositories.CategoryRepositories;
+using InventoryManagementAPI.Repositories.InvMovementRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.SupplierRepositories;
+using InventoryManagementAPI.Repositories.UserRepositories;
 using InventoryManagementAPI.Repositorys.ProductRepositories;
 using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +27,17 @@ namespace InventoryManagementAPI
             builder.Services.AddScoped<IProductService, ProductService>();
 
             builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+            builder.Services.AddScoped<ISupplierService, SupplierService>();
 
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
+
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IUserService, UserService>();
+
+            builder.Services.AddScoped<IInventoryMovementRepository, InventoryMovementRepository>();
+            builder.Services.AddScoped<IInventoryMovementService, InventoryMovementService>();
+            
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

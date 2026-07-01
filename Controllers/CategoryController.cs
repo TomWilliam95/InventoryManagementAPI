@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/categories")]
     [ApiController]
     public class CategoryController : ControllerBase
     {
@@ -29,7 +29,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("GetAllCategories")]
+        [HttpGet]
         public async Task<ActionResult<IEnumerable<BulkCategoryResponseDTO>>> GetAllCategories()
         {
             var categories = await _categoryService.GetAllCategories();
@@ -44,7 +44,7 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === POST === \\
-        [HttpPost("AddCategory")]
+        [HttpPost]
         public async Task<ActionResult<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto)
         {
             var addedCategory = await _categoryService.AddCategory(dto);
@@ -60,7 +60,7 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === PUT === \\
-        [HttpPut("UpdateCategoryDetails/{id}")]
+        [HttpPut("{id}")]
         public async Task<ActionResult<SingleCategoryResponseDTO>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto)
         {
             var updatedCategory = await _categoryService.UpdateCategoryDetails(id, dto);
@@ -75,7 +75,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === DELETE === \\
-        [HttpDelete("DeleteCategory/{id}")]
+        [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteCategory(int id)
         {
             var deletedCategory = await _categoryService.DeleteCategory(id);

@@ -444,23 +444,18 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             try
             {
-                // NEED TO CLARIFY LOGIC HERE !!!!!
-
-                await _productRepo.UpdateProductPriceAsync(id, dto.Price);
-                /// ^^^
-                /// 
-
-                if (!await _productRepo.UpdateProductPriceAsync(id, dto.Price))
+                //Stores the result of the update operation in a variable
+                var updatedPriceResult = await _productRepo.UpdateProductPriceAsync(id, dto.Price);
+              
+                if (!updatedPriceResult)
                 {
-                    if (!await _productRepo.ProductExistsAsync(id))
-                    {
                         return new ApiResponse<SingleProductResponseDTO>
                         {
                             Success = false,
                             Message = "Product Not Found",
                             StatusCode = 404
                         };
-                    }
+
                 }
                 var product = await _productRepo.GetProductAsync(id);
                 var response = new SingleProductResponseDTO

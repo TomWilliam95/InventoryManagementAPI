@@ -8,6 +8,9 @@ namespace InventoryManagementAPI.Models.CoreModels
         [Key]
         public int ID { get; set; }
         public int ProductId { get; set; }
+        public int Quantity { get; set; }
+        public int QuantityBefore { get; set; }
+        public int QuantityAfter { get; set; }
         public MovementType Movement { get; set; }
         public int UserID { get; set; }
         public string Reason { get; set; }
