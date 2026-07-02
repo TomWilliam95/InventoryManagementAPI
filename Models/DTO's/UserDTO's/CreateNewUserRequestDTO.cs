@@ -16,8 +16,5 @@ namespace InventoryManagementAPI.Models.DTO_s.UserDTO_s
         [Required]
         [StringLength(100, MinimumLength = 8)]
         public string Password { get; set; }
-
-        [EnumDataType(typeof(UserRoles))]
-        public UserRoles Role { get; set; } = UserRoles.Staff;
     }
 }

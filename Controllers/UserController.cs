@@ -16,7 +16,7 @@ namespace InventoryManagementAPI.Controllers
             _userService = userService;
         }
 
-        // === Get === \\
+        // === GET === \\
         [HttpGet("{id}")]
         public async Task<ActionResult<UserResponseDTO>> GetSingleUser(int id)
         {
@@ -72,7 +72,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
 
-        // === Post === \\
+        // === POST === \\
         [HttpPost]
         public async Task<ActionResult<UserResponseDTO>> CreateNewUser(CreateNewUserRequestDTO newUser)
         {
@@ -87,22 +87,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === Put === \\
-        [HttpPut("{userId}")]
-        public async Task<ActionResult<UserResponseDTO>> UpdateUser(int userId, UpdateUserRequestDTO updatedUser)
-        {
-            var user = await _userService.UpdateUserAsync(userId, updatedUser);
-            return user.StatusCode switch
-            {
-                200 => Ok(user),
-                400 => BadRequest(user),
-                404 => NotFound(user),
-                500 => StatusCode(500, user),
-                _ => StatusCode(user.StatusCode, user)
-            };
-        }
-
-        // === Patch === \\
+        // === PATCH === \\
         [HttpPatch("{userId}/role")]
         public async Task<ActionResult<UserResponseDTO>> UpdateUserRole(int userId, UpdateUserRoleRequestDTO newRole)
         {
@@ -117,7 +102,49 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === Delete === \\
+        [HttpPatch("{userId}/passwordReset")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateUserPassword(int userId, UpdateUserPasswordRequestDTO newPassword)
+        {
+            var user = await _userService.UpdateUserPasswordAsync(userId, newPassword);
+            return user.StatusCode switch
+            {
+                200 => Ok(user),
+                400 => BadRequest(user),
+                404 => NotFound(user),
+                500 => StatusCode(500, user),
+                _ => StatusCode(user.StatusCode, user)
+            };
+        }
+
+        [HttpPatch("{userId}/email")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateUserEmail(int userId, UpdateUserEmailRequestDTO newEmail)
+        {
+            var user = await _userService.UpdateUserEmailAsync(userId, newEmail);
+            return user.StatusCode switch
+            {
+                200 => Ok(user),
+                400 => BadRequest(user),
+                404 => NotFound(user),
+                500 => StatusCode(500, user),
+                _ => StatusCode(user.StatusCode, user)
+            };
+        }
+
+        [HttpPatch("{userId}/username")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateUserUsername(int userId, UpdateUserNameRequestDTO newUsername)
+        {
+            var user = await _userService.UpdateUserNameAsync(userId, newUsername);
+            return user.StatusCode switch
+            {
+                200 => Ok(user),
+                400 => BadRequest(user),
+                404 => NotFound(user),
+                500 => StatusCode(500, user),
+                _ => StatusCode(user.StatusCode, user)
+            };
+        }
+
+        // === DELETE === \\
 
         [HttpDelete("{userId}")]
         public async Task<ActionResult<object>> DeleteUser(int userId)

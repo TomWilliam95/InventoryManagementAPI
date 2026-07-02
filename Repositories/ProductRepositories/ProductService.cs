@@ -19,108 +19,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             _categoryRepo = categoryRepo;
         }
 
-        // === || POST || === \\
-        public async Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
-        {
-            if(dto == null)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Request data was null",
-                    StatusCode = 400
-                };
-            }
-            if (string.IsNullOrWhiteSpace(dto.Sku) || string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Description))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Please fill out all Product Fields",
-                    StatusCode = 400
-                };
-            }
-            if (dto.Price <= 0.00m)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Nothing is free, please Input Price value",
-                    StatusCode = 400
-                };
-            }
-            if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier does not exist",
-                    StatusCode = 404
-                };
-            }
-            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category does not exist",
-                    StatusCode = 404
-                };
-            }
-            var product = new Product
-            {
-                Sku = dto.Sku,
-                Name = dto.Name,
-                Description = dto.Description,
-                CategoryID = dto.CategoryID,
-                QuantityInStock = dto.QuantityInStock,
-                ReorderLevel = dto.ReorderLevel,
-                Price = dto.Price,
-                SupplierID = dto.SupplierID,
-                IsActive = dto.IsActive,
-                Created = DateOnly.FromDateTime(DateTime.Now),
-                Updated = DateTime.UtcNow
-            };
-            try
-            {
-                var createdProduct = await _productRepo.AddProductAsync(product);
-                var response = new SingleProductResponseDTO
-                {
-                    ID = createdProduct.ID,
-                    Sku = createdProduct.Sku,
-                    Name = createdProduct.Name,
-                    Description = createdProduct.Description,
-                    CategoryID = createdProduct.CategoryID,
-                    QuantityInStock = createdProduct.QuantityInStock,
-                    ReorderLevel = createdProduct.ReorderLevel,
-                    Price = createdProduct.Price,
-                    SupplierID = createdProduct.SupplierID,
-                    IsActive = createdProduct.IsActive
-
-                };
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = true,
-                    Message = "Product was successfully created",
-                    Data = response,
-                    StatusCode = 201
-
-                };
-            }
-            catch(Exception)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success =false,
-                    Message = "Internal Server Error",
-                    StatusCode = 500
-                };
-            } 
-        }
-
-
-
-        // === || GET || === \\
+        // === GET === \\
         public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetAllProducts()
         {
             try
@@ -324,43 +223,106 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-
-        // === || DELETE || === \\
-        public async Task<ApiResponse<object>> DeleteProduct(int id)
+        // === POST === \\
+        public async Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
         {
-            if (!await _productRepo.ProductExistsAsync(id))
+            if(dto == null)
             {
-                return new ApiResponse<object>
+                return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
-                    Message = "Product Not Found",
+                    Message = "Request data was null",
+                    StatusCode = 400
+                };
+            }
+            if (string.IsNullOrWhiteSpace(dto.Sku) || string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Description))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Please fill out all Product Fields",
+                    StatusCode = 400
+                };
+            }
+            if (dto.Price <= 0.00m)
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Nothing is free, please Input Price value",
+                    StatusCode = 400
+                };
+            }
+            if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Supplier does not exist",
                     StatusCode = 404
                 };
             }
-            try
+            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
             {
-                await _productRepo.RemoveProductAsync(id);
-                return new ApiResponse<object>
-                {
-                    Success = true,
-                    Message = "Product Successfully Deleted",
-                    StatusCode = 204
-                };
-            }
-            catch (Exception)
-            {
-                return new ApiResponse<Object>
+                return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
+                    Message = "Category does not exist",
+                    StatusCode = 404
+                };
+            }
+            var product = new Product
+            {
+                Sku = dto.Sku,
+                Name = dto.Name,
+                Description = dto.Description,
+                CategoryID = dto.CategoryID,
+                QuantityInStock = dto.QuantityInStock,
+                ReorderLevel = dto.ReorderLevel,
+                Price = dto.Price,
+                SupplierID = dto.SupplierID,
+                IsActive = dto.IsActive,
+                Created = DateOnly.FromDateTime(DateTime.Now),
+                Updated = DateTime.UtcNow
+            };
+            try
+            {
+                var createdProduct = await _productRepo.AddProductAsync(product);
+                var response = new SingleProductResponseDTO
+                {
+                    ID = createdProduct.ID,
+                    Sku = createdProduct.Sku,
+                    Name = createdProduct.Name,
+                    Description = createdProduct.Description,
+                    CategoryID = createdProduct.CategoryID,
+                    QuantityInStock = createdProduct.QuantityInStock,
+                    ReorderLevel = createdProduct.ReorderLevel,
+                    Price = createdProduct.Price,
+                    SupplierID = createdProduct.SupplierID,
+                    IsActive = createdProduct.IsActive
+
+                };
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = true,
+                    Message = "Product was successfully created",
+                    Data = response,
+                    StatusCode = 201
+
+                };
+            }
+            catch(Exception)
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success =false,
                     Message = "Internal Server Error",
                     StatusCode = 500
                 };
-            }
+            } 
         }
 
-
-
-        // === || PUT || === \\
+        // === PUT === \\
         public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductDetails(int id, UpdateProductDetailsRequestDTO dto)
         {
             if (! await _productRepo.ProductExistsAsync(id))
@@ -430,7 +392,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
 
 
-        // === || PATCH || === \\
+        // === PATCH === \\
         public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductPrice(int id, UpdateProductPriceRequestDTO dto)
         {
             if (dto.Price <= 0.00m)
@@ -617,6 +579,39 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             catch (Exception)
             {
                 return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Internal Server Error",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        // === DELETE === \\
+        public async Task<ApiResponse<object>> DeleteProduct(int id)
+        {
+            if (!await _productRepo.ProductExistsAsync(id))
+            {
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Product Not Found",
+                    StatusCode = 404
+                };
+            }
+            try
+            {
+                await _productRepo.RemoveProductAsync(id);
+                return new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Product Successfully Deleted",
+                    StatusCode = 204
+                };
+            }
+            catch (Exception)
+            {
+                return new ApiResponse<Object>
                 {
                     Success = false,
                     Message = "Internal Server Error",

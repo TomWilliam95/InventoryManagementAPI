@@ -14,17 +14,6 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             _context = context;
         }
 
-
-        // === POST === \\
-        public async Task<Product> AddProductAsync(Product product)
-        {
-            await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
-            return product;
-        }
-
-
-
         // === GET === \\
         public async Task<IEnumerable<Product>> GetAllProductsAsync()
         {
@@ -49,20 +38,13 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             return await _context.Products.Where(p => p.QuantityInStock < p.ReorderLevel).ToListAsync();
         }
 
-
-        // === DELETE === \\
-        public async Task<bool> RemoveProductAsync(int id)
+        // === POST === \\
+        public async Task<Product> AddProductAsync(Product product)
         {
-            var product = await _context.Products.FindAsync(id);
-
-            if(product == null) return false;
-
-            _context.Products.Remove(product);
+            await _context.Products.AddAsync(product);
             await _context.SaveChangesAsync();
-            return true;
+            return product;
         }
-
-
 
         // === PUT === \\
         public async Task<bool> UpdateProductDetailsAsync(int id,Product product)
@@ -121,8 +103,19 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             return true;
         }
 
+        // === DELETE === \\
+        public async Task<bool> RemoveProductAsync(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
 
-        // === OTHER === \\
+            if(product == null) return false;
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // === CHECK EXISTENCE === \\
         public async Task<bool> ProductExistsAsync(int id)
         {
             return await _context.Products.AnyAsync(p => p.ID == id);

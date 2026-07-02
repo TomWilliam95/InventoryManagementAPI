@@ -11,98 +11,6 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             _categoryRepository = categoryRepository;
         }
 
-        // === POST === \\
-        public async Task<ApiResponse<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto)
-        {
-            if(dto == null)
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid category data.",
-                    StatusCode = 400,
-                };
-            }
-            if(string.IsNullOrWhiteSpace(dto.Name))
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category name is required.",
-                    StatusCode = 400,
-                };
-            }
-            var category = new Category
-            {
-                Name = dto.Name,
-                Description = dto.Description,
-                IsActive = dto.IsActive,
-                Created = DateOnly.FromDateTime(DateTime.UtcNow),
-                Updated = DateOnly.FromDateTime(DateTime.UtcNow)
-            };
-            try
-            {
-                var createdCategory = await _categoryRepository.CreateCategoryAsync(category);
-                var responseDto = new SingleCategoryResponseDTO
-                {
-                    ID = createdCategory.ID,
-                    Name = createdCategory.Name,
-                    Description = createdCategory.Description,
-                    IsActive = createdCategory.IsActive
-                };
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = true,
-                    Message = "Category added successfully.",
-                    Data = responseDto,
-                    StatusCode = 201,
-                };
-            }
-            catch (Exception) { 
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "An error occurred while adding the category.",
-                    StatusCode = 500,
-                };
-            }
-        }
-
-
-        // === DELETE === \\
-        public async Task<ApiResponse<object>> DeleteCategory(int id)
-        {
-            if (!await _categoryRepository.CategoryExistsAsync(id))
-            {
-                return new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Category not found.",
-                    StatusCode = 404,
-                };
-            }
-            try
-            {
-                await _categoryRepository.DeleteCategoryAsync(id);
-                return new ApiResponse<object>
-                {
-                    Success = true,
-                    Message = "Category deleted successfully.",
-                    StatusCode = 204,
-                };
-            }
-            catch(Exception)
-            {
-                return new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "An error occurred while deleting the category.",
-                    StatusCode = 500,
-                };
-            }
-        }
-
-
         // === GET === \\
         public async Task<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>> GetAllCategories()
         {
@@ -188,6 +96,63 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
         }
 
+        // === POST === \\
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto)
+        {
+            if(dto == null)
+            {
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "Invalid category data.",
+                    StatusCode = 400,
+                };
+            }
+            if(string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category name is required.",
+                    StatusCode = 400,
+                };
+            }
+            var category = new Category
+            {
+                Name = dto.Name,
+                Description = dto.Description,
+                IsActive = dto.IsActive,
+                Created = DateOnly.FromDateTime(DateTime.UtcNow),
+                Updated = DateOnly.FromDateTime(DateTime.UtcNow)
+            };
+            try
+            {
+                var createdCategory = await _categoryRepository.CreateCategoryAsync(category);
+                var responseDto = new SingleCategoryResponseDTO
+                {
+                    ID = createdCategory.ID,
+                    Name = createdCategory.Name,
+                    Description = createdCategory.Description,
+                    IsActive = createdCategory.IsActive
+                };
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = true,
+                    Message = "Category added successfully.",
+                    Data = responseDto,
+                    StatusCode = 201,
+                };
+            }
+            catch (Exception) { 
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "An error occurred while adding the category.",
+                    StatusCode = 500,
+                };
+            }
+        }
+
         // === PUT === \\
         public async Task<ApiResponse<SingleCategoryResponseDTO>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto)
         {
@@ -240,6 +205,39 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 {
                     Success = false,
                     Message = "An error occurred while updating the category.",
+                    StatusCode = 500,
+                };
+            }
+        }
+
+        // === DELETE === \\
+        public async Task<ApiResponse<object>> DeleteCategory(int id)
+        {
+            if (!await _categoryRepository.CategoryExistsAsync(id))
+            {
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Category not found.",
+                    StatusCode = 404,
+                };
+            }
+            try
+            {
+                await _categoryRepository.DeleteCategoryAsync(id);
+                return new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Category deleted successfully.",
+                    StatusCode = 204,
+                };
+            }
+            catch(Exception)
+            {
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "An error occurred while deleting the category.",
                     StatusCode = 500,
                 };
             }

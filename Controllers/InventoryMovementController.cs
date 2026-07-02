@@ -9,56 +9,16 @@ namespace InventoryManagementAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class InventoryManagementController : ControllerBase
+    public class InventoryMovementController : ControllerBase
     {
         // === Dependencies === \\
         private readonly IInventoryMovementService _inventoryManagementService;
-        public InventoryManagementController(IInventoryMovementService inventoryManagementService)
+        public InventoryMovementController(IInventoryMovementService inventoryManagementService)
         {
             _inventoryManagementService = inventoryManagementService;
         }
 
-        // === POST ENDPOINTS === \\
-        [HttpPost("RecordMovement")]
-        public async Task<ActionResult<InventoryMovementResponseDTO>> RecordMovement(CreateInventoryMovementRequestDTO dto)
-        {
-            ApiResponse<InventoryMovementResponseDTO> result = new ApiResponse<InventoryMovementResponseDTO>();
-
-            switch (dto.Movement)
-            {
-                case MovementType.StockIn:
-                case MovementType.Purchase:
-                    result = await _inventoryManagementService.RecordStockInAsync(dto);
-                    break;
-                case MovementType.StockOut:
-                case MovementType.Sale:
-                    result = await _inventoryManagementService.RecordStockOutAsync(dto);
-                    break;
-                case MovementType.AdjustmentIncrease:
-                case MovementType.AdjustmentDecrease:
-                    result = await _inventoryManagementService.RecordAdjustmentAsync(dto);
-                    break;
-                default:
-                    return BadRequest(new ApiResponse<InventoryMovementResponseDTO>
-                    {
-                        StatusCode = 400,
-                        Message = "Invalid movement type.",
-                        Data = null
-                    });
-            }
-
-            return result.StatusCode switch
-            {
-                201 => CreatedAtAction(nameof(GetMovementById), new { id = result.Data.ID }, result.Data),
-                400 => BadRequest(result),
-                404 => NotFound(result),
-                500 => StatusCode(500, result),
-                _ => StatusCode(result.StatusCode, result)
-            };
-        }
-
-
-        // === GET ENDPOINTS === \\
+        // === GET === \\
         [HttpGet("MovementHistory/{id}")]
         public async Task<ActionResult<InventoryMovementResponseDTO>> GetMovementById(int id)
         {
@@ -92,6 +52,45 @@ namespace InventoryManagementAPI.Controllers
             return result.StatusCode switch
             {
                 200 => Ok(result),
+                404 => NotFound(result),
+                500 => StatusCode(500, result),
+                _ => StatusCode(result.StatusCode, result)
+            };
+        }
+
+        // === POST === \\
+        [HttpPost("RecordMovement")]
+        public async Task<ActionResult<InventoryMovementResponseDTO>> RecordMovement(CreateInventoryMovementRequestDTO dto)
+        {
+            ApiResponse<InventoryMovementResponseDTO> result = new ApiResponse<InventoryMovementResponseDTO>();
+
+            switch (dto.Movement)
+            {
+                case MovementType.StockIn:
+                case MovementType.Purchase:
+                    result = await _inventoryManagementService.RecordStockInAsync(dto);
+                    break;
+                case MovementType.StockOut:
+                case MovementType.Sale:
+                    result = await _inventoryManagementService.RecordStockOutAsync(dto);
+                    break;
+                case MovementType.AdjustmentIncrease:
+                case MovementType.AdjustmentDecrease:
+                    result = await _inventoryManagementService.RecordAdjustmentAsync(dto);
+                    break;
+                default:
+                    return BadRequest(new ApiResponse<InventoryMovementResponseDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "Invalid movement type.",
+                        Data = null
+                    });
+            }
+
+            return result.StatusCode switch
+            {
+                201 => CreatedAtAction(nameof(GetMovementById), new { id = result.Data.ID }, result.Data),
+                400 => BadRequest(result),
                 404 => NotFound(result),
                 500 => StatusCode(500, result),
                 _ => StatusCode(result.StatusCode, result)

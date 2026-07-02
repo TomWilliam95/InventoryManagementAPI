@@ -18,7 +18,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             _userRepository = userRepository;
         }
         
-        // === GET METHODS === \\
+        // === GET === \\
 
         public async Task<ApiResponse<InventoryMovementResponseDTO>> GetMovementByIdAsync(int movementId)
         {
@@ -166,7 +166,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
 
 
-        // === POST METHODS === \\
+        // === POST === \\
 
         public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordAdjustmentAsync(CreateInventoryMovementRequestDTO dto)
         {

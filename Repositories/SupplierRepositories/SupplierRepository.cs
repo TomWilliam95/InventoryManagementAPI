@@ -6,7 +6,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 {
     public class SupplierRepository : ISupplierRepository
     {
-        // === || CONSTRUCTER DI || === \\
+        // === CONSTRUCTOR DI === \\
         private readonly InvManDBContext _context;
         public SupplierRepository(InvManDBContext context)
         {
@@ -33,7 +33,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             return supplier;
         }
 
-        // === PUT === \
+        // === PUT === \\
         public async Task<bool> UpdateSupplierAsync(int supplierId, Supplier updatedSupplier)
         {
             var findSupplier = await _context.Suppliers.FindAsync(supplierId);
@@ -65,7 +65,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
 
-        // === CHECK IF EXISTS === \\
+        // === CHECK EXISTENCE === \\
         public async Task<bool> SupplierExistsAsync(int supplierId)
         {
             return await _context.Suppliers.AnyAsync(s => s.ID == supplierId);

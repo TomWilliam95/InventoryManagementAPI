@@ -12,16 +12,6 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             _context = context;
         }
 
-        // === POST === \\
-        public async Task<Category> CreateCategoryAsync(Category category)
-        {
-            await _context.Categories.AddAsync(category);
-            await _context.SaveChangesAsync();
-            return category;
-        }
-
-
-
         // === GET === \\
         public async Task<Category> GetCategoryByIdAsync(int categoryId)
         {
@@ -32,6 +22,13 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             return await _context.Categories.ToListAsync();
         }
 
+        // === POST === \\
+        public async Task<Category> CreateCategoryAsync(Category category)
+        {
+            await _context.Categories.AddAsync(category);
+            await _context.SaveChangesAsync();
+            return category;
+        }
 
         // === PUT === \\
         public async Task<bool> UpdateCategoryAsync(int categoryId, Category category)

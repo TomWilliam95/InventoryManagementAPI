@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace InventoryManagementAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class DBSetup : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,8 +19,11 @@ namespace InventoryManagementAPI.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    Created = table.Column<DateOnly>(type: "date", nullable: false),
+                    Updated = table.Column<DateOnly>(type: "date", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -31,12 +36,14 @@ namespace InventoryManagementAPI.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ContactName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    PhoneContact = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    EmailContact = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    ContactName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    PhoneContact = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    EmailContact = table.Column<string>(type: "nvarchar(254)", maxLength: 254, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    Created = table.Column<DateOnly>(type: "date", nullable: false),
+                    LastUpdated = table.Column<DateOnly>(type: "date", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -49,12 +56,13 @@ namespace InventoryManagementAPI.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Password_Hash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Role = table.Column<int>(type: "int", nullable: false),
-                    LastLogin = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Created = table.Column<DateOnly>(type: "date", nullable: false),
+                    UserName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(254)", maxLength: 254, nullable: false),
+                    Password_Hash = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()"),
+                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Created = table.Column<DateOnly>(type: "date", nullable: false, defaultValueSql: "GETDATE()"),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -68,9 +76,9 @@ namespace InventoryManagementAPI.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Sku = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Sku = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     CategoryID = table.Column<int>(type: "int", nullable: false),
                     QuantityInStock = table.Column<int>(type: "int", nullable: false),
                     ReorderLevel = table.Column<int>(type: "int", nullable: false),
@@ -104,10 +112,13 @@ namespace InventoryManagementAPI.Migrations
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductId = table.Column<int>(type: "int", nullable: false),
-                    Direction = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    QuantityBefore = table.Column<int>(type: "int", nullable: false),
+                    QuantityAfter = table.Column<int>(type: "int", nullable: false),
+                    Movement = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UserID = table.Column<int>(type: "int", nullable: false),
-                    Reason = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Created = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Created = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()")
                 },
                 constraints: table =>
                 {
@@ -128,18 +139,33 @@ namespace InventoryManagementAPI.Migrations
 
             migrationBuilder.InsertData(
                 table: "Categories",
-                columns: new[] { "ID", "Description", "Name" },
-                values: new object[] { 1, "Things that are cool", "CoolStuff" });
+                columns: new[] { "ID", "Created", "Description", "IsActive", "Name", "Updated" },
+                values: new object[,]
+                {
+                    { 1, new DateOnly(2026, 7, 2), "Things that are cool", true, "CoolStuff", new DateOnly(2026, 7, 2) },
+                    { 2, new DateOnly(2026, 7, 2), "Things that are cooler", true, "CoolerStuff", new DateOnly(2026, 7, 2) },
+                    { 3, new DateOnly(2026, 7, 2), "Things that are coolest", true, "CoolestStuff", new DateOnly(2026, 7, 2) }
+                });
 
             migrationBuilder.InsertData(
                 table: "Suppliers",
-                columns: new[] { "ID", "Address", "ContactName", "EmailContact", "IsActive", "Name", "PhoneContact" },
-                values: new object[] { 1, "TestSupplier", "TestSupplier", "TestSupplier", true, "TestSupplier", "TestSupplier" });
+                columns: new[] { "ID", "Address", "ContactName", "Created", "EmailContact", "IsActive", "LastUpdated", "Name", "PhoneContact" },
+                values: new object[,]
+                {
+                    { 1, "TestSupplier", "TestSupplier", new DateOnly(1, 1, 1), "TestSupplier", true, new DateOnly(1, 1, 1), "TestSupplier", "TestSupplier" },
+                    { 2, "TestSupplier", "TestSupplier", new DateOnly(1, 1, 1), "TestSupplier", true, new DateOnly(1, 1, 1), "TestSupplier", "TestSupplier" },
+                    { 3, "TestSupplier", "TestSupplier", new DateOnly(1, 1, 1), "TestSupplier", true, new DateOnly(1, 1, 1), "TestSupplier", "TestSupplier" }
+                });
 
             migrationBuilder.InsertData(
                 table: "Products",
                 columns: new[] { "ID", "CategoryID", "Description", "IsActive", "Name", "Price", "QuantityInStock", "ReorderLevel", "Sku", "SupplierID" },
-                values: new object[] { 1, 1, "Test", true, "Test", 123m, 420, 69, "Test", 1 });
+                values: new object[,]
+                {
+                    { 1, 1, "Test", true, "Test", 123m, 420, 69, "Test", 1 },
+                    { 2, 1, "Test2", true, "Test2", 123.85m, 420, 69, "Test2", 2 },
+                    { 3, 2, "Test3", true, "Test3", 123.85m, 420, 69, "Test3", 2 }
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_InventoryMovements_ProductId",

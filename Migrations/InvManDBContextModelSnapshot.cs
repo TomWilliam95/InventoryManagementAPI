@@ -34,14 +34,16 @@ namespace InventoryManagementAPI.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateOnly>("Updated")
                         .HasColumnType("date");
@@ -54,29 +56,29 @@ namespace InventoryManagementAPI.Migrations
                         new
                         {
                             ID = 1,
-                            Created = new DateOnly(2026, 4, 17),
+                            Created = new DateOnly(2026, 7, 2),
                             Description = "Things that are cool",
                             IsActive = true,
                             Name = "CoolStuff",
-                            Updated = new DateOnly(2026, 4, 17)
+                            Updated = new DateOnly(2026, 7, 2)
                         },
                         new
                         {
                             ID = 2,
-                            Created = new DateOnly(2026, 4, 17),
+                            Created = new DateOnly(2026, 7, 2),
                             Description = "Things that are cooler",
                             IsActive = true,
                             Name = "CoolerStuff",
-                            Updated = new DateOnly(2026, 4, 17)
+                            Updated = new DateOnly(2026, 7, 2)
                         },
                         new
                         {
                             ID = 3,
-                            Created = new DateOnly(2026, 4, 17),
+                            Created = new DateOnly(2026, 7, 2),
                             Description = "Things that are coolest",
                             IsActive = true,
                             Name = "CoolestStuff",
-                            Updated = new DateOnly(2026, 4, 17)
+                            Updated = new DateOnly(2026, 7, 2)
                         });
                 });
 
@@ -89,17 +91,30 @@ namespace InventoryManagementAPI.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
                     b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
 
-                    b.Property<int>("Direction")
-                        .HasColumnType("int");
+                    b.Property<string>("Movement")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QuantityAfter")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QuantityBefore")
+                        .HasColumnType("int");
+
                     b.Property<string>("Reason")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("UserID")
                         .HasColumnType("int");
@@ -130,14 +145,16 @@ namespace InventoryManagementAPI.Migrations
                         .HasDefaultValueSql("GETDATE()");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
@@ -151,7 +168,8 @@ namespace InventoryManagementAPI.Migrations
 
                     b.Property<string>("Sku")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("SupplierID")
                         .HasColumnType("int");
@@ -227,26 +245,37 @@ namespace InventoryManagementAPI.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("ContactName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateOnly>("Created")
+                        .HasColumnType("date");
 
                     b.Property<string>("EmailContact")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<DateOnly>("LastUpdated")
+                        .HasColumnType("date");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("PhoneContact")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.HasKey("ID");
 
@@ -258,8 +287,10 @@ namespace InventoryManagementAPI.Migrations
                             ID = 1,
                             Address = "TestSupplier",
                             ContactName = "TestSupplier",
+                            Created = new DateOnly(1, 1, 1),
                             EmailContact = "TestSupplier",
                             IsActive = true,
+                            LastUpdated = new DateOnly(1, 1, 1),
                             Name = "TestSupplier",
                             PhoneContact = "TestSupplier"
                         },
@@ -268,8 +299,10 @@ namespace InventoryManagementAPI.Migrations
                             ID = 2,
                             Address = "TestSupplier",
                             ContactName = "TestSupplier",
+                            Created = new DateOnly(1, 1, 1),
                             EmailContact = "TestSupplier",
                             IsActive = true,
+                            LastUpdated = new DateOnly(1, 1, 1),
                             Name = "TestSupplier",
                             PhoneContact = "TestSupplier"
                         },
@@ -278,8 +311,10 @@ namespace InventoryManagementAPI.Migrations
                             ID = 3,
                             Address = "TestSupplier",
                             ContactName = "TestSupplier",
+                            Created = new DateOnly(1, 1, 1),
                             EmailContact = "TestSupplier",
                             IsActive = true,
+                            LastUpdated = new DateOnly(1, 1, 1),
                             Name = "TestSupplier",
                             PhoneContact = "TestSupplier"
                         });
@@ -294,28 +329,39 @@ namespace InventoryManagementAPI.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
                     b.Property<DateOnly>("Created")
-                        .HasColumnType("date");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("date")
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("LastLogin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Password_Hash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("ID");
 

@@ -71,7 +71,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === Delete === \\
+        // === DELETE === \\
         [HttpDelete("{supplierId}")]
         public async Task<ActionResult<SupplierResponseDTO>> DeleteSupplier(int supplierId)
         {

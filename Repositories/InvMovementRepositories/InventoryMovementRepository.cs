@@ -14,13 +14,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             _context = context;
         }
 
-        public async Task<InventoryMovement> AddMovementAsync(InventoryMovement movement)
-        {
-            await _context.InventoryMovements.AddAsync(movement);
-            await _context.SaveChangesAsync();
-            return movement;
-        }
-
+        // === GET === \\
         public async Task<IEnumerable<InventoryMovement>> GetAllMovementsAsync()
         {
             return await _context.InventoryMovements.ToListAsync();
@@ -59,6 +53,14 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             return await _context.InventoryMovements
                 .Where(m => m.UserID == userId)
                 .ToListAsync();
+        }
+
+        // === POST === \\
+        public async Task<InventoryMovement> AddMovementAsync(InventoryMovement movement)
+        {
+            await _context.InventoryMovements.AddAsync(movement);
+            await _context.SaveChangesAsync();
+            return movement;
         }
     }
 }

@@ -25,10 +25,6 @@ namespace InventoryManagementAPI.Models.CoreModels
         [EnumDataType(typeof(UserRoles))]
         public UserRoles Role { get; set; }
 
-        [Required]
-        [StringLength(255)]
-        public string ApiKey { get; set; }
-
         public DateTime LastLogin { get; set; }
         public DateTime LastUpdated { get; set; }
         public DateOnly Created { get; set; }

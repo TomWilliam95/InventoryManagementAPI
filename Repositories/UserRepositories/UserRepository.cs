@@ -14,28 +14,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             _context = context;
         }
 
-        public async Task<User> CreateUserAsync(User user)
-        {
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-            return user;
-        }
-
-        public async Task<bool> DeleteUserAsync(int userId)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if(user == null) return false;
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> EmailExistsAsync(string email)
-        {
-            return await _context.Users.AnyAsync(u => u.Email == email);
-        }
-
+        // === GET === \\
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
             return await _context.Users.ToListAsync();
@@ -56,15 +35,47 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return await _context.Users.Where(u => u.Role == role).ToListAsync();
         }
 
-        public async Task<bool> UpdateUserAsync(int userId, User updatedUser)
+        // === POST === \\
+        public async Task<User> CreateUserAsync(User user)
+        {
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+
+        // === PATCH === \\
+        public async Task<bool> UpdateUserEmailAsync(int userId, string email)
         {
             var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return false; 
+            
+            user.Email = email;
+            user.LastUpdated = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
 
-            if(user == null) return false; 
+        public async Task<bool> UpdateUserNameAsync(int userId, string userName)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return false;
 
-            user.UserName = updatedUser.UserName;
-            user.Email = updatedUser.Email;
-            user.Password_Hash = updatedUser.Password_Hash;
+            user.UserName = userName;
+            user.LastUpdated = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateUserPasswordAsync(int userId, string newPassword)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return false;
+
+            user.Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword(newPassword);
+            user.LastUpdated = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -75,8 +86,26 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             if (user == null) return false;
             
             user.Role = newRole;
+            user.LastUpdated = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        // === DELETE === \\
+        public async Task<bool> DeleteUserAsync(int userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if(user == null) return false;
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // === CHECK EXISTENCE === \\
+        public async Task<bool> EmailExistsAsync(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email == email);
         }
 
         public async Task<bool> UserExistsAsync(int userId)

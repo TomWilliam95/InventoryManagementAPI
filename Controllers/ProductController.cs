@@ -18,22 +18,6 @@ namespace InventoryManagementAPI.Controllers
             _productService = productService;
         }
 
-        // === POST === \\
-        [HttpPost]
-        public async Task<ActionResult<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
-        {
-            var addedProduct = await _productService.AddProduct(dto);
-
-            return addedProduct.StatusCode switch
-            {
-                201 => CreatedAtAction(nameof(GetProduct), new { id = addedProduct.Data.ID }, addedProduct),
-                400 => BadRequest(addedProduct.Message),
-                404 => NotFound(addedProduct.Message),
-                500 => StatusCode(500, addedProduct.Message),
-                _ => StatusCode(addedProduct.StatusCode, addedProduct)
-            };
-        }
-
         // === GET === \\
         [HttpGet("{id}")]
         public async Task<ActionResult<SingleProductResponseDTO>> GetProduct(int id)
@@ -89,21 +73,21 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === DELETE === \\
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProduct(int id)
+        // === POST === \\
+        [HttpPost]
+        public async Task<ActionResult<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
         {
-            var deletedProduct = await _productService.DeleteProduct(id);
+            var addedProduct = await _productService.AddProduct(dto);
 
-            return deletedProduct.StatusCode switch
+            return addedProduct.StatusCode switch
             {
-                204 => Ok(deletedProduct.Data),
-                404 => NotFound(deletedProduct.Message),
-                500 => StatusCode(500, deletedProduct.Message),
-                _ => StatusCode(deletedProduct.StatusCode, deletedProduct)
+                201 => CreatedAtAction(nameof(GetProduct), new { id = addedProduct.Data.ID }, addedProduct),
+                400 => BadRequest(addedProduct.Message),
+                404 => NotFound(addedProduct.Message),
+                500 => StatusCode(500, addedProduct.Message),
+                _ => StatusCode(addedProduct.StatusCode, addedProduct)
             };
         }
-
 
         // === PUT === \\
         [HttpPut("{id}")]
@@ -165,6 +149,21 @@ namespace InventoryManagementAPI.Controllers
                 404 => NotFound(updatedReOrderProduct.Message),
                 500 => StatusCode(500, updatedReOrderProduct.Message),
                 _ => StatusCode(updatedReOrderProduct.StatusCode, updatedReOrderProduct)
+            };
+        }
+
+        // === DELETE === \\
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var deletedProduct = await _productService.DeleteProduct(id);
+
+            return deletedProduct.StatusCode switch
+            {
+                204 => Ok(deletedProduct.Data),
+                404 => NotFound(deletedProduct.Message),
+                500 => StatusCode(500, deletedProduct.Message),
+                _ => StatusCode(deletedProduct.StatusCode, deletedProduct)
             };
         }
     }
