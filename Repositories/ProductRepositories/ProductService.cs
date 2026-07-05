@@ -406,20 +406,20 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             try
             {
-                //Stores the result of the update operation in a variable
-                var updatedPriceResult = await _productRepo.UpdateProductPriceAsync(id, dto.Price);
-              
-                if (!updatedPriceResult)
-                {
-                        return new ApiResponse<SingleProductResponseDTO>
-                        {
-                            Success = false,
-                            Message = "Product Not Found",
-                            StatusCode = 404
-                        };
-
-                }
                 var product = await _productRepo.GetProductAsync(id);
+                if (product == null)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Product Not Found",
+                        StatusCode = 404
+                    };
+                }
+                
+                product.Price = dto.Price;
+                await _productRepo.SaveChangesAsync();
+
                 var response = new SingleProductResponseDTO
                 {
                     ID = product.ID,
@@ -442,7 +442,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     StatusCode = 200
                 };
             }
-            catch(Exception)
+            catch
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
@@ -455,36 +455,32 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
         public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductStockQuantity(int id, UpdateProductStockRequestDTO dto)
         {
-            if (dto.QuantityInStock < 0)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid Reorder Level",
-                    StatusCode = 400
-                };
-            }
             try
             {
-                // NEED TO CLARIFY LOGIC HERE !!!!!
-
-                await _productRepo.UpdateProductStockQuantityAsync(id, dto.QuantityInStock);
-                /// ^^^
-                /// 
-
-                if (!await _productRepo.UpdateProductStockQuantityAsync(id, dto.QuantityInStock))
-                {
-                    if (!await _productRepo.ProductExistsAsync(id))
-                    {
-                        return new ApiResponse<SingleProductResponseDTO>
-                        {
-                            Success = false,
-                            Message = "Product Not Found",
-                            StatusCode = 404
-                        };
-                    }
-                }
                 var product = await _productRepo.GetProductAsync(id);
+
+                if(product == null)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Product Not Found",
+                        StatusCode = 404
+                    };
+                }
+                if(dto.QuantityInStock == product.QuantityInStock)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "No stock update!",
+                        StatusCode = 400
+                    };
+                }
+
+                // Update the QuantityInStock property of the product
+                product.QuantityInStock = dto.QuantityInStock;
+                await _productRepo.SaveChangesAsync();
 
                 var response = new SingleProductResponseDTO
                 {
@@ -533,25 +529,20 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             try
             {
-                // NEED TO CLARIFY LOGIC HERE !!!!!
-
-                await _productRepo.UpdateProductReorderLevelAsync(id, dto.ReorderLevel);
-                /// ^^^
-                /// 
-
-                if (!await _productRepo.UpdateProductReorderLevelAsync(id, dto.ReorderLevel))
-                {
-                    if (!await _productRepo.ProductExistsAsync(id))
-                    {
-                        return new ApiResponse<SingleProductResponseDTO>
-                        {
-                            Success = false,
-                            Message = "Product Not Found",
-                            StatusCode = 404
-                        };
-                    }
-                }
                 var product = await _productRepo.GetProductAsync(id);
+                if (product == null)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Product Not Found",
+                        StatusCode = 404
+                    };
+                }
+                // Update the ReorderLevel property of the product
+                // Save the changes to the database
+                product.ReorderLevel = dto.ReorderLevel;
+                await _productRepo.SaveChangesAsync();
 
                 var response = new SingleProductResponseDTO
                 {

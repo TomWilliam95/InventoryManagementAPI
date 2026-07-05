@@ -60,7 +60,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("below-reorder-level")]
+        [HttpGet("belowReorderLevel")]
         public async Task<ActionResult<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel()
         {
             var products = await _productService.GetProductsBelowReorderLevel();
@@ -137,7 +137,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpPatch("{id}/reorder-level")]
+        [HttpPatch("{id}/reorderLevel")]
         public async Task<ActionResult<SingleProductResponseDTO>> UpdateProductReroderLevel(int id, UpdateProductReorderRequestDTO dto)
         {
             var updatedReOrderProduct = await _productService.UpdateProductReorderLevel(id, dto);

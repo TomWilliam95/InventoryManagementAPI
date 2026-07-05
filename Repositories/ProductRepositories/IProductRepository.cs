@@ -17,15 +17,13 @@ namespace InventoryManagementAPI.Repositories.ProductRepositorys
         // === PUT === \\
         Task<bool> UpdateProductDetailsAsync(int id, Product product);
 
-        // === PATCH === \\
-        Task<bool> UpdateProductPriceAsync(int id, decimal newProductPrice);
-        Task<bool> UpdateProductStockQuantityAsync(int id, int newStockQuantity);
-        Task<bool> UpdateProductReorderLevelAsync(int id, int newReorderLevel);
-
         // === DELETE === \\
         Task<bool> RemoveProductAsync(int id);
 
         // === CHECK EXISTENCE === \\
         Task<bool> ProductExistsAsync(int id);
+
+        // === Save Changes === \\
+        Task SaveChangesAsync();
     }
 }

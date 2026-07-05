@@ -47,7 +47,7 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         }
 
         // === PUT === \\
-        public async Task<bool> UpdateProductDetailsAsync(int id,Product product)
+        public async Task<bool> UpdateProductDetailsAsync(int id, Product product)
         {
             var updatedProduct = await _context.Products.FindAsync(id);
             if (updatedProduct == null) return false;
@@ -63,52 +63,12 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             await _context.SaveChangesAsync();
             return true;
         }
-
-
-
-        // === PATCH === \\
-        public async Task<bool> UpdateProductPriceAsync(int id, decimal newProductPrice)
-        {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return false;
-
-            product.Price = newProductPrice;
-            product.Updated = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> UpdateProductReorderLevelAsync(int id, int newReorderLevel)
-        {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return false;
-
-            product.ReorderLevel = newReorderLevel;
-            product.Updated = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> UpdateProductStockQuantityAsync(int id, int newStockQuantity)
-        {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return false;
-
-            product.QuantityInStock = newStockQuantity;
-            product.Updated = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
         // === DELETE === \\
         public async Task<bool> RemoveProductAsync(int id)
         {
             var product = await _context.Products.FindAsync(id);
 
-            if(product == null) return false;
+            if (product == null) return false;
 
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
@@ -119,6 +79,12 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         public async Task<bool> ProductExistsAsync(int id)
         {
             return await _context.Products.AnyAsync(p => p.ID == id);
+        }
+
+        // === Save Changes === \\
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

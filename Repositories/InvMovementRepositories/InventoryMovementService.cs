@@ -461,7 +461,10 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         private async void UpdateDatabaseAndReturnResponse(CreateInventoryMovementRequestDTO dto, InventoryMovement movement)
         {
             await _movementRepository.AddMovementAsync(movement);
-            await _productRepository.UpdateProductStockQuantityAsync(dto.ProductId, movement.QuantityAfter);
+
+            var product = await _productRepository.GetProductAsync(dto.ProductId); // Ensure the product is retrieved before updating stock quantity
+            product.QuantityInStock = movement.QuantityAfter; // Update the product's stock quantity
+            await _productRepository.SaveChangesAsync(); // Save changes to the product repository
         }
 
         private ApiResponse<InventoryMovementResponseDTO> ReturnResponse(CreateInventoryMovementRequestDTO dto, InventoryMovement movement, Product product, User user)
