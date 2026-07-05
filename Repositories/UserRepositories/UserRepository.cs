@@ -43,59 +43,11 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return user;
         }
 
-        // === PATCH === \\
-        public async Task<bool> UpdateUserEmailAsync(int userId, string email)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null)
-                return false; 
-            
-            user.Email = email;
-            user.LastUpdated = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> UpdateUserNameAsync(int userId, string userName)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null)
-                return false;
-
-            user.UserName = userName;
-            user.LastUpdated = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> UpdateUserPasswordAsync(int userId, string newPassword)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null)
-                return false;
-
-            user.Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword(newPassword);
-            user.LastUpdated = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> UpdateUserRoleAsync(int userId, UserRoles newRole)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) return false;
-            
-            user.Role = newRole;
-            user.LastUpdated = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
         // === DELETE === \\
         public async Task<bool> DeleteUserAsync(int userId)
         {
             var user = await _context.Users.FindAsync(userId);
-            if(user == null) return false;
+            if (user == null) return false;
 
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
@@ -111,6 +63,12 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         public async Task<bool> UserExistsAsync(int userId)
         {
             return await _context.Users.AnyAsync(u => u.ID == userId);
+        }
+
+        // === SAVE CHANGES === \\
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

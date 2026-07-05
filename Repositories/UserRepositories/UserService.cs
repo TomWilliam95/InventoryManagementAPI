@@ -1,4 +1,5 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+﻿
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Models.Enums;
 
@@ -320,8 +321,9 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User!;
 
-                // Updates the user's email in the repository by calling the UpdateUserEmailAsync method, passing the user ID and the new email.
-                await _userRepository.UpdateUserEmailAsync(userId, emailRequest.Email);
+                // Saves the updated email to the user object and persists the changes to the repository.
+                user.Email = emailRequest.Email;
+                await _userRepository.SaveChangesAsync();
 
                 return new ApiResponse<UserResponseDTO>
                 {
@@ -377,8 +379,9 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User!;
 
-                // Updates the user's username in the repository by calling the UpdateUserNameAsync method, passing the user ID and the new username.
-                await _userRepository.UpdateUserNameAsync(userId, nameRequest.UserName);
+                // Saves the updated username to the user object and persists the changes to the repository.
+                user.UserName = nameRequest.UserName;
+                await _userRepository.SaveChangesAsync();
 
                 return new ApiResponse<UserResponseDTO>
                 {
@@ -447,9 +450,9 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     };
                 } 
 
-                // Updates the user's password in the repository by calling the UpdateUserPasswordAsync method, passing the user ID and the new password.
-                await _userRepository.UpdateUserPasswordAsync(userId, passwordRequest.NewPassword);
-                
+                user.Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword(passwordRequest.NewPassword);
+                await _userRepository.SaveChangesAsync();
+
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = true,
@@ -498,10 +501,14 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     return userResult.Error;
                 }
 
-                await _userRepository.UpdateUserRoleAsync(userId, roleRequest.NewRole);
-
+                // Assigns the user from the result tuple to a variable for easier access
                 var user = userResult.User!;
 
+                // Updates the user's role to the new role provided in the request and saves the changes to the repository.
+                user.Role = roleRequest.NewRole;
+                await _userRepository.SaveChangesAsync();
+
+                
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = true,
