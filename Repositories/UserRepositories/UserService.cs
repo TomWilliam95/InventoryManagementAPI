@@ -573,12 +573,6 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        // === AUTHENTICATION === \\
-        public Task<ApiResponse<UserResponseDTO>> AuthenticateUserAsync(LoginRequestDTO loginRequestDTO)
-        {
-            throw new NotImplementedException();
-        }
-
         // === HELPER METHODS === \\
         private async Task<(User? User, ApiResponse<UserResponseDTO>? Error)> GetUserByIdWithResponseAsync(int userId)
         {

@@ -1,3 +1,5 @@
+using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Repositories.AuthenticationRepositories;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.InvMovementRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositories;
@@ -22,6 +24,11 @@ namespace InventoryManagementAPI
             {
                 options.UseSqlServer(connectionString);
             });
+
+            // Grabs the JwtSettings section from appsettings.json and binds it to the JwtSettings class, making it available for dependency injection.
+            builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
             builder.Services.AddScoped<IProductRepository, ProductRepository>();
             builder.Services.AddScoped<IProductService, ProductService>();

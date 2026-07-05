@@ -23,8 +23,5 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
         // === DELETE === \\
         Task<ApiResponse<object>> DeleteUserAsync(int userId);
-
-        // === AUTHENTICATION === \\
-        Task<ApiResponse<UserResponseDTO>> AuthenticateUserAsync(LoginRequestDTO loginRequestDTO);
     }
 }
