@@ -22,9 +22,10 @@ namespace InventoryManagementAPI.Controllers
             var supplier = await _supplierService.GetSupplierByIdAsync(id);
             return supplier.StatusCode switch
             {
-                200 => Ok(supplier),
-                404 => NotFound(supplier),
-                500 => StatusCode(500, supplier),
+                200 => Ok(supplier.Data),
+                400 => BadRequest(supplier.Message),
+                404 => NotFound(supplier.Message),
+                500 => StatusCode(500, supplier.Message),
                 _ => StatusCode(supplier.StatusCode, supplier)
             };
         }
@@ -43,7 +44,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === POST === \\
-        [HttpPost]
+        [HttpPost("addSupplier")]
         public async Task<ActionResult<SupplierResponseDTO>> AddSupplier(CreateSupplierRequestDTO supplierDTO)
         {
             var createdSupplier = await _supplierService.CreateSupplierAsync(supplierDTO);
@@ -57,7 +58,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === PUT === \\
-        [HttpPut("{supplierId}")]
+        [HttpPut("editSupplier/{supplierId}")]
         public async Task<ActionResult<SupplierResponseDTO>> EditSupplierDetails(int supplierId, UpdateSupplierRequestDTO supplierDTO)
         {
             var updatedSupplier = await _supplierService.UpdateSupplierAsync(supplierId, supplierDTO);
@@ -72,7 +73,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === DELETE === \\
-        [HttpDelete("{supplierId}")]
+        [HttpDelete("deleteSupplier/{supplierId}")]
         public async Task<ActionResult<SupplierResponseDTO>> DeleteSupplier(int supplierId)
         {
             var deletedSupplier = await _supplierService.DeleteSupplierAsync(supplierId);

@@ -19,7 +19,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             return await _context.Suppliers.ToListAsync();
         }
 
-        public async Task<Supplier> GetSupplierByIdAsync(int supplierId)
+        public async Task<Supplier?> GetSupplierByIdAsync(int supplierId)
         {
             return await _context.Suppliers.FindAsync(supplierId);
         }
@@ -31,44 +31,35 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             await _context.Suppliers.AddAsync(supplier);
             await _context.SaveChangesAsync();
             return supplier;
-        }
+    }
 
         // === PUT === \\
-        public async Task<bool> UpdateSupplierAsync(int supplierId, Supplier updatedSupplier)
+        public async Task UpdateSupplierAsync(Supplier updatedSupplierData)
         {
-            var findSupplier = await _context.Suppliers.FindAsync(supplierId);
+            var supplierUpdating = await _context.Suppliers.FindAsync(updatedSupplierData.ID);
 
-            if (findSupplier == null) return false;
+            if (supplierUpdating == null) return;
 
-            findSupplier.Name = updatedSupplier.Name;
-            findSupplier.ContactName = updatedSupplier.ContactName;
-            findSupplier.PhoneContact = updatedSupplier.PhoneContact;
-            findSupplier.EmailContact = updatedSupplier.EmailContact;
-            findSupplier.Address = updatedSupplier.Address;
-            findSupplier.IsActive = updatedSupplier.IsActive;
-            updatedSupplier.LastUpdated = DateOnly.FromDateTime(DateTime.Now);
+            supplierUpdating.Name = updatedSupplierData.Name;
+            supplierUpdating.ContactName = updatedSupplierData.ContactName;
+            supplierUpdating.PhoneContact = updatedSupplierData.PhoneContact;
+            supplierUpdating.EmailContact = updatedSupplierData.EmailContact;
+            supplierUpdating.Address = updatedSupplierData.Address;
+            supplierUpdating.IsActive = updatedSupplierData.IsActive;
+            supplierUpdating.LastUpdated = DateOnly.FromDateTime(DateTime.Now);
             await _context.SaveChangesAsync();
-            return true;
         }
 
 
         // === DELETE === \\
-        public async Task<bool> DeleteSupplierAsync(int supplierId)
+        public async Task DeleteSupplierAsync(int supplierId)
         {
             var supplier = await _context.Suppliers.FindAsync(supplierId);
 
-            if (supplier == null) return false;
+            if (supplier == null) return;
 
             _context.Suppliers.Remove(supplier);
             await _context.SaveChangesAsync();
-            return true;
-        }
-
-
-        // === CHECK EXISTENCE === \\
-        public async Task<bool> SupplierExistsAsync(int supplierId)
-        {
-            return await _context.Suppliers.AnyAsync(s => s.ID == supplierId);
         }
     }
 }
