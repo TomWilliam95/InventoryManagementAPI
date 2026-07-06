@@ -170,8 +170,14 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
         public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordAdjustmentAsync(CreateInventoryMovementRequestDTO dto)
         {
-            // Validate the request DTO
-            RecordValidation(dto);
+            // Assigns results of validationmethod
+            var validationResult = RecordValidation(dto);
+            // If validation does succeed, will skip if statement
+            // If validation does not suceed returns ApiResponse from RecordValidation method
+            if (validationResult != null)
+            {
+                return validationResult;
+            }
 
             // Validate movement type for adjustment
             if (dto.Movement != MovementType.AdjustmentIncrease && dto.Movement != MovementType.AdjustmentDecrease)
@@ -218,7 +224,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 }
 
                 // Update the product's stock quantity and record the movement
-                UpdateDatabaseAndReturnResponse(dto, movement);
+                await UpdateDatabaseAndReturnResponse(dto, movement);
 
                 // Return the response with the movement details
                 return ReturnResponse(dto, movement, product, user);
@@ -236,8 +242,14 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
         public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockInAsync(CreateInventoryMovementRequestDTO dto)
         {
-            //Validate the request DTO
-            RecordValidation(dto);
+            // Assigns results of validationmethod
+            var validationResult = RecordValidation(dto);
+            // If validation does succeed, will skip if statement
+            // If validation does not suceed returns ApiResponse from RecordValidation method
+            if (validationResult != null)
+            {
+                return validationResult;
+            }
 
             // Validate movement type for adjustment
             if (dto.Movement != MovementType.StockIn && dto.Movement != MovementType.Purchase)
@@ -266,9 +278,6 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 var product = result.Product!;
                 var user = result.User!;
 
-                // Validate stock availability for adjustment decrease
-                ValidateStockAvailability(product, dto);
-
                 //Create the InventoryMovement entity
                 var movement = CreateInventoryMovement(dto, product);
 
@@ -276,7 +285,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 movement.QuantityAfter = product.QuantityInStock + dto.Quantity;
 
                 // Update the product's stock quantity and record the movement
-                UpdateDatabaseAndReturnResponse(dto, movement);
+                await UpdateDatabaseAndReturnResponse(dto, movement);
 
                 // Return the response with the movement details
                 return ReturnResponse(dto, movement, product, user);
@@ -296,8 +305,14 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
         public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockOutAsync(CreateInventoryMovementRequestDTO dto)
         {
-            //Validate the request DTO
-            RecordValidation(dto);
+            // Assigns results of validationmethod
+            var validationResult = RecordValidation(dto);
+            // If validation does succeed, will skip if statement
+            // If validation does not suceed returns ApiResponse from RecordValidation method
+            if (validationResult != null)
+            {
+                return validationResult;
+            }
 
             try
             {
@@ -325,7 +340,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 movement.QuantityAfter = product.QuantityInStock - dto.Quantity;
 
                 // Update the product's stock quantity and record the movement
-                UpdateDatabaseAndReturnResponse(dto, movement);
+                await UpdateDatabaseAndReturnResponse(dto, movement);
 
                 // Return the response with the movement details
                 return ReturnResponse(dto, movement, product, user);
@@ -458,7 +473,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             };
         }
 
-        private async void UpdateDatabaseAndReturnResponse(CreateInventoryMovementRequestDTO dto, InventoryMovement movement)
+        private async Task UpdateDatabaseAndReturnResponse(CreateInventoryMovementRequestDTO dto, InventoryMovement movement)
         {
             await _movementRepository.AddMovementAsync(movement);
 

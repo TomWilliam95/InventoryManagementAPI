@@ -53,7 +53,16 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
                         StatusCode = 401
                     };
                 }
-                ;
+
+                if (!user.IsActive)
+                {
+                    return new ApiResponse<LoginResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Invalid Email or Password",
+                        StatusCode = 401
+                    };
+                }
 
                 // Validates the provided password against the stored password hash using BCrypt's EnhancedVerify method.
                 if (!BCrypt.Net.BCrypt.EnhancedVerify(loginRequestDTO.Password, user.Password_Hash))

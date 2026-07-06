@@ -16,7 +16,7 @@ namespace InventoryManagementAPI.Controllers
             _authService = authService;
         }
 
-        [HttpPost]
+        [HttpPost("login")]
         public async Task<ActionResult<ApiResponse<LoginResponseDTO>>> LoginAsync(LoginRequestDTO loginRequestDTO)
         {
             var result = await _authService.LoginAsync(loginRequestDTO);
