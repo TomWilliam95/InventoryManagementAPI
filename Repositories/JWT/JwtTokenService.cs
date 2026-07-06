@@ -37,7 +37,7 @@ namespace InventoryManagementAPI.Repositories.JWT
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             //Assign an expiration time for the token based on the duration specified in the JWT settings
-            var expiration = DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes);
+            var expiration = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes);
 
             //Create the JWT token using the claims, signing credentials, and expiration time
             //The JwtSecurityToken class represents a JSON Web Token and provides methods for creating and validating tokens

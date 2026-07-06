@@ -5,6 +5,6 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
 {
     public interface IAuthService
     {
-        Task<ApiResponse<LoginResponseDTO>?> LoginAsync(LoginRequestDTO loginRequest);
+        Task<ApiResponse<LoginResponseDTO>> LoginAsync(LoginRequestDTO loginRequest);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
+using InventoryManagementAPI.Repositories.JWT;
 using InventoryManagementAPI.Repositories.UserRepositories;
 
 namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
@@ -7,13 +8,37 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
-        public AuthService(IUserRepository userRepository)
+        private readonly IJwtTokenService _jwtTokenRepository;
+        public AuthService(IUserRepository userRepository, IJwtTokenService jwtTokenRepository)
         {
             _userRepository = userRepository;
+            _jwtTokenRepository = jwtTokenRepository;
         }
 
-        public async Task<ApiResponse<LoginResponseDTO>?> LoginAsync(LoginRequestDTO loginRequestDTO)
+        public async Task<ApiResponse<LoginResponseDTO>> LoginAsync(LoginRequestDTO loginRequestDTO)
         {
+            // Validates that all fields have data
+            if(loginRequestDTO == null || string.IsNullOrEmpty(loginRequestDTO.Email) || string.IsNullOrEmpty(loginRequestDTO.Password))
+            {
+                return new ApiResponse<LoginResponseDTO>
+                {
+                    Success = false,
+                    Message = "Email and Password are required",
+                    StatusCode = 400
+                };
+            }
+
+            // Validates the provided email format to ensure it contains both "@" and "." characters.
+            // If the email format is invalid, it returns a 400 Bad Request response.
+            if (!loginRequestDTO.Email.Contains("@") || !loginRequestDTO.Email.Contains("."))
+            {
+                return new ApiResponse<LoginResponseDTO>
+                {
+                    Success = false,
+                    Message = "Invalid Email format",
+                    StatusCode = 400
+                };
+            }            
             try
             {
                 // Validates the provided email and password for null or empty values.
@@ -25,7 +50,7 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
                     {
                         Success = false,
                         Message = "Invalid Email or Password",
-                        StatusCode = 404
+                        StatusCode = 401
                     };
                 }
                 ;
@@ -51,7 +76,7 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
                     Message = "User authenticated successfully",
                     Data = new LoginResponseDTO
                     {
-                        // Generates a JWT token for the authenticated user using the GenerateJwtToken method.
+                        Token = _jwtTokenRepository.GenerateToken(user)
                     },
                     StatusCode = 200
                 };
