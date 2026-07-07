@@ -296,7 +296,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
         // === PATCH === \\
 
-        public async Task<ApiResponse<UserResponseDTO>> UpdateUserEmailAsync(int userId, UpdateUserEmailRequestDTO emailRequest)
+        public async Task<ApiResponse<UserResponseDTO>> UpdateUserEmailAsync(int userId, UpdateUserEmailRequestDTO emailRequest, int currentUserId, string currentUserRole)
         {
             // Validates the new email format using a simple check for the presence of "@" and "." characters.
             // If the email is invalid, it returns a 400 Bad Request response.
@@ -307,6 +307,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     Success = false,
                     Message = "Invalid Email format",
                     StatusCode = 400
+                };
+            }
+            
+            //Checks Jwt Claims to see if either Admin or Corrosponding User
+            if(currentUserRole != "Admin" && currentUserId !=  userId)
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "Unauthorized! Can only update your own account.",
+                    StatusCode = 403
                 };
             }
 
@@ -354,7 +365,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> UpdateUserNameAsync(int userId, UpdateUserNameRequestDTO nameRequest)
+        public async Task<ApiResponse<UserResponseDTO>> UpdateUserNameAsync(int userId, UpdateUserNameRequestDTO nameRequest, int currentUserId, string currentUserRole)
         {
             // Validates the new username for length and character requirements (alphanumeric, no spaces).
             if (string.IsNullOrEmpty(nameRequest.UserName) || nameRequest.UserName.Length < 3 || nameRequest.UserName.Length > 50
@@ -365,6 +376,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     Success = false,
                     Message = "Invalid UserName",
                     StatusCode = 400
+                };
+            }
+
+            //Checks Jwt Claims to see if either Admin or Corrosponding User
+            if (currentUserRole != "Admin" && currentUserId != userId)
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "Unauthorized! Can only update your own account.",
+                    StatusCode = 403
                 };
             }
 
@@ -412,7 +434,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> UpdateUserPasswordAsync(int userId, UpdateUserPasswordRequestDTO passwordRequest)
+        public async Task<ApiResponse<UserResponseDTO>> UpdateUserPasswordAsync(int userId, UpdateUserPasswordRequestDTO passwordRequest, int currentUserId, string currentUserRole)
         {
 
             // Validates the new password for complexity requirements (length, uppercase, lowercase, digit, special character).
@@ -424,6 +446,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     Success = false,
                     Message = "New password must be at least 8 characters long and include uppercase, lowercase, digit, and special character.",
                     StatusCode = 400
+                };
+            }
+
+            //Checks Jwt Claims to see if either Admin or Corrosponding User
+            if (currentUserRole != "Admin" && currentUserId != userId)
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "Unauthorized! Can only update your own account.",
+                    StatusCode = 403
                 };
             }
 

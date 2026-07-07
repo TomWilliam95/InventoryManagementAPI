@@ -16,5 +16,8 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 
         // === DELETE === \\
         Task DeleteSupplierAsync(int supplierId);
+
+        // === Check Exists === \\
+        Task<bool> SupplierExistsAsync(int supplierId);
     }
 }

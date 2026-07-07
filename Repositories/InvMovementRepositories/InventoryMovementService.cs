@@ -207,8 +207,16 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 var user = result.User!;
 
                 // Validate stock availability for adjustment decrease
-                ValidateStockAvailability(product, dto);
-
+                // Returns ApiResponse if validation not successful
+                if(dto.Movement == MovementType.AdjustmentDecrease)
+                {
+                    var stockValidResult = ValidateStockAvailability(product, dto);
+                    if (stockValidResult != null)
+                    {
+                        return stockValidResult;
+                    }
+                }
+                
                 //Create the InventoryMovement entity
                 var movement = CreateInventoryMovement(dto, product);
 

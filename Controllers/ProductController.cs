@@ -1,8 +1,7 @@
-﻿using Azure;
-using InventoryManagementAPI.Models.CoreModels;
-using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
+﻿using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PUT.STOCK;
 using InventoryManagementAPI.Repositories.ProductRepositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +9,7 @@ namespace InventoryManagementAPI.Controllers
 {
     [Route("api/products")]
     [ApiController]
+    [Authorize]
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
@@ -19,7 +19,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === GET === \\
-        [HttpGet("{id}")]
+        [HttpGet("Product/{id}")]
         public async Task<ActionResult<SingleProductResponseDTO>> GetProduct(int id)
         {
             var product = await _productService.GetSingleProduct(id);
@@ -33,7 +33,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet]
+        [HttpGet("AllProducts")]
         public async Task<ActionResult<IEnumerable<BulkProductResponseDTO>>> GetAllProducts()
         {
             var products = await _productService.GetAllProducts();
@@ -47,7 +47,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("category/{categoryId}")]
+        [HttpGet("ProductsByCategory/{categoryId}")]
         public async Task<ActionResult<IEnumerable<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId)
         {
             var products = await _productService.GetProductsByCategory(categoryId);
@@ -60,7 +60,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet("belowReorderLevel")]
+        [HttpGet("ProductsBelowReorderLevel")]
         public async Task<ActionResult<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel()
         {
             var products = await _productService.GetProductsBelowReorderLevel();
@@ -74,7 +74,8 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === POST === \\
-        [HttpPost]
+        [HttpPost("AddProduct")]
+        [Authorize(Policy =("AdminOrManager"))]
         public async Task<ActionResult<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
         {
             var addedProduct = await _productService.AddProduct(dto);
@@ -90,7 +91,8 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === PUT === \\
-        [HttpPut("{id}")]
+        [HttpPut("UpdateProduct/{id}")]
+        [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<SingleProductResponseDTO>> UpdateProduct(int id, UpdateProductDetailsRequestDTO productDto)
         {
             var updatedProduct = await _productService.UpdateProductDetails(id, productDto);
@@ -105,9 +107,10 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-
+  
         // === PATCH === \\
-        [HttpPatch("{id}/price")]
+        [HttpPatch("UpdatePrice/{id}")]
+        [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<SingleProductResponseDTO>> UpdateProductPrice (int id, UpdateProductPriceRequestDTO dto)
         {
             var updatedPriceProduct = await _productService.UpdateProductPrice(id, dto);
@@ -122,7 +125,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpPatch("{id}/stock")]
+        [HttpPatch("UpdateStock/{id}")]
         public async Task<ActionResult<SingleProductResponseDTO>> UpdateProductStock(int id, UpdateProductStockRequestDTO dto)
         {
             var updatedStockProduct = await _productService.UpdateProductStockQuantity(id, dto);
@@ -137,7 +140,8 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpPatch("{id}/reorderLevel")]
+        [HttpPatch("UpdateProductReorderLevel/{id}")]
+        [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<SingleProductResponseDTO>> UpdateProductReroderLevel(int id, UpdateProductReorderRequestDTO dto)
         {
             var updatedReOrderProduct = await _productService.UpdateProductReorderLevel(id, dto);
@@ -153,7 +157,8 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === DELETE === \\
-        [HttpDelete("{id}")]
+        [HttpDelete("DeleteProduct/{id}")]
+        [Authorize(Policy = ("AdminOrManager"))]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             var deletedProduct = await _productService.DeleteProduct(id);

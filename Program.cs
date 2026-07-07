@@ -85,7 +85,12 @@ namespace InventoryManagementAPI
                 });
 
             // Registers authorization services so [Authorize] and [Authorize(Roles = "...")] can be used on controllers/actions.
-            builder.Services.AddAuthorization();
+            // Adds AdminOrManager Policy
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("AdminOrManager", policy =>
+                policy.RequireRole("Admin", "Manager"));
+            });
 
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();

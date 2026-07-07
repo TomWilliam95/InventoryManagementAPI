@@ -1,5 +1,6 @@
 ﻿using InventoryManagementAPI.Models.DTO_s.SupplierDTO_s;
 using InventoryManagementAPI.Repositories.SupplierRepositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace InventoryManagementAPI.Controllers
 {
     [Route("api/suppliers")]
     [ApiController]
+    [Authorize]
     public class SupplierController : ControllerBase
     {
         private readonly ISupplierService _supplierService;
@@ -16,7 +18,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === GET === \\
-        [HttpGet("{id}")]
+        [HttpGet("Supplier/{id}")]
         public async Task<ActionResult<SupplierResponseDTO>> GetSingleSupplier(int id)
         {
             var supplier = await _supplierService.GetSupplierByIdAsync(id);
@@ -30,7 +32,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet]
+        [HttpGet("AllSuppliers")]
         public async Task<ActionResult<IEnumerable<SupplierResponseDTO>>> GetAllSuppliers()
         {
             var suppliers = await _supplierService.GetAllSuppliersAsync();
@@ -44,7 +46,8 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === POST === \\
-        [HttpPost("addSupplier")]
+        [HttpPost("AddSupplier")]
+        [Authorize (Policy = ("AdminOrManager"))]
         public async Task<ActionResult<SupplierResponseDTO>> AddSupplier(CreateSupplierRequestDTO supplierDTO)
         {
             var createdSupplier = await _supplierService.CreateSupplierAsync(supplierDTO);
@@ -58,7 +61,8 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === PUT === \\
-        [HttpPut("editSupplier/{supplierId}")]
+        [HttpPut("EditSupplier/{supplierId}")]
+        [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<SupplierResponseDTO>> EditSupplierDetails(int supplierId, UpdateSupplierRequestDTO supplierDTO)
         {
             var updatedSupplier = await _supplierService.UpdateSupplierAsync(supplierId, supplierDTO);
@@ -73,7 +77,8 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === DELETE === \\
-        [HttpDelete("deleteSupplier/{supplierId}")]
+        [HttpDelete("DeleteSupplier/{supplierId}")]
+        [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<SupplierResponseDTO>> DeleteSupplier(int supplierId)
         {
             var deletedSupplier = await _supplierService.DeleteSupplierAsync(supplierId);

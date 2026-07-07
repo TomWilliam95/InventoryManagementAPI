@@ -23,6 +23,7 @@ namespace InventoryManagementAPI.Repositories.JWT
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.ID.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName)
             };

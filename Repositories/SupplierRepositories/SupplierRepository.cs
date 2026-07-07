@@ -61,5 +61,12 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             _context.Suppliers.Remove(supplier);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<bool> SupplierExistsAsync(int supplierId)
+        {
+            var supplier = await _context.Suppliers.FindAsync(supplierId);
+            if (supplier == null) return false;
+            return true;
+        }
     }
 }

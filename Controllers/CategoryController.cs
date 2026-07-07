@@ -1,5 +1,6 @@
 ﻿using InventoryManagementAPI.Models.DTO_s.CategoryDTO_s;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace InventoryManagementAPI.Controllers
 {
     [Route("api/categories")]
     [ApiController]
+    [Authorize]
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService _categoryService;
@@ -16,7 +18,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === GET === \\
-        [HttpGet("{id}")]
+        [HttpGet("Category/{id}")]
         public async Task<ActionResult<SingleCategoryResponseDTO>> GetCategory(int id)
         {
             var category = await _categoryService.GetSingleCategory(id);
@@ -29,7 +31,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        [HttpGet]
+        [HttpGet("AllCategories")]
         public async Task<ActionResult<IEnumerable<BulkCategoryResponseDTO>>> GetAllCategories()
         {
             var categories = await _categoryService.GetAllCategories();
@@ -44,7 +46,8 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === POST === \\
-        [HttpPost]
+        [HttpPost("AddCategory")]
+        [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto)
         {
             var addedCategory = await _categoryService.AddCategory(dto);
@@ -60,7 +63,8 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === PUT === \\
-        [HttpPut("{id}")]
+        [HttpPut("UpdateCategory/{id}")]
+        [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<SingleCategoryResponseDTO>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto)
         {
             var updatedCategory = await _categoryService.UpdateCategoryDetails(id, dto);
@@ -75,7 +79,8 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === DELETE === \\
-        [HttpDelete("{id}")]
+        [HttpDelete("DeleteCategory/{id}")]
+        [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult> DeleteCategory(int id)
         {
             var deletedCategory = await _categoryService.DeleteCategory(id);

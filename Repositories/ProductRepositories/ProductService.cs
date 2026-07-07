@@ -253,40 +253,42 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     StatusCode = 400
                 };
             }
-            if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier does not exist",
-                    StatusCode = 404
-                };
-            }
-            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category does not exist",
-                    StatusCode = 404
-                };
-            }
-            var product = new Product
-            {
-                Sku = dto.Sku,
-                Name = dto.Name,
-                Description = dto.Description,
-                CategoryID = dto.CategoryID,
-                QuantityInStock = dto.QuantityInStock,
-                ReorderLevel = dto.ReorderLevel,
-                Price = dto.Price,
-                SupplierID = dto.SupplierID,
-                IsActive = dto.IsActive,
-                Created = DateOnly.FromDateTime(DateTime.Now),
-                Updated = DateTime.UtcNow
-            };
+            
             try
             {
+                if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Supplier does not exist",
+                        StatusCode = 404
+                    };
+                }
+                if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Category does not exist",
+                        StatusCode = 404
+                    };
+                }
+                var product = new Product
+                {
+                    Sku = dto.Sku,
+                    Name = dto.Name,
+                    Description = dto.Description,
+                    CategoryID = dto.CategoryID,
+                    QuantityInStock = dto.QuantityInStock,
+                    ReorderLevel = dto.ReorderLevel,
+                    Price = dto.Price,
+                    SupplierID = dto.SupplierID,
+                    IsActive = dto.IsActive,
+                    Created = DateOnly.FromDateTime(DateTime.Now),
+                    Updated = DateTime.UtcNow
+                };
+
                 var createdProduct = await _productRepo.AddProductAsync(product);
                 var response = new SingleProductResponseDTO
                 {

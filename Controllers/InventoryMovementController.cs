@@ -2,6 +2,7 @@
 using InventoryManagementAPI.Models.DTO_s.MovementDTO_s;
 using InventoryManagementAPI.Models.Enums;
 using InventoryManagementAPI.Repositories.InvMovementRepositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace InventoryManagementAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class InventoryMovementController : ControllerBase
     {
         // === Dependencies === \\
@@ -81,9 +83,9 @@ namespace InventoryManagementAPI.Controllers
                 default:
                     return BadRequest(new ApiResponse<InventoryMovementResponseDTO>
                     {
+                        Success = false,
                         StatusCode = 400,
                         Message = "Invalid movement type.",
-                        Data = null
                     });
             }
 
