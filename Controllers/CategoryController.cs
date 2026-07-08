@@ -42,7 +42,9 @@ namespace InventoryManagementAPI.Controllers
             var addedCategory = await _categoryService.AddCategory(dto);
             return addedCategory.StatusCode switch
             {
-                201 => CreatedAtAction(nameof(GetCategory), new { id = addedCategory.Data.ID }, addedCategory),
+                201 when addedCategory.Data is not null => 
+                CreatedAtAction(nameof(GetCategory), new { id = addedCategory.Data!.ID }, addedCategory),
+                
                 _ => StatusCode(addedCategory.StatusCode, addedCategory)
             };
         }
@@ -60,7 +62,7 @@ namespace InventoryManagementAPI.Controllers
         // === SET ACTIVE STATUS === \\
         [HttpPut("ActivateCategory/{id}")]
         [Authorize(Policy = "AdminOrManager")]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SingleCategoryResponseDTO>>> ActivateCategory(int id)
+        public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> ActivateCategory(int id)
         {
             var activatedCategory = await _categoryService.ActivateCategory(id);
             return StatusCode(activatedCategory.StatusCode, activatedCategory);
@@ -68,7 +70,7 @@ namespace InventoryManagementAPI.Controllers
 
         [HttpPut("DeactivateCategory/{id}")]
         [Authorize(Policy = "AdminOrManager")]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SingleCategoryResponseDTO>>> DeactivateCategory(int id)
+        public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> DeactivateCategory(int id)
         {
             var deactivatedCategory = await _categoryService.DeactivateCategory(id);
             return StatusCode(deactivatedCategory.StatusCode, deactivatedCategory);

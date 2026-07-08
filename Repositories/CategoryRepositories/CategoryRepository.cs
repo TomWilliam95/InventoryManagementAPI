@@ -13,11 +13,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === GET === \\
-        public async Task<Category> GetCategoryByIdAsync(int categoryId)
+        public async Task<Category?> GetCategoryByIdAsync(int categoryId)
         {
-            return await  _context.Categories.FindAsync(categoryId);
+            return await _context.Categories.FindAsync(categoryId);
         }
-        public async Task<IEnumerable<Category>> GetAllCategoriesAsync()
+        public async Task<IEnumerable<Category>?> GetAllCategoriesAsync()
         {
             return await _context.Categories.ToListAsync();
         }
@@ -31,23 +31,27 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === PUT === \\
-        public async Task<bool> UpdateCategoryAsync(int categoryId, Category category)
+        public async Task UpdateCategoryAsync(int categoryId, Category category)
         {
             var updatingCategory = await _context.Categories.FindAsync(categoryId);
-            if (updatingCategory == null) return false;
+            if (updatingCategory == null) return;
 
             updatingCategory.Name = category.Name;
             updatingCategory.Description = category.Description;
             updatingCategory.Updated = DateOnly.FromDateTime(DateTime.Now);
             
             await _context.SaveChangesAsync();
-            return true;
         }
 
         // === CHECK EXISTENCE === \\
         public async Task<bool> CategoryExistsAsync(int categoryId)
         {
             return await _context.Categories.AnyAsync(c => c.ID == categoryId);
+        }
+
+        public async Task<bool> CategoryNameExistsAsync(string categoryName)
+        {
+            return await _context.Categories.AnyAsync(c => c.Name == categoryName);
         }
 
         // === SAVE CHANGES === \\
