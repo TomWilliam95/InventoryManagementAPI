@@ -30,13 +30,19 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         public async Task<IEnumerable<Product>> GetProductsByCategory(int categoryId)
         {
             return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Supplier)
                 .Where(p => p.CategoryID == categoryId)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync()
         {
-            return await _context.Products.Where(p => p.QuantityInStock < p.ReorderLevel).ToListAsync();
+            return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Supplier)
+                .Where(p => p.QuantityInStock < p.ReorderLevel)
+                .ToListAsync();
         }
 
         // === POST === \\

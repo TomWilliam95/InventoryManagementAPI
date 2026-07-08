@@ -42,17 +42,46 @@ namespace InventoryManagementAPI
             // as long as the secret name is "Jwt:Key".
             var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
 
+            // Validate that the Jwt settings are present and valid. If not, throw an exception to prevent the app from starting.
+            // This is important because if the Jwt settings are missing or invalid, the API will not be able to validate tokens and will reject all requests.
+            if (jwtSettings is null)
+            {
+                throw new InvalidOperationException("Missing Jwt settings in configuration. Please check appsettings.json or user-secrets.");
+            }
+            if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+            {
+                throw new InvalidOperationException("Missing Jwt:Key in configuration. Please check appsettings.json or user-secrets.");
+            }
+            if(string.IsNullOrWhiteSpace(jwtSettings.Issuer))
+            {
+                throw new InvalidOperationException("Missing Jwt:Issuer in configuration. Please check appsettings.json or user-secrets.");
+            }
+            if(string.IsNullOrWhiteSpace(jwtSettings.Audience))
+            {
+                throw new InvalidOperationException("Missing Jwt:Audience in configuration. Please check appsettings.json or user-secrets.");
+            }
+            if(jwtSettings.ExpirationInMinutes <= 0)
+            {
+                throw new InvalidOperationException("Invalid Jwt:ExpirationInMinutes in configuration. Please check appsettings.json or user-secrets.");
+            }
+
+
             // The signing key is the shared secret used to prove the token was created by this API.
             // It should normally come from user-secrets or an environment variable, not from committed source code.
             // If Jwt:Key is missing or too short, token creation/validation will fail, so make sure it is set.
 
+
+
             builder.Services
+
                 // Tells ASP.NET Core that this API uses authentication and that the default scheme is JWT Bearer.
                 // "Bearer" means the client sends the token in the Authorization header:
                 // Authorization: Bearer eyJhbGciOi...
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+
                 // Configures the rules for accepting or rejecting JWT bearer tokens.
                 // These rules run automatically when a request hits an endpoint protected by [Authorize].
+
                 .AddJwtBearer(options =>
                 {
                     // TokenValidationParameters defines what must be true for an incoming JWT to be trusted.

@@ -297,10 +297,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Name = createdProduct.Name,
                     Description = createdProduct.Description,
                     CategoryID = createdProduct.CategoryID,
+                    CategoryName = createdProduct.Category!.Name,
                     QuantityInStock = createdProduct.QuantityInStock,
                     ReorderLevel = createdProduct.ReorderLevel,
                     Price = createdProduct.Price,
                     SupplierID = createdProduct.SupplierID,
+                    SupplierName = createdProduct.Supplier!.Name,
                     IsActive = createdProduct.IsActive
 
                 };
@@ -339,7 +341,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 var updateProduct = await _productRepo.GetProductAsync(id);
-                updateProduct.Sku = dto.Sku;
+                updateProduct!.Sku = dto.Sku;
                 updateProduct.Name = dto.Name;
                 updateProduct.Description = dto.Description;
                 updateProduct.CategoryID = dto.CategoryID;
@@ -361,15 +363,17 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 var response = new SingleProductResponseDTO
                 {
-                    ID = findUpdatedProduct.ID,
+                    ID = findUpdatedProduct!.ID,
                     Sku = findUpdatedProduct.Sku,
                     Name = findUpdatedProduct.Name,
                     Description = findUpdatedProduct.Description,
                     CategoryID = findUpdatedProduct.CategoryID,
+                    CategoryName = findUpdatedProduct.Category!.Name,
                     QuantityInStock = findUpdatedProduct.QuantityInStock,
                     ReorderLevel = findUpdatedProduct.ReorderLevel,
                     Price = findUpdatedProduct.Price,
                     SupplierID = findUpdatedProduct.SupplierID,
+                    SupplierName = findUpdatedProduct.Supplier!.Name,
                     IsActive = findUpdatedProduct.IsActive
                 };
                 return new ApiResponse<SingleProductResponseDTO>
@@ -428,10 +432,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Name = product.Name,
                     Description = product.Description,
                     CategoryID = product.CategoryID,
+                    CategoryName = product.Category!.Name,
                     QuantityInStock = product.QuantityInStock,
                     ReorderLevel = product.ReorderLevel,
                     Price = product.Price,
                     SupplierID = product.SupplierID,
+                    SupplierName = product.Supplier!.Name,
                     IsActive = product.IsActive
                 };
 
@@ -490,10 +496,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Name = product.Name,
                     Description = product.Description,
                     CategoryID = product.CategoryID,
+                    CategoryName = product.Category!.Name,
                     QuantityInStock = product.QuantityInStock,
                     ReorderLevel = product.ReorderLevel,
                     Price = product.Price,
                     SupplierID = product.SupplierID,
+                    SupplierName = product.Supplier!.Name,
                     IsActive = product.IsActive
                 };
 
@@ -552,10 +560,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Name = product.Name,
                     Description = product.Description,
                     CategoryID = product.CategoryID,
+                    CategoryName = product.Category!.Name,
                     QuantityInStock = product.QuantityInStock,
                     ReorderLevel = product.ReorderLevel,
                     Price = product.Price,
                     SupplierID = product.SupplierID,
+                    SupplierName = product.Supplier!.Name,
                     IsActive = product.IsActive
                 };
 
@@ -620,10 +630,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                         Name = product.Name,
                         Description = product.Description,
                         CategoryID = product.CategoryID,
+                        CategoryName = product.Category!.Name,
                         QuantityInStock = product.QuantityInStock,
                         ReorderLevel = product.ReorderLevel,
                         Price = product.Price,
                         SupplierID = product.SupplierID,
+                        SupplierName = product.Supplier!.Name,
                         IsActive = product.IsActive
                     },
                     StatusCode = 200
@@ -680,10 +692,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                         Name = product.Name,
                         Description = product.Description,
                         CategoryID = product.CategoryID,
+                        CategoryName = product.Category!.Name,
                         QuantityInStock = product.QuantityInStock,
                         ReorderLevel = product.ReorderLevel,
                         Price = product.Price,
                         SupplierID = product.SupplierID,
+                        SupplierName = product.Supplier!.Name,
                         IsActive = product.IsActive
                     },
                     StatusCode = 200

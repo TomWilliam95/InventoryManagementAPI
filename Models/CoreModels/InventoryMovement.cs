@@ -27,18 +27,15 @@ namespace InventoryManagementAPI.Models.CoreModels
         [Range(1, int.MaxValue)]
         public int UserID { get; set; }
 
-        [Required]
         [StringLength(500)]
-        public string Reason { get; set; }
+        public required string Reason { get; set; }
 
         public DateTime Created { get; set; } = DateTime.Now;
 
-        [Required]
         [ForeignKey(nameof(ProductId))]
-        public virtual Product Product { get; set; }
+        public virtual Product? Product { get; set; }
 
-        [Required]
         [ForeignKey(nameof(UserID))]
-        public virtual User User { get; set; }
+        public virtual User? User { get; set; }
     }
 }

@@ -4,15 +4,15 @@
     {
         [Required]
         [StringLength(50)]
-        public string Sku { get; set; }
+        public required string Sku { get; set; }
 
         [Required]
         [StringLength(150)]
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
         [Required]
         [StringLength(1000)]
-        public string Description { get; set; }
+        public required string Description { get; set; }
 
         [Range(1, int.MaxValue)]
         public int CategoryID { get; set; }

@@ -170,6 +170,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 ContactName = supplier.ContactName,
                 PhoneContact = supplier.PhoneContact,
                 EmailContact = supplier.EmailContact,
+                Address = supplier.Address,
                 IsActive = supplier.IsActive,
                 Created = DateOnly.FromDateTime(DateTime.UtcNow),
                 LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow)

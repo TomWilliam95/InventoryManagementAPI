@@ -22,14 +22,7 @@ namespace InventoryManagementAPI.Controllers
         public async Task<ActionResult<ApiResponse<LoginResponseDTO>>> LoginAsync(LoginRequestDTO loginRequestDTO)
         {
             var result = await _authService.LoginAsync(loginRequestDTO);
-            return result.StatusCode switch
-            {
-                200 => Ok(result),
-                400 => BadRequest(result.Message),
-                401 => Unauthorized(result.Message),
-                500 => StatusCode(500, result.Message),
-                _ => StatusCode(result.StatusCode, result),
-            };
+            return StatusCode(result.StatusCode, result);
         }
     }
 }

@@ -6,15 +6,23 @@ namespace InventoryManagementAPI.Models.DTO_s.UserDTO_s
     {
         [Required]
         [StringLength(100, MinimumLength = 3)]
-        public string UserName { get; set; }
+        public required string UserName { get; set; }
 
         [Required]
         [EmailAddress]
         [StringLength(254)]
-        public string Email { get; set; }
+        public required string Email { get; set; }
 
         [Required]
         [StringLength(100, MinimumLength = 8)]
-        public string Password { get; set; }
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", 
+            ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.")]
+        public required string Password { get; set; }
+
+        [Required]
+        [StringLength(100, MinimumLength = 8)]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", 
+            ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.")]
+        public required string RetypePassword { get; set; }
     }
 }

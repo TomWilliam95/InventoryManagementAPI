@@ -9,7 +9,7 @@ namespace InventoryManagementAPI.Models.CoreModels
 
         [Required]
         [StringLength(100)]
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
         [StringLength(500)]
         public string? Description { get; set; }
@@ -18,6 +18,6 @@ namespace InventoryManagementAPI.Models.CoreModels
         public DateOnly Created { get; set; }
         public DateOnly Updated { get; set; }
 
-        public virtual ICollection<Product>? Products { get; set; }
+        public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

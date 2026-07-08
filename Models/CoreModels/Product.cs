@@ -11,15 +11,15 @@ namespace InventoryManagementAPI.Models.CoreModels
 
         [Required]
         [StringLength(50)]
-        public string Sku { get; set; }
+        public required string Sku { get; set; }
 
         [Required]
         [StringLength(150)]
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
         [Required]
         [StringLength(1000)]
-        public string Description { get; set; }
+        public required string Description { get; set; }
 
         [Required]
         [Range(1, int.MaxValue)]
@@ -47,6 +47,6 @@ namespace InventoryManagementAPI.Models.CoreModels
         [ForeignKey(nameof(SupplierID))]
         public virtual Supplier? Supplier { get; set; }
 
-        public virtual ICollection<InventoryMovement>? InventoryMovements { get; set; }
+        public virtual ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
     }
 }

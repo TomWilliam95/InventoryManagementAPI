@@ -244,6 +244,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 };
             }
 
+            // Validate that the password and retype password match. If they do not match, it returns a 400 Bad Request response.
+            if (user.Password != user.RetypePassword)
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "Password and Retype Password do not match.",
+                    StatusCode = 400
+                };
+            }
+
             // Create new user object and hash the password
             // Note: The password hashing is done using BCrypt with the EnhancedHashPassword method for improved security.
             // The new user is initialized with the provided details, and additional fields such as Created,
@@ -271,7 +282,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     Message = "User created successfully",
                     Data = new UserResponseDTO
                     {
-                        ID = createdUser.ID,
+                        ID = createdUser!.ID,
                         UserName = createdUser.UserName,
                         Email = createdUser.Email,
                         Role = createdUser.Role,

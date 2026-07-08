@@ -11,16 +11,16 @@ namespace InventoryManagementAPI.Models.CoreModels
 
         [Required]
         [StringLength(100, MinimumLength = 3)]
-        public string UserName { get; set; }
+        public required string UserName { get; set; }
 
         [Required]
         [EmailAddress]
         [StringLength(254)]
-        public string Email { get; set; }
+        public required string Email { get; set; }
 
         [Required]
         [StringLength(255)]
-        public string Password_Hash { get; set; }
+        public required string Password_Hash { get; set; }
 
         [EnumDataType(typeof(UserRoles))]
         public UserRoles Role { get; set; } = UserRoles.Staff;
@@ -30,6 +30,6 @@ namespace InventoryManagementAPI.Models.CoreModels
         public DateOnly Created { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
         public bool IsActive { get; set; } = true;
 
-        public virtual ICollection<InventoryMovement>? InventoryMovements { get; set; }
+        public virtual ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
     }
 }

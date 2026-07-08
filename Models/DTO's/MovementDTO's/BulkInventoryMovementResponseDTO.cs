@@ -6,14 +6,14 @@ namespace InventoryManagementAPI.Models.DTO_s.MovementDTO_s
     {
         public int ID { get; set; }
         public int ProductId { get; set; }
-        public string ProductName { get; set; } = string.Empty;
+        public required string ProductName { get; set; } 
         public int Quantity { get; set; }
         public int QuantityBefore { get; set; }
         public int QuantityAfter { get; set; }
         public MovementType Movement { get; set; }
         public int UserID { get; set; }
-        public string UserName { get; set; } = string.Empty;
-        public string Reason { get; set; } = string.Empty;
+        public required string UserName { get; set; } 
+        public required string Reason { get; set; } 
         public DateTime Created { get; set; }
     }
 }
