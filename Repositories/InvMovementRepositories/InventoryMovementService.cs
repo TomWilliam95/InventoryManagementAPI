@@ -93,6 +93,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                     QuantityAfter = m.QuantityAfter,
                     Movement = m.Movement,
                     UserID = m.UserID,
+                    UserName = m.User.UserName,
                     Reason = m.Reason,
                     Created = m.Created
                 });
@@ -120,6 +121,17 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         {
             try
             {
+                var product = await _productRepository.GetProductAsync(productId);
+                if(product == null)
+                {
+                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                    {
+                        Success = false,
+                        Message = "Product not found.",
+                        StatusCode = 404
+                    };
+                }
+
                 var movements = await _movementRepository.GetMovementsByProductIdAsync(productId);
                 if (movements == null || !movements.Any())
                 {
@@ -141,6 +153,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                     QuantityAfter = m.QuantityAfter,
                     Movement = m.Movement,
                     UserID = m.UserID,
+                    UserName = m.User.UserName,
                     Reason = m.Reason,
                     Created = m.Created
                 });
@@ -159,6 +172,190 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 {
                     Success = false,
                     Message = "An error occurred while retrieving product movement history.",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByUserIdAsync(int userId)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                    {
+                        Success = false,
+                        Message = "User not found.",
+                        StatusCode = 404
+                    };
+                }
+
+                var movements = await _movementRepository.GetMovementsByUserIdAsync(userId);
+                if(movements == null || !movements.Any())
+                {
+                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                    {
+                        Success = false,
+                        Message = "No movements found for the specified user.",
+                        StatusCode = 404
+                    };
+                }
+
+                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
+                {
+                    ID = m.ID,
+                    ProductId = m.ProductId,
+                    ProductName = m.Product.Name,
+                    Quantity = m.Quantity,
+                    QuantityBefore = m.QuantityBefore,
+                    QuantityAfter = m.QuantityAfter,
+                    Movement = m.Movement,
+                    UserID = m.UserID,
+                    UserName = m.User.UserName,
+                    Reason = m.Reason,
+                    Created = m.Created
+                });
+
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = true,
+                    Message = "Movements retrieved successfully for the specified user.",
+                    Data = movementResponse,
+                    StatusCode = 200
+                };
+            }
+            catch
+            {
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving movements for the specified user.",
+                    StatusCode = 500
+                };
+            }
+        }
+        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByDateRangeAsync(DateTime startDate, DateTime endDate)
+        {
+            if(startDate > endDate)
+            {
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = false,
+                    Message = "Start date cannot be later than end date.",
+                    StatusCode = 400
+                };
+            }
+            if(startDate > DateTime.UtcNow)
+            {
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = false,
+                    Message = "Start date cannot be in the future.",
+                    StatusCode = 400
+                };
+            }
+            try
+            {
+                var movements = await _movementRepository.GetMovementsByDateRangeAsync(startDate, endDate);
+
+                if(movements == null || !movements.Any())
+                {
+                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                    {
+                        Success = false,
+                        Message = "No movements found for the specified date range.",
+                        StatusCode = 404
+                    };
+                }
+
+                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
+                {
+                    ID = m.ID,
+                    ProductId = m.ProductId,
+                    ProductName = m.Product.Name,
+                    Quantity = m.Quantity,
+                    QuantityBefore = m.QuantityBefore,
+                    QuantityAfter = m.QuantityAfter,
+                    Movement = m.Movement,
+                    UserID = m.UserID,
+                    UserName = m.User.UserName,
+                    Reason = m.Reason,
+                    Created = m.Created
+                });
+
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = true,
+                    Message = "Movements retrieved successfully for the specified date range.",
+                    Data = movementResponse,
+                    StatusCode = 200
+                };
+            }
+            catch
+            {
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving movements for the specified date range.",
+                    StatusCode = 500
+                };
+            }
+        }
+        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByMovementTypeAsync(MovementType movementType)
+        {
+            if(Enum.IsDefined(typeof(MovementType), movementType) == false)
+            {
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = false,
+                    Message = "Invalid movement type.",
+                    StatusCode = 400
+                };
+            }
+            try
+            {
+                var movements = await _movementRepository.GetMovementsByTypeAsync(movementType);
+                if(movements == null || !movements.Any())
+                {
+                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                    {
+                        Success = false,
+                        Message = "No movements found for the specified movement type.",
+                        StatusCode = 404
+                    };
+                }
+
+                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
+                {
+                    ID = m.ID,
+                    ProductId = m.ProductId,
+                    ProductName = m.Product.Name,
+                    Quantity = m.Quantity,
+                    QuantityBefore = m.QuantityBefore,
+                    QuantityAfter = m.QuantityAfter,
+                    Movement = m.Movement,
+                    UserID = m.UserID,
+                    UserName = m.User.UserName,
+                    Reason = m.Reason,
+                    Created = m.Created
+                });
+
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = true,
+                    Message = "Movements retrieved successfully for the specified movement type.",
+                    Data = movementResponse,
+                    StatusCode = 200
+                };
+            }
+            catch
+            {
+                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving movements for the specified movement type.",
                     StatusCode = 500
                 };
             }

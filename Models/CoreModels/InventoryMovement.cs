@@ -33,10 +33,12 @@ namespace InventoryManagementAPI.Models.CoreModels
 
         public DateTime Created { get; set; } = DateTime.Now;
 
+        [Required]
         [ForeignKey(nameof(ProductId))]
-        public virtual Product? Product { get; set; }
+        public virtual Product Product { get; set; }
 
+        [Required]
         [ForeignKey(nameof(UserID))]
-        public virtual User? User { get; set; }
+        public virtual User User { get; set; }
     }
 }

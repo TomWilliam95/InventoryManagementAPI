@@ -17,40 +17,39 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         // === GET === \\
         public async Task<IEnumerable<InventoryMovement>> GetAllMovementsAsync()
         {
-            return await _context.InventoryMovements.ToListAsync();
+            return await MovementWithDetails().ToListAsync();
         }
 
         public async Task<InventoryMovement?> GetMovementByIdAsync(int id)
         {
-            return await _context.InventoryMovements.Include(m => m.User).
-                Include(m => m.Product).
-                FirstOrDefaultAsync(m => m.ID == id);
+            return await MovementWithDetails()
+                .FirstOrDefaultAsync(m => m.ID == id);
         }
 
         public async Task<IEnumerable<InventoryMovement>> GetMovementsByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            return await _context.InventoryMovements
+            return await MovementWithDetails()
                 .Where(m => m.Created >= startDate && m.Created <= endDate)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<InventoryMovement>> GetMovementsByProductIdAsync(int productId)
         {
-            return await _context.InventoryMovements
+            return await MovementWithDetails()
                 .Where(m => m.ProductId == productId)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<InventoryMovement>> GetMovementsByTypeAsync(MovementType movementType)
         {
-            return await _context.InventoryMovements
+            return await MovementWithDetails()
                 .Where(m => m.Movement == movementType)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<InventoryMovement>> GetMovementsByUserIdAsync(int userId)
         {
-            return await _context.InventoryMovements
+            return await MovementWithDetails()
                 .Where(m => m.UserID == userId)
                 .ToListAsync();
         }
@@ -61,6 +60,14 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             await _context.InventoryMovements.AddAsync(movement);
             await _context.SaveChangesAsync();
             return movement;
+        }
+
+        // === QUERY HELPER METHOD === \\
+        private IQueryable<InventoryMovement> MovementWithDetails()
+        {
+            return _context.InventoryMovements
+                .Include(m => m.User)
+                .Include(m => m.Product);
         }
     }
 }
