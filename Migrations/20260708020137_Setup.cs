@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace InventoryManagementAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class Setup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -142,9 +142,9 @@ namespace InventoryManagementAPI.Migrations
                 columns: new[] { "ID", "Created", "Description", "IsActive", "Name", "Updated" },
                 values: new object[,]
                 {
-                    { 1, new DateOnly(2026, 7, 2), "Things that are cool", true, "CoolStuff", new DateOnly(2026, 7, 2) },
-                    { 2, new DateOnly(2026, 7, 2), "Things that are cooler", true, "CoolerStuff", new DateOnly(2026, 7, 2) },
-                    { 3, new DateOnly(2026, 7, 2), "Things that are coolest", true, "CoolestStuff", new DateOnly(2026, 7, 2) }
+                    { 1, new DateOnly(2026, 7, 8), "Things that are cool", true, "CoolStuff", new DateOnly(2026, 7, 8) },
+                    { 2, new DateOnly(2026, 7, 8), "Things that are cooler", true, "CoolerStuff", new DateOnly(2026, 7, 8) },
+                    { 3, new DateOnly(2026, 7, 8), "Things that are coolest", true, "CoolestStuff", new DateOnly(2026, 7, 8) }
                 });
 
             migrationBuilder.InsertData(

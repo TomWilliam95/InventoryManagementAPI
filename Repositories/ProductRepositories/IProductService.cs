@@ -23,7 +23,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         Task<ApiResponse<SingleProductResponseDTO>> UpdateProductStockQuantity(int id, UpdateProductStockRequestDTO dto);
         Task<ApiResponse<SingleProductResponseDTO>> UpdateProductReorderLevel(int id, UpdateProductReorderRequestDTO dto);
 
-        // === DELETE === \\
-        Task<ApiResponse<object>> DeleteProduct(int id);
+        // === SET ACTIVE STATUS === \\
+        Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id);
+        Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id);
     }
 }

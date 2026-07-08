@@ -14,10 +14,10 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         // === PUT === \\
         Task UpdateSupplierAsync(Supplier updatedSupplier);
 
-        // === DELETE === \\
-        Task DeleteSupplierAsync(int supplierId);
-
         // === Check Exists === \\
         Task<bool> SupplierExistsAsync(int supplierId);
+
+        // === SAVE CHANGES === \\
+        Task SaveChangesAsync();
     }
 }

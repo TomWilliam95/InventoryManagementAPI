@@ -17,9 +17,11 @@ namespace InventoryManagementAPI.Models.CoreModels
         [StringLength(150)]
         public string Name { get; set; }
 
+        [Required]
         [StringLength(1000)]
-        public string? Description { get; set; }
+        public string Description { get; set; }
 
+        [Required]
         [Range(1, int.MaxValue)]
         public int CategoryID { get; set; }
 

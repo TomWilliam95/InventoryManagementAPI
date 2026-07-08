@@ -15,7 +15,8 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         // === PUT === \\
         Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(int supplierId, UpdateSupplierRequestDTO updatedSupplier);
 
-        // === DELETE === \\
-        Task<ApiResponse<object>> DeleteSupplierAsync(int supplierId);
+        // === SET ACTIVE STATUS === \\
+        Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId);
+        Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId);
     }
 }

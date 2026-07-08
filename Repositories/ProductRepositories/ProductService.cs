@@ -344,7 +344,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 updateProduct.Description = dto.Description;
                 updateProduct.CategoryID = dto.CategoryID;
                 updateProduct.SupplierID = dto.SupplierID;
-                updateProduct.IsActive = dto.IsActive;
 
                 var updateProductResult = await _productRepo.UpdateProductDetailsAsync(id, updateProduct);
 
@@ -580,31 +579,59 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-        // === DELETE === \\
-        public async Task<ApiResponse<object>> DeleteProduct(int id)
+        // === SET ACTIVE STATUS === \\
+        public async Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id)
         {
-            if (!await _productRepo.ProductExistsAsync(id))
-            {
-                return new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Product Not Found",
-                    StatusCode = 404
-                };
-            }
             try
             {
-                await _productRepo.RemoveProductAsync(id);
-                return new ApiResponse<object>
+                var product = _productRepo.GetProductAsync(id).Result;
+                if(product == null)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Product Not Found",
+                        StatusCode = 404
+                    };
+                }
+
+                if (product.IsActive)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Product is already active",
+                        StatusCode = 400
+                    };
+                }
+
+                product.IsActive = true;
+                product.Updated = DateTime.UtcNow;
+                await _productRepo.SaveChangesAsync();
+
+                return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = true,
-                    Message = "Product Successfully Deleted",
-                    StatusCode = 204
+                    Message = "Product activated successfully",
+                    Data = new SingleProductResponseDTO
+                    {
+                        ID = product.ID,
+                        Sku = product.Sku,
+                        Name = product.Name,
+                        Description = product.Description,
+                        CategoryID = product.CategoryID,
+                        QuantityInStock = product.QuantityInStock,
+                        ReorderLevel = product.ReorderLevel,
+                        Price = product.Price,
+                        SupplierID = product.SupplierID,
+                        IsActive = product.IsActive
+                    },
+                    StatusCode = 200
                 };
             }
-            catch (Exception)
+            catch
             {
-                return new ApiResponse<Object>
+                return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
                     Message = "Internal Server Error",
@@ -613,5 +640,64 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
+        public async Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id)
+        {
+            try
+            {
+                var product = await _productRepo.GetProductAsync(id);
+                if(product == null)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Product Not Found",
+                        StatusCode = 404
+                    };
+                }
+
+                if (!product.IsActive)
+                {
+                    return new ApiResponse<SingleProductResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Product is already inactive",
+                        StatusCode = 400
+                    };
+                }
+
+                product.IsActive = false;
+                product.Updated = DateTime.UtcNow;
+                await _productRepo.SaveChangesAsync();
+
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = true,
+                    Message = "Product deactivated successfully",
+                    Data = new SingleProductResponseDTO
+                    {
+                        ID = product.ID,
+                        Sku = product.Sku,
+                        Name = product.Name,
+                        Description = product.Description,
+                        CategoryID = product.CategoryID,
+                        QuantityInStock = product.QuantityInStock,
+                        ReorderLevel = product.ReorderLevel,
+                        Price = product.Price,
+                        SupplierID = product.SupplierID,
+                        IsActive = product.IsActive
+                    },
+                    StatusCode = 200
+                };
+            }
+            catch
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Internal Server Error",
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }

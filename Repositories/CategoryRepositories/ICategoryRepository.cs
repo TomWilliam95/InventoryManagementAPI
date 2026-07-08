@@ -14,10 +14,10 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         // === PUT === \\
         Task<bool> UpdateCategoryAsync(int categoryId, Category category);
 
-        // === DELETE === \\
-        Task<bool> DeleteCategoryAsync(int categoryId);
-
         // === CHECK EXISTENCE === \\
         Task<bool> CategoryExistsAsync(int categoryId);
+
+        // === SAVE CHANGES === \\
+        Task SaveChangesAsync();
     }
 }

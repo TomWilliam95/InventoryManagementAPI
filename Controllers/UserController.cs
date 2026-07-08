@@ -162,18 +162,34 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === DELETE === \\
-        [Authorize]
-        [HttpDelete("{userId}")]
-        public async Task<ActionResult<object>> DeleteUser(int userId)
+        // === SET ACTIVE / INACTIVE === \\
+        [HttpPatch("Activate/{userId}")]
+        [Authorize(Roles = ("Admin"))]
+        public async Task<ActionResult<UserResponseDTO>> ActivateUser(int userId)
         {
-            var result = await _userService.DeleteUserAsync(userId);
-            return result.StatusCode switch
+            var user = await _userService.ActivateUserAsync(userId);
+            return user.StatusCode switch
             {
-                200 => Ok(result),
-                404 => NotFound(result),
-                500 => StatusCode(500, result),
-                _ => StatusCode(result.StatusCode, result)
+                200 => Ok(user),
+                400 => BadRequest(user),
+                404 => NotFound(user),
+                500 => StatusCode(500, user),
+                _ => StatusCode(user.StatusCode, user)
+            };
+        }
+
+        [HttpPatch("Deactivate/{userId}")]
+        [Authorize(Roles = ("Admin"))]
+        public async Task<ActionResult<UserResponseDTO>> DeactivateUser(int userId)
+        {
+            var user = await _userService.DeactivateUserAsync(userId);
+            return user.StatusCode switch
+            {
+                200 => Ok(user),
+                400 => BadRequest(user),
+                404 => NotFound(user),
+                500 => StatusCode(500, user),
+                _ => StatusCode(user.StatusCode, user)
             };
         }
     }

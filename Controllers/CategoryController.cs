@@ -78,18 +78,34 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === DELETE === \\
-        [HttpDelete("DeleteCategory/{id}")]
+        // === SET ACTIVE STATUS === \\
+        [HttpPut("ActivateCategory/{id}")]
         [Authorize(Policy = "AdminOrManager")]
-        public async Task<ActionResult> DeleteCategory(int id)
+        public async Task<ActionResult<SingleCategoryResponseDTO>> ActivateCategory(int id)
         {
-            var deletedCategory = await _categoryService.DeleteCategory(id);
-            return deletedCategory.StatusCode switch
+            var activatedCategory = await _categoryService.ActivateCategory(id);
+            return activatedCategory.StatusCode switch
             {
-                200 => Ok(deletedCategory.Message),
-                404 => NotFound(deletedCategory.Message),
-                500 => StatusCode(500, deletedCategory.Message),
-                _ => StatusCode(deletedCategory.StatusCode, deletedCategory)
+                200 => Ok(activatedCategory.Data),
+                400 => BadRequest(activatedCategory.Message),
+                404 => NotFound(activatedCategory.Message),
+                500 => StatusCode(500, activatedCategory.Message),
+                _ => StatusCode(activatedCategory.StatusCode, activatedCategory)
+            };
+        }
+
+        [HttpPut("DeactivateCategory/{id}")]
+        [Authorize(Policy = "AdminOrManager")]
+        public async Task<ActionResult<SingleCategoryResponseDTO>> DeactivateCategory(int id)
+        {
+            var deactivatedCategory = await _categoryService.DeactivateCategory(id);
+            return deactivatedCategory.StatusCode switch
+            {
+                200 => Ok(deactivatedCategory.Data),
+                400 => BadRequest(deactivatedCategory.Message),
+                404 => NotFound(deactivatedCategory.Message),
+                500 => StatusCode(500, deactivatedCategory.Message),
+                _ => StatusCode(deactivatedCategory.StatusCode, deactivatedCategory)
             };
         }
     }

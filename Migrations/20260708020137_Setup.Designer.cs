@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventoryManagementAPI.Migrations
 {
     [DbContext(typeof(InvManDBContext))]
-    [Migration("20260701223713_Initial")]
-    partial class Initial
+    [Migration("20260708020137_Setup")]
+    partial class Setup
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -59,29 +59,29 @@ namespace InventoryManagementAPI.Migrations
                         new
                         {
                             ID = 1,
-                            Created = new DateOnly(2026, 7, 2),
+                            Created = new DateOnly(2026, 7, 8),
                             Description = "Things that are cool",
                             IsActive = true,
                             Name = "CoolStuff",
-                            Updated = new DateOnly(2026, 7, 2)
+                            Updated = new DateOnly(2026, 7, 8)
                         },
                         new
                         {
                             ID = 2,
-                            Created = new DateOnly(2026, 7, 2),
+                            Created = new DateOnly(2026, 7, 8),
                             Description = "Things that are cooler",
                             IsActive = true,
                             Name = "CoolerStuff",
-                            Updated = new DateOnly(2026, 7, 2)
+                            Updated = new DateOnly(2026, 7, 8)
                         },
                         new
                         {
                             ID = 3,
-                            Created = new DateOnly(2026, 7, 2),
+                            Created = new DateOnly(2026, 7, 8),
                             Description = "Things that are coolest",
                             IsActive = true,
                             Name = "CoolestStuff",
-                            Updated = new DateOnly(2026, 7, 2)
+                            Updated = new DateOnly(2026, 7, 8)
                         });
                 });
 

@@ -15,7 +15,8 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         // === PUT === \\
         Task<ApiResponse<SingleCategoryResponseDTO>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto);
 
-        // === DELETE === \\
-        Task<ApiResponse<object>> DeleteCategory(int id);
+        // === SET ACTIVE STATUS === \\
+        Task<ApiResponse<SingleCategoryResponseDTO>> ActivateCategory(int id);
+        Task<ApiResponse<SingleCategoryResponseDTO>> DeactivateCategory(int id);
     }
 }

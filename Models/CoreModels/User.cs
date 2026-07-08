@@ -23,12 +23,12 @@ namespace InventoryManagementAPI.Models.CoreModels
         public string Password_Hash { get; set; }
 
         [EnumDataType(typeof(UserRoles))]
-        public UserRoles Role { get; set; }
+        public UserRoles Role { get; set; } = UserRoles.Staff;
 
         public DateTime LastLogin { get; set; }
         public DateTime LastUpdated { get; set; }
-        public DateOnly Created { get; set; }
-        public bool IsActive { get; set; }
+        public DateOnly Created { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+        public bool IsActive { get; set; } = true;
 
         public virtual ICollection<InventoryMovement>? InventoryMovements { get; set; }
     }

@@ -56,29 +56,29 @@ namespace InventoryManagementAPI.Migrations
                         new
                         {
                             ID = 1,
-                            Created = new DateOnly(2026, 7, 2),
+                            Created = new DateOnly(2026, 7, 8),
                             Description = "Things that are cool",
                             IsActive = true,
                             Name = "CoolStuff",
-                            Updated = new DateOnly(2026, 7, 2)
+                            Updated = new DateOnly(2026, 7, 8)
                         },
                         new
                         {
                             ID = 2,
-                            Created = new DateOnly(2026, 7, 2),
+                            Created = new DateOnly(2026, 7, 8),
                             Description = "Things that are cooler",
                             IsActive = true,
                             Name = "CoolerStuff",
-                            Updated = new DateOnly(2026, 7, 2)
+                            Updated = new DateOnly(2026, 7, 8)
                         },
                         new
                         {
                             ID = 3,
-                            Created = new DateOnly(2026, 7, 2),
+                            Created = new DateOnly(2026, 7, 8),
                             Description = "Things that are coolest",
                             IsActive = true,
                             Name = "CoolestStuff",
-                            Updated = new DateOnly(2026, 7, 2)
+                            Updated = new DateOnly(2026, 7, 8)
                         });
                 });
 

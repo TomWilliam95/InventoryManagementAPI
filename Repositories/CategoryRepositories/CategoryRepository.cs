@@ -38,30 +38,22 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
 
             updatingCategory.Name = category.Name;
             updatingCategory.Description = category.Description;
-            updatingCategory.IsActive = category.IsActive;
             updatingCategory.Updated = DateOnly.FromDateTime(DateTime.Now);
             
             await _context.SaveChangesAsync();
             return true;
         }
 
-
-        // === DELETE === \\
-        public async Task<bool> DeleteCategoryAsync(int categoryId)
-        {
-            var category = await _context.Categories.FindAsync(categoryId);
-            if (category == null) return false;
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-
         // === CHECK EXISTENCE === \\
         public async Task<bool> CategoryExistsAsync(int categoryId)
         {
             return await _context.Categories.AnyAsync(c => c.ID == categoryId);
+        }
+
+        // === SAVE CHANGES === \\
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

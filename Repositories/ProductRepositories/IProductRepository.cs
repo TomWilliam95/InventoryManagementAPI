@@ -17,9 +17,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositorys
         // === PUT === \\
         Task<bool> UpdateProductDetailsAsync(int id, Product product);
 
-        // === DELETE === \\
-        Task<bool> RemoveProductAsync(int id);
-
         // === CHECK EXISTENCE === \\
         Task<bool> ProductExistsAsync(int id);
 

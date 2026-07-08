@@ -76,18 +76,34 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === DELETE === \\
-        [HttpDelete("DeleteSupplier/{supplierId}")]
+        // === SET ACTIVE STATUS === \\
+        [HttpPut("ActivateSupplier/{supplierId}")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<SupplierResponseDTO>> DeleteSupplier(int supplierId)
+        public async Task<ActionResult<SupplierResponseDTO>> ActivateSupplier(int supplierId)
         {
-            var deletedSupplier = await _supplierService.DeleteSupplierAsync(supplierId);
-            return deletedSupplier.StatusCode switch
+            var activatedSupplier = await _supplierService.ActivateSupplierAsync(supplierId);
+            return activatedSupplier.StatusCode switch
             {
-                204 => Ok(deletedSupplier.Data),
-                404 => NotFound(deletedSupplier.Message),
-                500 => StatusCode(500, deletedSupplier.Message),
-                _ => StatusCode(500, deletedSupplier)
+                200 => Ok(activatedSupplier.Data),
+                400 => BadRequest(activatedSupplier.Message),
+                404 => NotFound(activatedSupplier.Message),
+                500 => StatusCode(500, activatedSupplier.Message),
+                _ => StatusCode(activatedSupplier.StatusCode, activatedSupplier)
+            };
+        }
+
+        [HttpPut("DeactivateSupplier/{supplierId}")]
+        [Authorize(Policy = ("AdminOrManager"))]
+        public async Task<ActionResult<SupplierResponseDTO>> DeactivateSupplier(int supplierId)
+        {
+            var deactivatedSupplier = await _supplierService.DeactivateSupplierAsync(supplierId);
+            return deactivatedSupplier.StatusCode switch
+            {
+                200 => Ok(deactivatedSupplier.Data),
+                400 => BadRequest(deactivatedSupplier.Message),
+                404 => NotFound(deactivatedSupplier.Message),
+                500 => StatusCode(500, deactivatedSupplier.Message),
+                _ => StatusCode(deactivatedSupplier.StatusCode, deactivatedSupplier)
             };
         }
     }

@@ -259,36 +259,109 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             }
         }
 
-
-        // === DELETE === \\
-        public async Task<ApiResponse<object>> DeleteSupplierAsync(int supplierId)
+        // === SET ACTIVE STATUS === \\
+        public async Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId)
         {
             try
             {
                 var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId);
-
                 if(supplier == null)
                 {
-                    return new ApiResponse<object>
+                    return new ApiResponse<SupplierResponseDTO>
                     {
                         Success = false,
-                        Message = "Cant find Supplier",
+                        Message = "Supplier not found",
                         StatusCode = 404
                     };
                 }
+                if (supplier.IsActive)
+                {
+                    return new ApiResponse<SupplierResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Supplier is already active",
+                        StatusCode = 400
+                    };
+                }
 
-                await _supplierRepository.DeleteSupplierAsync(supplier.ID);
+                supplier.IsActive = true;
+                supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
+                await _supplierRepository.SaveChangesAsync();
 
-                return new ApiResponse<object>
+                return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = true,
-                    Message = "Supplier Deleted",
-                    StatusCode = 204
+                    Message = "Supplier successfully activated",
+                    StatusCode = 200,
+                    Data = new SupplierResponseDTO
+                    {
+                        ID = supplier.ID,
+                        Name = supplier.Name,
+                        ContactName = supplier.ContactName,
+                        PhoneContact = supplier.PhoneContact,
+                        EmailContact = supplier.EmailContact,
+                        IsActive = supplier.IsActive
+                    }
                 };
             }
             catch
             {
-                return new ApiResponse<object>
+                return new ApiResponse<SupplierResponseDTO>
+                {
+                    Success = false,
+                    Message = "Internal Server Error",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId)
+        {
+            try
+            {
+                var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId);
+                if(supplier == null)
+                {
+                    return new ApiResponse<SupplierResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Supplier not found",
+                        StatusCode = 404
+                    };
+                }
+                if(supplier.IsActive == false)
+                {
+                    return new ApiResponse<SupplierResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Supplier is already inactive",
+                        StatusCode = 400
+                    };
+                }
+
+                supplier.IsActive = false;
+                supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
+                await _supplierRepository.SaveChangesAsync();
+
+                return new ApiResponse<SupplierResponseDTO>
+                {
+                    Success = true,
+                    Message = "Supplier successfully deactivated",
+                    StatusCode = 200,
+                    Data = new SupplierResponseDTO
+                    {
+                        ID = supplier.ID,
+                        Name = supplier.Name,
+                        ContactName = supplier.ContactName,
+                        PhoneContact = supplier.PhoneContact,
+                        EmailContact = supplier.EmailContact,
+                        IsActive = supplier.IsActive
+                    }
+                };
+            }
+            catch
+            {
+                return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = false,
                     Message = "Internal Server Error",

@@ -43,17 +43,6 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return user;
         }
 
-        // === DELETE === \\
-        public async Task<bool> DeleteUserAsync(int userId)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) return false;
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
         // === CHECK EXISTENCE === \\
         public async Task<bool> EmailExistsAsync(string email)
         {

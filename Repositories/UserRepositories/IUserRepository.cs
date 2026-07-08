@@ -14,9 +14,6 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         // === POST === \\
         Task<User> CreateUserAsync(User user);
 
-        // === DELETE === \\
-        Task<bool> DeleteUserAsync(int userId);
-
         // === CHECK EXISTENCE === \\
         Task<bool> UserExistsAsync(int userId);
         Task<bool> EmailExistsAsync(string email);

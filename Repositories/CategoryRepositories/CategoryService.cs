@@ -99,7 +99,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         // === POST === \\
         public async Task<ApiResponse<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto)
         {
-            if(dto == null)
+            if (dto == null)
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
@@ -108,7 +108,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 400,
                 };
             }
-            if(string.IsNullOrWhiteSpace(dto.Name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
@@ -143,7 +143,8 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 201,
                 };
             }
-            catch (Exception) { 
+            catch (Exception)
+            {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
@@ -174,7 +175,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 categoryToUpdate.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
 
                 var updatedCategory = await _categoryRepository.UpdateCategoryAsync(categoryToUpdate.ID, categoryToUpdate);
-                if(!updatedCategory)
+                if (!updatedCategory)
                 {
                     return new ApiResponse<SingleCategoryResponseDTO>
                     {
@@ -210,34 +211,108 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
         }
 
-        // === DELETE === \\
-        public async Task<ApiResponse<object>> DeleteCategory(int id)
+        // === SET ACTIVE STATUS === \\
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> ActivateCategory(int id)
         {
-            if (!await _categoryRepository.CategoryExistsAsync(id))
-            {
-                return new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Category not found.",
-                    StatusCode = 404,
-                };
-            }
             try
             {
-                await _categoryRepository.DeleteCategoryAsync(id);
-                return new ApiResponse<object>
+                var category = await _categoryRepository.GetCategoryByIdAsync(id);
+                if(category == null)
+                {
+                    return new ApiResponse<SingleCategoryResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Category not found.",
+                        StatusCode = 404,
+                    };
+                }
+                if (category.IsActive)
+                {
+                    return new ApiResponse<SingleCategoryResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Category is already active.",
+                        StatusCode = 400,
+                    };
+                }
+
+                category.IsActive = true;
+                category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
+                await _categoryRepository.SaveChangesAsync();
+
+                return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = true,
-                    Message = "Category deleted successfully.",
-                    StatusCode = 204,
+                    Message = "Category activated successfully.",
+                    Data = new SingleCategoryResponseDTO
+                    {
+                        ID = category.ID,
+                        Name = category.Name,
+                        Description = category.Description,
+                        IsActive = category.IsActive
+                    },
+                    StatusCode = 200,
                 };
             }
-            catch(Exception)
+            catch (Exception)
             {
-                return new ApiResponse<object>
+                return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
-                    Message = "An error occurred while deleting the category.",
+                    Message = "An error occurred while activating the category.",
+                    StatusCode = 500,
+                };
+            }
+        }
+
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> DeactivateCategory(int id)
+        {
+            try
+            {
+                var category = await _categoryRepository.GetCategoryByIdAsync(id);
+                if(category == null)
+                {
+                    return new ApiResponse<SingleCategoryResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Category not found.",
+                        StatusCode = 404,
+                    };
+                }
+                if (!category.IsActive)
+                {
+                    return new ApiResponse<SingleCategoryResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Category is already inactive.",
+                        StatusCode = 400,
+                    };
+                }
+
+                category.IsActive = false;
+                category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
+                await _categoryRepository.SaveChangesAsync();
+
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = true,
+                    Message = "Category deactivated successfully.",
+                    Data = new SingleCategoryResponseDTO
+                    {
+                        ID = category.ID,
+                        Name = category.Name,
+                        Description = category.Description,
+                        IsActive = category.IsActive
+                    },
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception)
+            {
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "An error occurred while deactivating the category.",
                     StatusCode = 500,
                 };
             }

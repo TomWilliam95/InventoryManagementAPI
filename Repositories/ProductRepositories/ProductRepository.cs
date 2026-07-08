@@ -22,9 +22,10 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
 
         public async Task<Product?> GetProductAsync(int id)
         {
-            return await _context.Products.Include(p => p.Category).
-                Include(p => p.Supplier).
-                FirstOrDefaultAsync(p => p.ID == id);
+            return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Supplier)
+                .FirstOrDefaultAsync(p => p.ID == id);
         }
         public async Task<IEnumerable<Product>> GetProductsByCategory(int categoryId)
         {
@@ -57,20 +58,8 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             updatedProduct.Description = product.Description;
             updatedProduct.CategoryID = product.CategoryID;
             updatedProduct.SupplierID = product.SupplierID;
-            updatedProduct.IsActive = product.IsActive;
             updatedProduct.Updated = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-            return true;
-        }
-        // === DELETE === \\
-        public async Task<bool> RemoveProductAsync(int id)
-        {
-            var product = await _context.Products.FindAsync(id);
-
-            if (product == null) return false;
-
-            _context.Products.Remove(product);
             await _context.SaveChangesAsync();
             return true;
         }

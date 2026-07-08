@@ -9,12 +9,12 @@ namespace InventoryManagementAPI.Models.DTO_s.ProductDTO_s
         public string Name { get; set; }
         public string Description { get; set; }
         public int CategoryID { get; set; }
-        public string CategoryName { get; set; } = string.Empty;
+        public string CategoryName { get; set; }
         public int QuantityInStock { get; set; }
         public int ReorderLevel { get; set; }
         public decimal Price { get; set; }
         public int SupplierID { get; set; }
-        public string SupplierName { get; set; } = string.Empty;
+        public string SupplierName { get; set; } 
         public bool IsActive { get; set; }
     }
 }

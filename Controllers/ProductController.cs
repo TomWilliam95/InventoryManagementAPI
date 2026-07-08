@@ -156,19 +156,34 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === DELETE === \\
-        [HttpDelete("DeleteProduct/{id}")]
+        // === SET ACTIVE/INACTIVE === \\
+        [HttpPatch("ActivateProduct/{id}")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<IActionResult> DeleteProduct(int id)
+        public async Task<ActionResult<SingleProductResponseDTO>> ActivateProduct(int id)
         {
-            var deletedProduct = await _productService.DeleteProduct(id);
-
-            return deletedProduct.StatusCode switch
+            var activatedProduct = await _productService.ActivateProduct(id);
+            return activatedProduct.StatusCode switch
             {
-                204 => Ok(deletedProduct.Data),
-                404 => NotFound(deletedProduct.Message),
-                500 => StatusCode(500, deletedProduct.Message),
-                _ => StatusCode(deletedProduct.StatusCode, deletedProduct)
+                200 => Ok(activatedProduct.Data),
+                400 => BadRequest(activatedProduct.Message),
+                404 => NotFound(activatedProduct.Message),
+                500 => StatusCode(500, activatedProduct.Message),
+                _ => StatusCode(activatedProduct.StatusCode, activatedProduct)
+            };
+        }
+
+        [HttpPatch("DeactivateProduct/{id}")]
+        [Authorize(Policy = ("AdminOrManager"))]
+        public async Task<ActionResult<SingleProductResponseDTO>> DeactivateProduct(int id)
+        {
+            var deactivatedProduct = await _productService.DeactivateProduct(id);
+            return deactivatedProduct.StatusCode switch
+            {
+                200 => Ok(deactivatedProduct.Data),
+                400 => BadRequest(deactivatedProduct.Message),
+                404 => NotFound(deactivatedProduct.Message),
+                500 => StatusCode(500, deactivatedProduct.Message),
+                _ => StatusCode(deactivatedProduct.StatusCode, deactivatedProduct)
             };
         }
     }

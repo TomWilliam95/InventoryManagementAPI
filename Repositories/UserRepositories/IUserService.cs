@@ -21,7 +21,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         Task<ApiResponse<UserResponseDTO>> UpdateUserPasswordAsync(int userId, UpdateUserPasswordRequestDTO passwordRequest, int currentUserId, string currentUserRole);
         Task<ApiResponse<UserResponseDTO>> UpdateUserRoleAsync(int userId, UpdateUserRoleRequestDTO roleRequest);
 
-        // === DELETE === \\
-        Task<ApiResponse<object>> DeleteUserAsync(int userId);
+        // === SET ACTIVE / INACTIVE === \\
+        Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId);
+        Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId);
     }
 }

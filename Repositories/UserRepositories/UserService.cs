@@ -449,6 +449,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 };
             }
 
+            // Validates that the new password and retype password match. If they do not match, it returns a 400 Bad Request response.
+            if (passwordRequest.NewPassword != passwordRequest.RetypePassword)
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "New password and retype password do not match.",
+                    StatusCode = 400
+                };
+            }
+
             //Checks Jwt Claims to see if either Admin or Corrosponding User
             if (currentUserRole != "Admin" && currentUserId != userId)
             {
@@ -571,40 +582,124 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        // === DELETE === \\
-        public async Task<ApiResponse<object>> DeleteUserAsync(int userId)
+        // === SET ACTIVE / INACTIVE === \\
+        public async Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId)
         {
             try
             {
                 var user = await _userRepository.GetUserByIdAsync(userId);
-                if (user == null)
+
+                if(user == null)
                 {
-                    return new ApiResponse<object>
+                    return new ApiResponse<UserResponseDTO>
                     {
                         Success = false,
-                        Message = "User not Found",
+                        Message = "User not found",
                         StatusCode = 404
                     };
                 }
 
-                await _userRepository.DeleteUserAsync(userId);
-                return new ApiResponse<object>
+                if(user.IsActive)
+                {
+                    return new ApiResponse<UserResponseDTO>
+                    {
+                        Success = false,
+                        Message = "User is already active",
+                        StatusCode = 400
+                    };
+                }
+
+                user.IsActive = true;
+                user.LastUpdated = DateTime.UtcNow;
+                await _userRepository.SaveChangesAsync();
+
+                return new ApiResponse<UserResponseDTO>
                 {
                     Success = true,
-                    Message = "User was Deleted",
-                    StatusCode = 204
+                    Message = "User activated successfully",
+                    Data = new UserResponseDTO
+                    {
+                        ID = user.ID,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        Role = user.Role,
+                        LastLogin = user.LastLogin,
+                        LastUpdated = user.LastUpdated,
+                        Created = user.Created,
+                        IsActive = user.IsActive
+                    },
+                    StatusCode = 200
                 };
             }
             catch
             {
-                return new ApiResponse<object>
+                return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal server error",
                     StatusCode = 500
                 };
             }
         }
+
+        public async Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if(user == null)
+                {
+                    return new ApiResponse<UserResponseDTO>
+                    {
+                        Success = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+                if(!user.IsActive)
+                {
+                    return new ApiResponse<UserResponseDTO>
+                    {
+                        Success = false,
+                        Message = "User is already inactive",
+                        StatusCode = 400
+                    };
+                }
+
+                user.IsActive = false;
+                user.LastUpdated = DateTime.UtcNow;
+                await _userRepository.SaveChangesAsync();
+
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = true,
+                    Message = "User deactivated successfully",
+                    Data = new UserResponseDTO
+                    {
+                        ID = user.ID,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        Role = user.Role,
+                        LastLogin = user.LastLogin,
+                        LastUpdated = user.LastUpdated,
+                        Created = user.Created,
+                        IsActive = user.IsActive
+                    },
+                    StatusCode = 200
+                };
+            }
+            catch
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "Internal server error",
+                    StatusCode = 500
+                };
+            }
+        }
+
+
 
         // === HELPER METHODS === \\
         private async Task<(User? User, ApiResponse<UserResponseDTO>? Error)> GetUserByIdWithResponseAsync(int userId)

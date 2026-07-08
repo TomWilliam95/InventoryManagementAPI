@@ -31,7 +31,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             await _context.Suppliers.AddAsync(supplier);
             await _context.SaveChangesAsync();
             return supplier;
-    }
+        }
 
         // === PUT === \\
         public async Task UpdateSupplierAsync(Supplier updatedSupplierData)
@@ -45,28 +45,23 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             supplierUpdating.PhoneContact = updatedSupplierData.PhoneContact;
             supplierUpdating.EmailContact = updatedSupplierData.EmailContact;
             supplierUpdating.Address = updatedSupplierData.Address;
-            supplierUpdating.IsActive = updatedSupplierData.IsActive;
             supplierUpdating.LastUpdated = DateOnly.FromDateTime(DateTime.Now);
             await _context.SaveChangesAsync();
         }
 
-
-        // === DELETE === \\
-        public async Task DeleteSupplierAsync(int supplierId)
-        {
-            var supplier = await _context.Suppliers.FindAsync(supplierId);
-
-            if (supplier == null) return;
-
-            _context.Suppliers.Remove(supplier);
-            await _context.SaveChangesAsync();
-        }
+        // === CHECK EXISTENCE === \\
 
         public async Task<bool> SupplierExistsAsync(int supplierId)
         {
             var supplier = await _context.Suppliers.FindAsync(supplierId);
             if (supplier == null) return false;
             return true;
+        }
+
+        // === SAVE CHANGES === \\
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }
