@@ -54,7 +54,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<IEnumerable<UserResponseDTO>>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to load users.",
                     StatusCode = 500,
                 };
             }
@@ -97,7 +97,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to load user by email.",
                     StatusCode = 500
                 };
             }
@@ -141,7 +141,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to load user.",
                     StatusCode = 500
                 };
             }
@@ -196,7 +196,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<IEnumerable<UserResponseDTO>>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to load users by role.",
                     StatusCode = 500
                 };
             }
@@ -299,7 +299,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to create user.",
                     StatusCode = 500
                 };
             }
@@ -370,7 +370,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to update user email.",
                     StatusCode = 500
                 };
             }
@@ -439,7 +439,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to update username.",
                     StatusCode = 500
                 };
             }
@@ -531,7 +531,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to update user password.",
                     StatusCode = 500
                 };  
             }
@@ -587,7 +587,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to update user role.",
                     StatusCode = 500
                 };
             }
@@ -598,6 +598,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             try
             {
+                // Retrieve the user before attempting to activate them
                 var user = await _userRepository.GetUserByIdAsync(userId);
 
                 if(user == null)
@@ -610,6 +611,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     };
                 }
 
+                // Return a bad request response if the user is already active
                 if(user.IsActive)
                 {
                     return new ApiResponse<UserResponseDTO>
@@ -620,10 +622,12 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     };
                 }
 
+                // Set the user active and update the timestamp
                 user.IsActive = true;
                 user.LastUpdated = DateTime.UtcNow;
                 await _userRepository.SaveChangesAsync();
 
+                // Return the activated user details
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = true,
@@ -647,7 +651,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to activate user.",
                     StatusCode = 500
                 };
             }
@@ -657,6 +661,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             try
             {
+                // Retrieve the user before attempting to deactivate them
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if(user == null)
                 {
@@ -667,6 +672,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                         StatusCode = 404
                     };
                 }
+                // Return a bad request response if the user is already inactive
                 if(!user.IsActive)
                 {
                     return new ApiResponse<UserResponseDTO>
@@ -677,10 +683,12 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                     };
                 }
 
+                // Set the user inactive and update the timestamp
                 user.IsActive = false;
                 user.LastUpdated = DateTime.UtcNow;
                 await _userRepository.SaveChangesAsync();
 
+                // Return the deactivated user details
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = true,
@@ -704,7 +712,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 return new ApiResponse<UserResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to deactivate user.",
                     StatusCode = 500
                 };
             }
@@ -715,6 +723,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         // === HELPER METHODS === \\
         private async Task<(User? User, ApiResponse<UserResponseDTO>? Error)> GetUserByIdWithResponseAsync(int userId)
         {
+            // Retrieve the user and return a reusable not found response when missing
             var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null)
             {

@@ -54,10 +54,19 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return await _context.Users.AnyAsync(u => u.ID == userId);
         }
 
+        // === CHECK ACTIVE STATUS === \\
+        public async Task<bool> IsUserActiveAsync(int userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            return user?.IsActive == true;
+        }
+
         // === SAVE CHANGES === \\
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
         }
+
+        
     }
 }

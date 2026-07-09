@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+#codex
+.codex-build/
+
 # User-specific files
 *.rsuser
 *.suo

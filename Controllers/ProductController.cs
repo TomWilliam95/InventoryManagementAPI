@@ -48,6 +48,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(products.StatusCode, products);
         }
 
+
         // === POST === \\
         [HttpPost("AddProduct")]
         [Authorize(Policy =("AdminOrManager"))]
@@ -57,10 +58,11 @@ namespace InventoryManagementAPI.Controllers
 
             return addedProduct.StatusCode switch
             {
-                201 => CreatedAtAction(nameof(GetProduct), new { id = addedProduct.Data.ID }, addedProduct),
+                201 when addedProduct.Data is not null => CreatedAtAction(nameof(GetProduct), new { id = addedProduct.Data.ID }, addedProduct),
                 _ => StatusCode(addedProduct.StatusCode, addedProduct)
             };
         }
+
 
         // === PUT === \\
         [HttpPut("UpdateProduct/{id}")]
@@ -72,6 +74,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
   
+
         // === PATCH === \\
         [HttpPatch("UpdatePrice/{id}")]
         [Authorize(Policy = ("AdminOrManager"))]
@@ -95,6 +98,8 @@ namespace InventoryManagementAPI.Controllers
             var updatedReOrderProduct = await _productService.UpdateProductReorderLevel(id, dto);
             return StatusCode(updatedReOrderProduct.StatusCode, updatedReOrderProduct);
         }
+
+
 
         // === SET ACTIVE/INACTIVE === \\
         [HttpPatch("ActivateProduct/{id}")]

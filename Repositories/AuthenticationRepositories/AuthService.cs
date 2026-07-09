@@ -41,8 +41,7 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
             }            
             try
             {
-                // Validates the provided email and password for null or empty values.
-                // If either is invalid, it returns a 400 Bad Request response.
+                // Retrieve the user by email before validating credentials
                 var user = await _userRepository.GetUserByEmailAsync(loginRequestDTO.Email);
                 if (user == null)
                 {
@@ -54,6 +53,7 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
                     };
                 }
 
+                // Reject inactive users without revealing account state
                 if (!user.IsActive)
                 {
                     return new ApiResponse<LoginResponseDTO>
@@ -90,12 +90,13 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
                     StatusCode = 200
                 };
             }
+            // Handle any exceptions that may occur while authenticating the user
             catch
             {
                 return new ApiResponse<LoginResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal server error",
+                    Message = "Internal error occurred, failed to authenticate user.",
                     StatusCode = 500
                 };
             }

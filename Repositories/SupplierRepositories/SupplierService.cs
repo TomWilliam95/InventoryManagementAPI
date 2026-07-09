@@ -17,8 +17,10 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         {
             try
             {
+                // Retrieve all suppliers from the repository
                 var supplierList = await _supplierRepository.GetAllSuppliersAsync();
 
+                // Return not found if no suppliers exist
                 if (supplierList == null || !supplierList.Any())
                 {
                     return new ApiResponse<IEnumerable<SupplierResponseDTO>>
@@ -28,6 +30,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                         StatusCode = 404
                     };
                 }
+                // Build the response DTO list from the supplier entities
                 List<SupplierResponseDTO> supplierDtoList = new List<SupplierResponseDTO>();
 
                 foreach(var supplier in supplierList)
@@ -43,6 +46,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     };
                     supplierDtoList.Add(supplierDto);
                 }
+                // Return the supplier list in the ApiResponse
                 return new ApiResponse<IEnumerable<SupplierResponseDTO>>
                 {
                     Success = true,
@@ -51,18 +55,20 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 200
                 };
             }
+            // Handle any exceptions that may occur while retrieving suppliers
             catch
             {
                 return new ApiResponse<IEnumerable<SupplierResponseDTO>>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to load suppliers.",
                     StatusCode = 500
                 };
             }
         }
         public async Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(int supplierId)
         {
+            // Validate the supplier ID before querying the repository
             if(supplierId <= 0)
             {
                 return new ApiResponse<SupplierResponseDTO>
@@ -74,6 +80,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             }
             try
             {
+                // Retrieve the supplier by ID
                 var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId);
                 if(supplier == null)
                 {
@@ -85,6 +92,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     };
                 }
 
+                // Map the supplier entity to the response DTO
                 var supplierResponse = new SupplierResponseDTO
                 {
                     ID = supplier.ID,
@@ -95,6 +103,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     IsActive = supplier.IsActive
                 };
 
+                // Return the supplier details in the ApiResponse
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = true,
@@ -103,12 +112,13 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 200
                 };
             }
+            // Handle any exceptions that may occur while retrieving the supplier
             catch
             {
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to load supplier.",
                     StatusCode = 500
                 };
             }
@@ -118,6 +128,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         // === POST === \\
         public async Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(CreateSupplierRequestDTO supplier)
         {
+            // Validate that the request body was supplied
             if(supplier == null)
             {
                 return new ApiResponse<SupplierResponseDTO>
@@ -127,6 +138,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 400
                 };
             }
+            // Validate required supplier name
             if (String.IsNullOrEmpty(supplier.Name))
             {
                 return new ApiResponse<SupplierResponseDTO>
@@ -136,6 +148,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 400
                 };
             }
+            // Validate required contact name
             if(string.IsNullOrEmpty(supplier.ContactName))
             {
                 return new ApiResponse<SupplierResponseDTO>
@@ -145,6 +158,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 400
                 };
             }
+            // Validate basic supplier email format
             if(!supplier.EmailContact.Contains("@") || !supplier.EmailContact.Contains("."))
             {
                 return new ApiResponse<SupplierResponseDTO>
@@ -154,7 +168,8 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 400
                 };
             }
-            if(supplier.PhoneContact.Length > 5 || supplier.PhoneContact.Length > 20 || string.IsNullOrEmpty(supplier.PhoneContact))
+            // Validate supplier phone length and required value
+            if(string.IsNullOrEmpty(supplier.PhoneContact) || supplier.PhoneContact.Length < 4 || supplier.PhoneContact.Length > 20)
             {
                 return new ApiResponse<SupplierResponseDTO>
                 {
@@ -164,6 +179,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 };
             }
 
+            // Create the supplier entity from the request DTO
             var newSupplier = new Supplier
             {
                 Name = supplier.Name,
@@ -178,7 +194,9 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 
             try
             {
+                // Save the supplier to the repository
                 var createdSupplier = await _supplierRepository.CreateSupplierAsync(newSupplier);
+                // Build the response DTO from the created supplier
                 var supplierResponse = new SupplierResponseDTO
                 {
                     ID = createdSupplier.ID,
@@ -187,6 +205,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     PhoneContact = createdSupplier.PhoneContact,
                     EmailContact = createdSupplier.EmailContact,
                 };
+                // Return the created supplier response
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = true,
@@ -195,12 +214,13 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 201
                 };
             }
+            // Handle any exceptions that may occur while creating the supplier
             catch
             {
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to create supplier.",
                     StatusCode = 500
                 };
             }
@@ -212,6 +232,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         {
             try
             {
+                // Retrieve the supplier before applying updates
                 var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId);
                 if(supplier == null)
                 {
@@ -223,6 +244,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     };
                 }
                 
+                // Apply the update DTO values to the supplier entity
                 supplier.Name = updatedSupplier.Name;
                 supplier.ContactName = updatedSupplier.ContactName;
                 supplier.PhoneContact = updatedSupplier.PhoneContact;
@@ -230,8 +252,10 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 supplier.IsActive = updatedSupplier.IsActive;
                 supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
 
+                // Save the updated supplier through the repository
                 await _supplierRepository.UpdateSupplierAsync(supplier);
 
+                // Build the response DTO from the updated supplier
                 var supplierResponse = new SupplierResponseDTO
                 {
                     Name = supplier.Name,
@@ -241,6 +265,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     IsActive = supplier.IsActive,
                 };
 
+                // Return the updated supplier details
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = true,
@@ -249,12 +274,13 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     StatusCode = 200
                 };
             }
+            // Handle any exceptions that may occur while updating the supplier
             catch
             {
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to update supplier.",
                     StatusCode = 500
                 };
             }
@@ -265,6 +291,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         {
             try
             {
+                // Retrieve the supplier before attempting to activate it
                 var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId);
                 if(supplier == null)
                 {
@@ -275,6 +302,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                         StatusCode = 404
                     };
                 }
+                // Return a bad request response if the supplier is already active
                 if (supplier.IsActive)
                 {
                     return new ApiResponse<SupplierResponseDTO>
@@ -285,10 +313,12 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     };
                 }
 
+                // Set the supplier active and update the timestamp
                 supplier.IsActive = true;
                 supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
                 await _supplierRepository.SaveChangesAsync();
 
+                // Return the activated supplier details
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = true,
@@ -305,12 +335,13 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     }
                 };
             }
+            // Handle any exceptions that may occur while activating the supplier
             catch
             {
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to activate supplier.",
                     StatusCode = 500
                 };
             }
@@ -320,6 +351,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         {
             try
             {
+                // Retrieve the supplier before attempting to deactivate it
                 var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId);
                 if(supplier == null)
                 {
@@ -330,6 +362,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                         StatusCode = 404
                     };
                 }
+                // Return a bad request response if the supplier is already inactive
                 if(supplier.IsActive == false)
                 {
                     return new ApiResponse<SupplierResponseDTO>
@@ -340,10 +373,12 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     };
                 }
 
+                // Set the supplier inactive and update the timestamp
                 supplier.IsActive = false;
                 supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
                 await _supplierRepository.SaveChangesAsync();
 
+                // Return the deactivated supplier details
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = true,
@@ -360,12 +395,13 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     }
                 };
             }
+            // Handle any exceptions that may occur while deactivating the supplier
             catch
             {
                 return new ApiResponse<SupplierResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal Server Error",
+                    Message = "Internal error occurred, failed to deactivate supplier.",
                     StatusCode = 500
                 };
             }

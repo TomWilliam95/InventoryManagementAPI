@@ -60,7 +60,7 @@ namespace InventoryManagementAPI.Controllers
             var user = await _userService.CreateUserAsync(newUser);
             return user.StatusCode switch
             {
-                201 => CreatedAtAction(nameof(GetSingleUser), new { id = user.Data.ID }, user),
+                201 when user.Data is not null => CreatedAtAction(nameof(GetSingleUser), new { id = user.Data.ID }, user),
                 _ => StatusCode(user.StatusCode, user)
             };
         }

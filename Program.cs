@@ -149,57 +149,60 @@ namespace InventoryManagementAPI
 
             var app = builder.Build();
 
-            // Create a scope to access the database context and check for test users
-            // If they don't exist, create them
-            using (var scope = app.Services.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetRequiredService<InvManDBContext>();
-
-                var testAdmin = context.Users.FirstOrDefault(u => u.Email == "TestAdmin@email.com");
-                var testManager = context.Users.FirstOrDefault(u => u.Email == "TestManager@email.com");
-                var testStaff = context.Users.FirstOrDefault(u => u.Email == "TestStaff@email.com");
-
-                if(testAdmin == null)
-                {
-                    var newUser = new User
-                    {
-                        UserName = "TestAdmin",
-                        Email = "TestAdmin@email.com",
-                        Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestAdmin"),
-                        Role = Models.Enums.UserRoles.Admin,
-                    };
-                    context.Users.Add(newUser);
-                    context.SaveChanges();
-                }
-                if (testManager == null)
-                {
-                    var newUser = new User
-                    {
-                        UserName = "TestManager",
-                        Email = "TestManager@email.com",
-                        Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestManager"),
-                        Role = Models.Enums.UserRoles.Admin,
-                    };
-                    context.Users.Add(newUser);
-                    context.SaveChanges();
-                }
-                if (testStaff == null)
-                {
-                    var newUser = new User
-                    {
-                        UserName = "TestStaff",
-                        Email = "TestStaff@email.com",
-                        Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestStaff"),
-                        Role = Models.Enums.UserRoles.Admin,
-                    };
-                    context.Users.Add(newUser);
-                    context.SaveChanges();
-                }
-            }
-
+           
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
+                // Create a scope to access the database context and check for test users
+                // If they don't exist, create them
+                using (var scope = app.Services.CreateScope())
+                {
+                    var context = scope.ServiceProvider.GetRequiredService<InvManDBContext>();
+
+                    var testAdmin = context.Users.FirstOrDefault(u => u.Email == "TestAdmin@email.com");
+                    var testManager = context.Users.FirstOrDefault(u => u.Email == "TestManager@email.com");
+                    var testStaff = context.Users.FirstOrDefault(u => u.Email == "TestStaff@email.com");
+
+                    if (testAdmin == null)
+                    {
+                        var newUser = new User
+                        {
+                            UserName = "TestAdmin",
+                            Email = "TestAdmin@email.com",
+                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestAdmin"),
+                            Role = Models.Enums.UserRoles.Admin,
+                        };
+                        context.Users.Add(newUser);
+                        context.SaveChanges();
+                    }
+                    if (testManager == null)
+                    {
+                        var newUser = new User
+                        {
+                            UserName = "TestManager",
+                            Email = "TestManager@email.com",
+                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestManager"),
+                            Role = Models.Enums.UserRoles.Manager,
+                        };
+                        context.Users.Add(newUser);
+                        context.SaveChanges();
+                    }
+                    if (testStaff == null)
+                    {
+                        var newUser = new User
+                        {
+                            UserName = "TestStaff",
+                            Email = "TestStaff@email.com",
+                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestStaff"),
+                            Role = Models.Enums.UserRoles.Staff,
+                        };
+                        context.Users.Add(newUser);
+                        context.SaveChanges();
+                    }
+                }
+
+
+
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }

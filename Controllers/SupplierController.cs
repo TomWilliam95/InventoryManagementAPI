@@ -40,7 +40,7 @@ namespace InventoryManagementAPI.Controllers
             var createdSupplier = await _supplierService.CreateSupplierAsync(supplierDTO);
             return createdSupplier.StatusCode switch
             {
-                201 => CreatedAtAction(nameof(GetSingleSupplier), new { id = createdSupplier.Data.ID }, createdSupplier),
+                201 when createdSupplier.Data is not null => CreatedAtAction(nameof(GetSingleSupplier), new { id = createdSupplier.Data.ID }, createdSupplier),
                 _ => StatusCode(createdSupplier.StatusCode, createdSupplier)
             };
         }

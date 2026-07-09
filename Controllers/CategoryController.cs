@@ -2,7 +2,6 @@
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using Microsoft.AspNetCore.Authorization;
 using InventoryManagementAPI.Models.CoreModels;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagementAPI.Controllers

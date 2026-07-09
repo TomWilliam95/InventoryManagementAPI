@@ -76,6 +76,31 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             return await _context.Products.AnyAsync(p => p.ID == id);
         }
 
+        public async Task<bool> UpdateProductNameExistsAsync(int id, string name)
+        {
+            return await _context.Products.AnyAsync(p => p.Name == name && p.ID != id);
+        }
+        public async Task<bool> AddProductNameExistsAsync(string name)
+        {
+            return await _context.Products.AnyAsync(p => p.Name == name);
+        }
+
+        public async Task<bool> UpdateProductSkuExistsAsync(int id, string sku)
+        {
+            return await _context.Products.AnyAsync(p => p.Sku == sku && p.ID != id);
+        }
+        public async Task<bool> AddProductSkuExistsAsync(string sku)
+        {
+            return await _context.Products.AnyAsync(p => p.Sku == sku);
+        }
+
+        // === CHECK ACTIVE STATUS === \\
+        public async Task<bool> IsProductActiveAsync(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            return product?.IsActive == true;
+        }
+
         // === Save Changes === \\
         public async Task SaveChangesAsync()
         {

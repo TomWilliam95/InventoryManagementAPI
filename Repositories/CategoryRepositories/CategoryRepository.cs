@@ -17,7 +17,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         {
             return await _context.Categories.FindAsync(categoryId);
         }
-        public async Task<IEnumerable<Category>?> GetAllCategoriesAsync()
+        public async Task<IEnumerable<Category>> GetAllCategoriesAsync()
         {
             return await _context.Categories.ToListAsync();
         }
@@ -49,7 +49,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             return await _context.Categories.AnyAsync(c => c.ID == categoryId);
         }
 
-        public async Task<bool> CategoryNameExistsAsync(string categoryName)
+        public async Task<bool> UpdateCategoryNameExistsAsync(int categoryId, string categoryName)
+        {
+            return await _context.Categories.AnyAsync(c => c.Name == categoryName && c.ID != categoryId);
+        }
+        public async Task<bool> AddCategoryNameExistsASync(string categoryName)
         {
             return await _context.Categories.AnyAsync(c => c.Name == categoryName);
         }

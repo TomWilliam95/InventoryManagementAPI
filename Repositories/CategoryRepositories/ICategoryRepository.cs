@@ -5,7 +5,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
     public interface ICategoryRepository
     {
         // === GET === \\
-        Task<IEnumerable<Category>?> GetAllCategoriesAsync();
+        Task<IEnumerable<Category>> GetAllCategoriesAsync();
         Task<Category?> GetCategoryByIdAsync(int categoryId);
 
         // === POST === \\
@@ -16,7 +16,8 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
 
         // === CHECK EXISTENCE === \\
         Task<bool> CategoryExistsAsync(int categoryId);
-        Task<bool> CategoryNameExistsAsync(string categoryName);
+        Task<bool> UpdateCategoryNameExistsAsync(int categoryId, string categoryName);
+        Task<bool> AddCategoryNameExistsASync(string categoryName);
 
         // === SAVE CHANGES === \\
         Task SaveChangesAsync();

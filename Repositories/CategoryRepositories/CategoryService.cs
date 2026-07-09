@@ -47,13 +47,13 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 200,
                 };
             }
-            // Handle any exceptions that may occur during the process and return an error response
+            // Handle any exceptions that may occur while retrieving categories
             catch
             {
                 return new ApiResponse<IEnumerable<BulkCategoryResponseDTO>>
                 {
                     Success = false,
-                    Message = "An error occurred while retrieving categories.",
+                    Message = "Internal error occurred, failed to load categories.",
                     StatusCode = 500,
                 };
             }
@@ -92,13 +92,13 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 200,
                 };
             }
-            // Handle any exceptions that may occur during the process and return an error response
+            // Handle any exceptions that may occur while retrieving the category
             catch
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
-                    Message = "An error occurred while retrieving the category.",
+                    Message = "Internal error occurred, failed to load category.",
                     StatusCode = 500,
                 };
             }
@@ -131,7 +131,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             try
             {
                 // Validate if a category with the same name already exists
-                if (await _categoryRepository.CategoryNameExistsAsync(dto.Name))
+                if (await _categoryRepository.AddCategoryNameExistsASync(dto.Name))
                 {
                     return new ApiResponse<SingleCategoryResponseDTO>
                     {
@@ -169,13 +169,13 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 201,
                 };
             }
-            // Handle any exceptions that may occur during the process and return an error response
+            // Handle any exceptions that may occur while creating the category
             catch
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
-                    Message = "An error occurred while adding the category.",
+                    Message = "Internal error occurred, failed to create category.",
                     StatusCode = 500,
                 };
             }
@@ -211,7 +211,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 }
 
                 // Validate if a category with the same name already exists 
-                if (await _categoryRepository.CategoryNameExistsAsync(dto.Name) || string.Equals(category.Name,dto.Name))
+                if (await _categoryRepository.UpdateCategoryNameExistsAsync(id, dto.Name))
                 {
                     return new ApiResponse<SingleCategoryResponseDTO>
                     {
@@ -244,13 +244,13 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 200,
                 };
             }
-            // Handle any exceptions that may occur during the process and return an error response
+            // Handle any exceptions that may occur while updating the category
             catch
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
-                    Message = "An error occurred while updating the category.",
+                    Message = "Internal error occurred, failed to update category.",
                     StatusCode = 500,
                 };
             }
@@ -306,13 +306,13 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 200,
                 };
             }
-            // Handle any exceptions that may occur during the process and return an error response
+            // Handle any exceptions that may occur while activating the category
             catch
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
-                    Message = "An error occurred while activating the category.",
+                    Message = "Internal error occurred, failed to activate category.",
                     StatusCode = 500,
                 };
             }
@@ -367,13 +367,13 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     StatusCode = 200,
                 };
             }
-            // Handle any exceptions that may occur during the process and return an error response
+            // Handle any exceptions that may occur while deactivating the category
             catch
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
-                    Message = "An error occurred while deactivating the category.",
+                    Message = "Internal error occurred, failed to deactivate category.",
                     StatusCode = 500,
                 };
             }

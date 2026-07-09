@@ -18,6 +18,9 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         Task<bool> UserExistsAsync(int userId);
         Task<bool> EmailExistsAsync(string email);
 
+        // === CHECK ACTIVE STATUS === \\
+        Task<bool> IsUserActiveAsync(int userId);
+
         // === SAVE CHANGES === \\
         Task SaveChangesAsync();
     }

@@ -19,6 +19,13 @@ namespace InventoryManagementAPI.Repositories.ProductRepositorys
 
         // === CHECK EXISTENCE === \\
         Task<bool> ProductExistsAsync(int id);
+        Task<bool> UpdateProductNameExistsAsync(int id, string name);
+        Task<bool> AddProductNameExistsAsync(string name);
+        Task<bool> UpdateProductSkuExistsAsync(int id, string sku);
+        Task<bool> AddProductSkuExistsAsync(string sku);
+
+        // === CHECK ACTIVE STATUS === \\
+        Task<bool> IsProductActiveAsync(int id);
 
         // === Save Changes === \\
         Task SaveChangesAsync();

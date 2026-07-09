@@ -98,7 +98,8 @@ namespace InventoryManagementAPI.Controllers
 
             return result.StatusCode switch
             {
-                201 => CreatedAtAction(nameof(GetMovementById), new { id = result.Data!.ID }, result),
+                201 when result.Data is not null  => 
+                CreatedAtAction(nameof(GetMovementById), new { id = result.Data.ID }, result),
                 _ => StatusCode(result.StatusCode, result)
             };
         }
