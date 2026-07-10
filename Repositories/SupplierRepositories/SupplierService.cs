@@ -104,7 +104,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             }
 
             // Validate the supplier DTO for required fields and correct formats
-            var validationResult = ValidateDtoFields(supplier.Name, supplier.ContactName, supplier.EmailContact, supplier.PhoneContact);
+            var validationResult = ValidateDtoFields(supplier.Name, supplier.ContactName, supplier.EmailContact, supplier.PhoneContact, supplier.Address);
             if (validationResult != null)
             {
                 // Return the validation error response if any required fields are missing or incorrectly formatted
@@ -156,7 +156,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             }
 
             // Validate the supplier DTO for required fields and correct formats
-            var validationResult = ValidateDtoFields(updateSupplierDTO.Name, updateSupplierDTO.ContactName, updateSupplierDTO.EmailContact, updateSupplierDTO.PhoneContact);
+            var validationResult = ValidateDtoFields(updateSupplierDTO.Name, updateSupplierDTO.ContactName, updateSupplierDTO.EmailContact, updateSupplierDTO.PhoneContact, updateSupplierDTO.Address);
             if (validationResult != null)
             {
                 // Return the validation error response if any required fields are missing or incorrectly formatted
@@ -385,10 +385,11 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         /// <param name="contactName"></param>
         /// <param name="emailContact"></param>
         /// <param name="phoneContact"></param>
+        /// <param name="address"></param>
         /// <returns>
         /// Returns an ApiResponse with validation errors if any, or null if validation passes.
         /// </returns>
-        private static ApiResponse<SupplierResponseDTO>? ValidateDtoFields(string name, string contactName, string emailContact, string phoneContact)
+        private static ApiResponse<SupplierResponseDTO>? ValidateDtoFields(string name, string contactName, string emailContact, string phoneContact, string address)
         {
             // Validate required supplier name
             if (string.IsNullOrWhiteSpace(name))
@@ -427,6 +428,16 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 {
                     Success = false,
                     Message = "Provide a correct supplier phone",
+                    StatusCode = 400
+                };
+            }
+            // Validate required supplier address
+            if (string.IsNullOrWhiteSpace(address))
+            {
+                return new ApiResponse<SupplierResponseDTO>
+                {
+                    Success = false,
+                    Message = "Provide a supplier address",
                     StatusCode = 400
                 };
             }
