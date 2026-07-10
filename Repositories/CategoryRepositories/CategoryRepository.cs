@@ -31,15 +31,10 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === PUT === \\
-        public async Task UpdateCategoryAsync(int categoryId, Category category)
+        public async Task UpdateCategoryAsync(Category category)
         {
-            var updatingCategory = await _context.Categories.FindAsync(categoryId);
-            if (updatingCategory == null) return;
+            _context.Suppliers.Update(category);
 
-            updatingCategory.Name = category.Name;
-            updatingCategory.Description = category.Description;
-            updatingCategory.Updated = DateOnly.FromDateTime(DateTime.Now);
-            
             await _context.SaveChangesAsync();
         }
 
@@ -49,11 +44,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             return await _context.Categories.AnyAsync(c => c.ID == categoryId);
         }
 
-        public async Task<bool> UpdateCategoryNameExistsAsync(int categoryId, string categoryName)
+        public async Task<bool> OtherCategoryNameExistsAsync(int categoryId, string categoryName)
         {
             return await _context.Categories.AnyAsync(c => c.Name == categoryName && c.ID != categoryId);
         }
-        public async Task<bool> AddCategoryNameExistsASync(string categoryName)
+        public async Task<bool> CategoryNameExistsASync(string categoryName)
         {
             return await _context.Categories.AnyAsync(c => c.Name == categoryName);
         }

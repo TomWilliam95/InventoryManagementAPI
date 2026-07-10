@@ -644,7 +644,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 return new ApiResponse<InventoryMovementResponseDTO>
                 {
                     Success = false,
-                    Message = "Reason for adjustment is required.",
+                    Message = "Reason for movement is required.",
                     StatusCode = 400
                 };
             }

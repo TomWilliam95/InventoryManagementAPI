@@ -63,44 +63,20 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         {
             try
             {
-                // Retrieve the category by ID from the repository
-                var category = await _categoryRepository.GetCategoryByIdAsync(categoryId);
-
-                // Validate the categoryId
-                if (category == null)
+                // Use the helper method to find the category by ID and handle any errors
+                var findCategoryResult = await FindCategoryById(categoryId);
+                if (findCategoryResult.Category == null)
                 {
-                    return new ApiResponse<SingleCategoryResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category not found.",
-                        StatusCode = 404,
-                    };
+                    // If the category is not found, return the error response from the helper method
+                    return findCategoryResult.Error!;
                 }
 
                 // Return the category details in the response DTO
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = true,
-                    Message = "Category retrieved successfully.",
-                    Data = new SingleCategoryResponseDTO
-                    {
-                        ID = category.ID,
-                        Name = category.Name,
-                        Description = category.Description,
-                        IsActive = category.IsActive
-                    },
-                    StatusCode = 200,
-                };
+                return BuildDtoResponse(findCategoryResult.Category, "Category retrieved successfully.", 200);
             }
-            // Handle any exceptions that may occur while retrieving the category
             catch
             {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load category.",
-                    StatusCode = 500,
-                };
+                return BuildCatchErrorResponse("Internal error occurred, failed to load category.");
             }
         }
 
@@ -108,37 +84,20 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         public async Task<ApiResponse<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto)
         {
             // Validate the input DTO
-            if (dto == null)
+            var validationResponse = ValidateDtoExists(dto);
+            if (validationResponse != null)
             {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid category data.",
-                    StatusCode = 400,
-                };
-            }
-
-            // Validate the category name
-            if (string.IsNullOrWhiteSpace(dto.Name))
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category name is required.",
-                    StatusCode = 400,
-                };
+                // If the DTO is null, return the validation error response
+                return validationResponse;
             }
             try
             {
-                // Validate if a category with the same name already exists
-                if (await _categoryRepository.AddCategoryNameExistsASync(dto.Name))
+                // Validate the category name is not null, empty, or whitespace and check for duplicates
+                var nameValidationResponse = await ValidateNewCategoryName(dto.Name);
+                if (nameValidationResponse != null)
                 {
-                    return new ApiResponse<SingleCategoryResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category with the same name already exists.",
-                        StatusCode = 400,
-                    };
+                    // If the category name is invalid, return the validation error response
+                    return nameValidationResponse;
                 }
 
                 // Create a new Category entity from the DTO
@@ -148,36 +107,18 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     Description = dto.Description,
                     IsActive = dto.IsActive,
                     Created = DateOnly.FromDateTime(DateTime.UtcNow),
-                    Updated = DateOnly.FromDateTime(DateTime.UtcNow)
+                    Updated = DateOnly.FromDateTime(DateTime.UtcNow),
                 };
 
                 // Save the new category to the repository
                 var createdCategory = await _categoryRepository.CreateCategoryAsync(category);
 
                 // Return the created category details in the response DTO
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = true,
-                    Message = "Category added successfully.",
-                    Data = new SingleCategoryResponseDTO
-                    {
-                        ID = createdCategory.ID,
-                        Name = createdCategory.Name,
-                        Description = createdCategory.Description,
-                        IsActive = createdCategory.IsActive
-                    },
-                    StatusCode = 201,
-                };
+                return BuildDtoResponse(createdCategory, "Category added successfully.", 201);
             }
-            // Handle any exceptions that may occur while creating the category
             catch
             {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to create category.",
-                    StatusCode = 500,
-                };
+                return BuildCatchErrorResponse("Internal error occurred, failed to add category.");
             }
         }
 
@@ -185,74 +126,48 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         public async Task<ApiResponse<SingleCategoryResponseDTO>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto)
         {
             // Validate the input DTO
-            if (string.IsNullOrWhiteSpace(dto.Name) || dto.Name == null)
+            var dtoValidationResponse = ValidateDtoExists(dto);
+            if (dtoValidationResponse != null)
             {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category name is required.",
-                    StatusCode = 400,
-                };
+                // If the DTO is null, return the validation error response
+                return dtoValidationResponse;
             }
             try
             {
-                //Grab the category to update from the repository
-                var category = await _categoryRepository.GetCategoryByIdAsync(id);
-
-                // Validate if the category exists
-                if (category == null)
+                // Validate the updated category name is not null, empty, or whitespace and check for duplicates
+                var nameValidationResponse = await ValidateUpdatedCategoryName(id, dto.Name);
+                if(nameValidationResponse != null)
                 {
-                    return new ApiResponse<SingleCategoryResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category not found.",
-                        StatusCode = 404,
-                    };
+                    // If the category name is invalid, return the validation error response
+                    return nameValidationResponse;
                 }
 
-                // Validate if a category with the same name already exists 
-                if (await _categoryRepository.UpdateCategoryNameExistsAsync(id, dto.Name))
+                //Grab the category to update from the repository, and validate if it exists
+                var fetchCategoryResult = await FindCategoryById(id);
+                if(fetchCategoryResult.Category == null)
                 {
-                    return new ApiResponse<SingleCategoryResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category with the same name already exists.",
-                        StatusCode = 400,
-                    };
+                    // If the category is not found, return the error response from the helper method
+                    return fetchCategoryResult.Error!;
                 }
+                //Assign the found category to a variable for easier access
+                var category = fetchCategoryResult.Category;
+
 
                 //Assign the updated values from the DTO to the category entity
                 category.Name = dto.Name;
                 category.Description = dto.Description;
                 category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
+                category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
 
                 // Save the updated category to the repository
-                await _categoryRepository.UpdateCategoryAsync(category.ID, category);
+                await _categoryRepository.UpdateCategoryAsync(category);
 
                 //Return the updated category details in the response DTO
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = true,
-                    Message = "Category updated successfully.",
-                    Data = new SingleCategoryResponseDTO
-                    {
-                        ID = category.ID,
-                        Name = category.Name,
-                        Description = category.Description,
-                        IsActive = category.IsActive
-                    },
-                    StatusCode = 200,
-                };
+                return BuildDtoResponse(category, "Category updated successfully.", 200);
             }
-            // Handle any exceptions that may occur while updating the category
             catch
             {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to update category.",
-                    StatusCode = 500,
-                };
+                return BuildCatchErrorResponse("Internal error occurred, failed to update category.");
             }
         }
 
@@ -261,19 +176,14 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         {
             try
             {
-                //Retrieve the category by ID from the repository
-                var category = await _categoryRepository.GetCategoryByIdAsync(id);
-
-                //Validate if the category exists
-                if (category == null)
+                //Validate if the category exists by using the helper method
+                var validateCategoryResult = await FindCategoryById(id);
+                if(validateCategoryResult.Category == null)
                 {
-                    return new ApiResponse<SingleCategoryResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category not found.",
-                        StatusCode = 404,
-                    };
+                    return validateCategoryResult.Error!;
                 }
+
+                var category = validateCategoryResult.Category;
 
                 //Validate if the category is already active
                 if (category.IsActive)
@@ -286,35 +196,17 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     };
                 }
 
-                //Set the category's IsActive property to true and update the Updated timestamp
+                //Set the category's IsActive property to true, update the Updated timestamp and save to database
                 category.IsActive = true;
                 category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
                 await _categoryRepository.SaveChangesAsync();
 
                 //Return the activated category details in the response DTO
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = true,
-                    Message = "Category activated successfully.",
-                    Data = new SingleCategoryResponseDTO
-                    {
-                        ID = category.ID,
-                        Name = category.Name,
-                        Description = category.Description,
-                        IsActive = category.IsActive
-                    },
-                    StatusCode = 200,
-                };
+                return BuildDtoResponse(category, "Category activated successfully.", 200);
             }
-            // Handle any exceptions that may occur while activating the category
             catch
             {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to activate category.",
-                    StatusCode = 500,
-                };
+                return BuildCatchErrorResponse("Internal error occurred, failed to activate category.");
             }
         }
 
@@ -322,19 +214,14 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         {
             try
             {
-                //Retrieve the category by ID from the repository
-                var category = await _categoryRepository.GetCategoryByIdAsync(id);
-
-                //Validate if the category exists
-                if (category == null)
+                //Validate if the category exists by using the helper method
+                var validateCategoryResult = await FindCategoryById(id);
+                if (validateCategoryResult.Category == null)
                 {
-                    return new ApiResponse<SingleCategoryResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category not found.",
-                        StatusCode = 404,
-                    };
+                    return validateCategoryResult.Error!;
                 }
+
+                var category = validateCategoryResult.Category;
 
                 //Validate if the category is already inactive
                 if (!category.IsActive)
@@ -353,30 +240,167 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 await _categoryRepository.SaveChangesAsync();
 
                 //Return the deactivated category details in the response DTO
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = true,
-                    Message = "Category deactivated successfully.",
-                    Data = new SingleCategoryResponseDTO
-                    {
-                        ID = category.ID,
-                        Name = category.Name,
-                        Description = category.Description,
-                        IsActive = category.IsActive
-                    },
-                    StatusCode = 200,
-                };
+                return BuildDtoResponse(category, "Category deactivated successfully.", 200);
             }
-            // Handle any exceptions that may occur while deactivating the category
             catch
+            {
+                return BuildCatchErrorResponse("Internal error occurred, failed to deactivate category.");
+            }
+        }
+
+
+
+        // === Find Category By ID Helper Method === \\
+
+        /// <summary>
+        /// Finds a category by its ID. and returns the category along with any error response if applicable.
+        /// </summary>
+        /// <param name="categoryId">The ID of the category to find.</param>
+        /// <returns>
+        /// Returns a tuple containing the found category (or null if not found) and an ApiResponse with error details (or null if no error).
+        /// </returns>
+        private async Task<(Category? Category, ApiResponse<SingleCategoryResponseDTO>? Error)> FindCategoryById(int categoryId)
+        {
+            // Retrieve the category by ID from the repository
+            var category = await _categoryRepository.GetCategoryByIdAsync(categoryId);
+
+            // Validate the categoryId
+            if (category == null)
+            {
+                return (null, new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category not found.",
+                    StatusCode = 404,
+                });
+            }
+            return (category, null);
+        }
+
+
+        // === RESPONSE BUILDER METHODS === \\
+        /// <summary>
+        /// Builds an ApiResponse containing the details of a single category in the response DTO.
+        /// </summary>
+        /// <param name="category">The category entity to include in the response.</param>
+        /// <param name="message">The message to include in the response.</param>
+        /// <param name="statusCode">The HTTP status code to include in the response.</param>
+        /// <returns>An ApiResponse containing the category details.</returns>
+        private ApiResponse<SingleCategoryResponseDTO> BuildDtoResponse(Category category,string message, int statusCode)
+        {
+            // Return the category details in the response DTO
+            return new ApiResponse<SingleCategoryResponseDTO>
+            {
+                Success = true,
+                Message = "Category retrieved successfully.",
+                Data = new SingleCategoryResponseDTO
+                {
+                    ID = category.ID,
+                    Name = category.Name,
+                    Description = category.Description,
+                    IsActive = category.IsActive
+                },
+                StatusCode = statusCode,
+            };
+        }
+
+        /// <summary>
+        /// Builds an ApiResponse for error scenarios, indicating a failure with a provided message and a 500 status code.
+        /// </summary>
+        /// <param name="message">The error message to include in the response.</param>
+        /// <returns>An ApiResponse indicating a failure.</returns>
+        private ApiResponse<SingleCategoryResponseDTO> BuildCatchErrorResponse(string message)
+        {
+            return new ApiResponse<SingleCategoryResponseDTO>
+            {
+                Success = false,
+                Message = message,
+                StatusCode = 500,
+            };
+        }
+
+
+        // === VALIDATION METHODS === \\
+        /// <summary>
+        /// Validates if the provided DTO exists (is not null). If it does not exist, 
+        /// returns an ApiResponse indicating a failure with a 400 status code. 
+        /// Otherwise, returns null.
+        /// </summary>
+        /// <param name="dto">The DTO to validate.</param>
+        /// <returns>An ApiResponse indicating a failure if the DTO is null, otherwise null.</returns>
+        private ApiResponse<SingleCategoryResponseDTO>? ValidateDtoExists(object dto)
+        {
+            if (dto == null)
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal error occurred, failed to deactivate category.",
-                    StatusCode = 500,
+                    Message = "Request body is required.",
+                    StatusCode = 400,
                 };
             }
+            return null;
+        }
+
+        /// <summary>
+        /// Validates if the provided category name is not null, empty, or whitespace, and checks if a category with the same name already exists in the repository.
+        /// This method is used when adding a new category to ensure that the name is valid and unique.
+        /// </summary>
+        /// <param name="categoryName">The name of the category to validate.</param>
+        /// <returns>An ApiResponse indicating a failure if the category name is invalid or already exists, otherwise null.</returns>
+        private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateNewCategoryName(string categoryName)
+        {
+            if (string.IsNullOrWhiteSpace(categoryName))
+            {
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category name is required.",
+                    StatusCode = 400,
+                };
+            }
+            // Validate if a category with the same name already exists
+            if (await _categoryRepository.CategoryNameExistsASync(categoryName))
+            {
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category with the same name already exists.",
+                    StatusCode = 400,
+                };
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Validates if the updated category name is not null, empty, or whitespace, and checks if a category with the same name already exists in the repository (excluding the category being updated).
+        /// This method is used when updating an existing category to ensure that the new name is valid and unique.
+        /// </summary>
+        /// <param name="id">The ID of the category being updated.</param>
+        /// <param name="categoryName">The new name of the category to validate.</param>
+        /// <returns>An ApiResponse indicating a failure if the new category name is invalid or already exists, otherwise null.</returns>
+        private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateUpdatedCategoryName(int id, string categoryName)
+        {
+            if (string.IsNullOrWhiteSpace(categoryName))
+            {
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category name is required.",
+                    StatusCode = 400,
+                };
+            }
+            // Validate if a category with the same name already exists
+            if (await _categoryRepository.OtherCategoryNameExistsAsync(id, categoryName))
+            {
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category with the same name already exists.",
+                    StatusCode = 400,
+                };
+            }
+            return null;
         }
     }
 }

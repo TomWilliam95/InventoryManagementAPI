@@ -12,12 +12,12 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         Task<Category> CreateCategoryAsync(Category category);
 
         // === PUT === \\
-        Task UpdateCategoryAsync(int categoryId, Category category);
+        Task UpdateCategoryAsync(Category category);
 
         // === CHECK EXISTENCE === \\
         Task<bool> CategoryExistsAsync(int categoryId);
-        Task<bool> UpdateCategoryNameExistsAsync(int categoryId, string categoryName);
-        Task<bool> AddCategoryNameExistsASync(string categoryName);
+        Task<bool> OtherCategoryNameExistsAsync(int categoryId, string categoryName);
+        Task<bool> CategoryNameExistsASync(string categoryName);
 
         // === SAVE CHANGES === \\
         Task SaveChangesAsync();

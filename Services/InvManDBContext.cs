@@ -42,6 +42,8 @@ namespace InventoryManagementAPI.Services
                     CategoryID = 1,
                     QuantityInStock = 420,
                     ReorderLevel = 69,
+                    Created = new DateOnly (2026, 1, 1),
+                    Updated = new DateTime(2026, 1, 1),
                     Price = 123,
                     SupplierID = 1,
                     IsActive = true
@@ -55,6 +57,8 @@ namespace InventoryManagementAPI.Services
                     CategoryID = 1,
                     QuantityInStock = 420,
                     ReorderLevel = 69,
+                    Created = new DateOnly(2026, 1, 1),
+                    Updated = new DateTime(2026, 1, 1),
                     Price = 123.85m,
                     SupplierID = 2,
                     IsActive = true
@@ -68,6 +72,8 @@ namespace InventoryManagementAPI.Services
                     CategoryID = 2,
                     QuantityInStock = 420,
                     ReorderLevel = 69,
+                    Created = new DateOnly(2026, 1, 1),
+                    Updated = new DateTime(2026, 1, 1),
                     Price = 123.85m,
                     SupplierID = 2,
                     IsActive = true
@@ -78,29 +84,29 @@ namespace InventoryManagementAPI.Services
                 new Category
                 {
                     ID = 1,
-                    Name = "CoolStuff",
-                    Description = "Things that are cool",
+                    Name = "Category1",
+                    Description = "Category1 Description",
                     IsActive = true,
-                    Created = DateOnly.FromDateTime(DateTime.Now),
-                    Updated = DateOnly.FromDateTime(DateTime.Now)
+                    Created = new DateOnly(2026, 1, 1),
+                    Updated = new DateOnly(2026, 1, 1)
                 },
                 new Category
                 {
                     ID = 2,
-                    Name = "CoolerStuff",
-                    Description = "Things that are cooler",
+                    Name = "Category2",
+                    Description = "Category2 Description",
                     IsActive = true,
-                    Created = DateOnly.FromDateTime(DateTime.Now),
-                    Updated = DateOnly.FromDateTime(DateTime.Now)
+                    Created = new DateOnly(2026, 1, 1),
+                    Updated = new DateOnly(2026, 1, 1)
                 },
                 new Category
                 {
                     ID = 3,
-                    Name = "CoolestStuff",
-                    Description = "Things that are coolest",
+                    Name = "Category3",
+                    Description = "Category3 Description",
                     IsActive = true,
-                    Created = DateOnly.FromDateTime(DateTime.Now),
-                    Updated = DateOnly.FromDateTime(DateTime.Now)
+                    Created = new DateOnly(2026, 1, 1),
+                    Updated = new DateOnly(2026, 1, 1)
                 }
             );
 
@@ -108,32 +114,38 @@ namespace InventoryManagementAPI.Services
                 new Supplier
                 {
                     ID = 1,
-                    Name = "TestSupplier",
-                    ContactName = "TestSupplier",
-                    PhoneContact = "TestSupplier",
-                    EmailContact = "TestSupplier",
-                    Address = "TestSupplier",
-                    IsActive = true
+                    Name = "TestSupplier1",
+                    ContactName = "TestSupplier1",
+                    PhoneContact = "TestSupplier1",
+                    EmailContact = "TestSupplier1",
+                    Address = "TestSupplier1",
+                    IsActive = true,
+                    Created = new DateOnly(2026, 1, 1),
+                    LastUpdated = new DateOnly(2026, 1, 1)
                 },
                 new Supplier
                 {
                     ID = 2,
-                    Name = "TestSupplier",
-                    ContactName = "TestSupplier",
-                    PhoneContact = "TestSupplier",
-                    EmailContact = "TestSupplier",
-                    Address = "TestSupplier",
-                    IsActive = true
+                    Name = "TestSupplier2",
+                    ContactName = "TestSupplier2",
+                    PhoneContact = "TestSupplier2",
+                    EmailContact = "TestSupplier2",
+                    Address = "TestSupplier2",
+                    IsActive = true,
+                    Created = new DateOnly(2026, 1, 1),
+                    LastUpdated = new DateOnly(2026, 1, 1)
                 },
                 new Supplier
                 {
                     ID = 3,
-                    Name = "TestSupplier",
-                    ContactName = "TestSupplier",
-                    PhoneContact = "TestSupplier",
-                    EmailContact = "TestSupplier",
-                    Address = "TestSupplier",
-                    IsActive = true
+                    Name = "TestSupplier3",
+                    ContactName = "TestSupplier3",
+                    PhoneContact = "TestSupplier3",
+                    EmailContact = "TestSupplier3",
+                    Address = "TestSupplier3",
+                    IsActive = true,
+                    Created = new DateOnly(2026, 1, 1),
+                    LastUpdated = new DateOnly(2026, 1, 1)
                 }
             );
 
