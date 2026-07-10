@@ -16,6 +16,10 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 
         // === Check Exists === \\
         Task<bool> SupplierExistsAsync(int supplierId);
+        Task<bool> SupplierNameExistsAsync(string supplierName);
+        Task<bool> SupplierNameExistsForOtherSupplierAsync(int supplierId, string supplierName);
+        Task<bool> SupplierEmailExistsAsync(string supplierEmail);
+        Task<bool> SupplierEmailExistsForOtherSupplierAsync(int supplierId, string supplierEmail);
 
         // === SAVE CHANGES === \\
         Task SaveChangesAsync();

@@ -18,14 +18,14 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === GET === \\
-        [HttpGet("Category/{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> GetCategory(int id)
         {
             var category = await _categoryService.GetSingleCategory(id);
             return StatusCode(category.StatusCode, category);
         }
 
-        [HttpGet("AllCategories")]
+        [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>>> GetAllCategories()
         {
             var categories = await _categoryService.GetAllCategories();
@@ -34,7 +34,7 @@ namespace InventoryManagementAPI.Controllers
 
         
         // === POST === \\
-        [HttpPost("AddCategory")]
+        [HttpPost]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> AddCategory(CreateCategoryRequestDTO dto)
         {
@@ -50,7 +50,7 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === PUT === \\
-        [HttpPut("UpdateCategory/{id}")]
+        [HttpPut("{id:int}")]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto)
         {
@@ -59,7 +59,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === SET ACTIVE STATUS === \\
-        [HttpPut("ActivateCategory/{id}")]
+        [HttpPatch("{id:int}/activate")]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> ActivateCategory(int id)
         {
@@ -67,7 +67,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(activatedCategory.StatusCode, activatedCategory);
         }
 
-        [HttpPut("DeactivateCategory/{id}")]
+        [HttpPatch("{id:int}/deactivate")]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> DeactivateCategory(int id)
         {

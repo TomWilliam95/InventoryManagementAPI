@@ -36,16 +36,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         // === PUT === \\
         public async Task UpdateSupplierAsync(Supplier updatedSupplierData)
         {
-            var supplierUpdating = await _context.Suppliers.FindAsync(updatedSupplierData.ID);
-
-            if (supplierUpdating == null) return;
-
-            supplierUpdating.Name = updatedSupplierData.Name;
-            supplierUpdating.ContactName = updatedSupplierData.ContactName;
-            supplierUpdating.PhoneContact = updatedSupplierData.PhoneContact;
-            supplierUpdating.EmailContact = updatedSupplierData.EmailContact;
-            supplierUpdating.Address = updatedSupplierData.Address;
-            supplierUpdating.LastUpdated = DateOnly.FromDateTime(DateTime.Now);
+            _context.Suppliers.Update(updatedSupplierData);
             await _context.SaveChangesAsync();
         }
 
@@ -53,9 +44,27 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 
         public async Task<bool> SupplierExistsAsync(int supplierId)
         {
-            var supplier = await _context.Suppliers.FindAsync(supplierId);
-            if (supplier == null) return false;
-            return true;
+            return await _context.Suppliers.AnyAsync(s => s.ID == supplierId);
+        }
+
+        public async Task<bool> SupplierNameExistsAsync(string supplierName)
+        {
+            return await _context.Suppliers.AnyAsync(s => s.Name == supplierName);
+        }
+
+        public async Task<bool> SupplierNameExistsForOtherSupplierAsync(int supplierId, string supplierName)
+        {
+            return await _context.Suppliers.AnyAsync(s => s.Name == supplierName && s.ID != supplierId);
+        }
+
+        public async Task<bool> SupplierEmailExistsAsync(string supplierEmail)
+        {
+            return await _context.Suppliers.AnyAsync(s => s.EmailContact == supplierEmail);
+        }
+
+        public async Task<bool> SupplierEmailExistsForOtherSupplierAsync(int supplierId, string supplierEmail)
+        {
+            return await _context.Suppliers.AnyAsync(s => s.EmailContact == supplierEmail && s.ID != supplierId);
         }
 
         // === SAVE CHANGES === \\

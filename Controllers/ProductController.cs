@@ -20,28 +20,28 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === GET === \\
-        [HttpGet("Product/{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> GetProduct(int id)
         {
             var product = await _productService.GetSingleProduct(id);
             return StatusCode(product.StatusCode, product);
         }
 
-        [HttpGet("AllProducts")]
+        [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetAllProducts()
         {
             var products = await _productService.GetAllProducts();
             return StatusCode(products.StatusCode, products);
         }
 
-        [HttpGet("ProductsByCategory/{categoryId}")]
+        [HttpGet("~/api/categories/{categoryId:int}/products")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetProductsByCategory(int categoryId)
         {
             var products = await _productService.GetProductsByCategory(categoryId);
             return StatusCode(products.StatusCode, products);
         }
 
-        [HttpGet("ProductsBelowReorderLevel")]
+        [HttpGet("below-reorder-level")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetProductsBelowReorderLevel()
         {
             var products = await _productService.GetProductsBelowReorderLevel();
@@ -50,7 +50,7 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === POST === \\
-        [HttpPost("AddProduct")]
+        [HttpPost]
         [Authorize(Policy =("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> AddProduct(CreateProductRequestDTO dto)
         {
@@ -65,7 +65,7 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === PUT === \\
-        [HttpPut("UpdateProduct/{id}")]
+        [HttpPut("{id:int}")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProduct(int id, UpdateProductDetailsRequestDTO productDto)
         {
@@ -76,7 +76,7 @@ namespace InventoryManagementAPI.Controllers
   
 
         // === PATCH === \\
-        [HttpPatch("UpdatePrice/{id}")]
+        [HttpPatch("{id:int}/price")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProductPrice (int id, UpdateProductPriceRequestDTO dto)
         {
@@ -84,14 +84,14 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(updatedPriceProduct.StatusCode, updatedPriceProduct);
         }
 
-        [HttpPatch("UpdateStock/{id}")]
+        [HttpPatch("{id:int}/stock")]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProductStock(int id, UpdateProductStockRequestDTO dto)
         {
             var updatedStockProduct = await _productService.UpdateProductStockQuantity(id, dto);
             return StatusCode(updatedStockProduct.StatusCode, updatedStockProduct);
         }
 
-        [HttpPatch("UpdateProductReorderLevel/{id}")]
+        [HttpPatch("{id:int}/reorder-level")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProductReroderLevel(int id, UpdateProductReorderRequestDTO dto)
         {
@@ -102,7 +102,7 @@ namespace InventoryManagementAPI.Controllers
 
 
         // === SET ACTIVE/INACTIVE === \\
-        [HttpPatch("ActivateProduct/{id}")]
+        [HttpPatch("{id:int}/activate")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> ActivateProduct(int id)
         {
@@ -110,7 +110,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(activatedProduct.StatusCode, activatedProduct);
         }
 
-        [HttpPatch("DeactivateProduct/{id}")]
+        [HttpPatch("{id:int}/deactivate")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> DeactivateProduct(int id)
         {

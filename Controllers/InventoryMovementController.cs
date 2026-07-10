@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/inventory-movements")]
     [ApiController]
     [Authorize]
     public class InventoryMovementController : ControllerBase
@@ -21,14 +21,14 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === GET === \\
-        [HttpGet("MovementHistory/{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<InventoryMovementResponseDTO>>> GetMovementById(int id)
         {
             var result = await _inventoryManagementService.GetMovementByIdAsync(id);
             return StatusCode(result.StatusCode, result);
         }
 
-        [HttpGet("AllMovements")]
+        [HttpGet]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>>> GetAllMovements()
         {
@@ -36,7 +36,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        [HttpGet("ProductMovementHistory/{productId}")]
+        [HttpGet("~/api/products/{productId:int}/inventory-movements")]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>>> GetProductMovementHistory(int productId)
         {
@@ -44,7 +44,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        [HttpGet("UserMovementHistory/{userId}")]
+        [HttpGet("~/api/users/{userId:int}/inventory-movements")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>>> GetUserMovementHistory(int userId)
         {
@@ -52,7 +52,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        [HttpGet("MovementHistoryByDateRange/{startDate}-{endDate}")]
+        [HttpGet("date-range")]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>>> GetMovementHistoryByDateRange(DateTime startDate, DateTime endDate)
         {
@@ -60,7 +60,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        [HttpGet("MovementHistoryByType/{movementType}")]
+        [HttpGet("types/{movementType}")]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>>> GetMovementHistoryByType(MovementType movementType)
         {
@@ -69,7 +69,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === POST === \\
-        [HttpPost("RecordMovement")]
+        [HttpPost]
         public async Task<ActionResult<ApiResponse<InventoryMovementResponseDTO>>> RecordMovement(CreateInventoryMovementRequestDTO dto)
         {
             ApiResponse<InventoryMovementResponseDTO> result = new ApiResponse<InventoryMovementResponseDTO>();

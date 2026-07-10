@@ -19,7 +19,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === GET === \\
-        [HttpGet("User/{id}")]
+        [HttpGet("{id:int}")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> GetSingleUser(int id)
         {
@@ -27,7 +27,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(user.StatusCode, user);
         }
 
-        [HttpGet("AllUsers")]
+        [HttpGet]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<IEnumerable<UserResponseDTO>>>> GetAllUsers()
         {
@@ -35,7 +35,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(users.StatusCode, users);
         }
 
-        [HttpGet("Email/{email}")]
+        [HttpGet("by-email/{email}")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> GetUserByEmail(string email)
         {
@@ -43,7 +43,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(user.StatusCode, user);
         }
 
-        [HttpGet("Role/{role}")]
+        [HttpGet("roles/{role}")]
         [Authorize(Roles = ("Admin"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<IEnumerable<UserResponseDTO>>>> GetUsersByRole(UserRoles role)
         {
@@ -66,7 +66,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === PATCH === \\
-        [HttpPatch("UpdateRole/{userId}")]
+        [HttpPatch("{userId:int}/role")]
         [Authorize(Roles = ("Admin"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserRole(int userId, UpdateUserRoleRequestDTO newRole)
         {
@@ -74,7 +74,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(user.StatusCode, user);
         }
 
-        [HttpPatch("Password/{userId}")]
+        [HttpPatch("{userId:int}/password")]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserPassword(int userId, UpdateUserPasswordRequestDTO newPassword)
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -84,7 +84,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(user.StatusCode, user);
         }
 
-        [HttpPatch("Email/{userId}")]
+        [HttpPatch("{userId:int}/email")]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserEmail(int userId, UpdateUserEmailRequestDTO newEmail)
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!) ;
@@ -94,7 +94,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(user.StatusCode, user);
         }
 
-        [HttpPatch("Username/{userId}")]
+        [HttpPatch("{userId:int}/username")]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserUsername(int userId, UpdateUserNameRequestDTO newUsername)
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -105,7 +105,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         // === SET ACTIVE / INACTIVE === \\
-        [HttpPatch("Activate/{userId}")]
+        [HttpPatch("{userId:int}/activate")]
         [Authorize(Roles = ("Admin"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> ActivateUser(int userId)
         {
@@ -113,7 +113,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(user.StatusCode, user);
         }
 
-        [HttpPatch("Deactivate/{userId}")]
+        [HttpPatch("{userId:int}/deactivate")]
         [Authorize(Roles = ("Admin"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> DeactivateUser(int userId)
         {
