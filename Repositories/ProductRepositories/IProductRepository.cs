@@ -14,15 +14,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositorys
         // === POST === \\
         Task<Product> AddProductAsync(Product product);
 
-        // === PUT === \\
-        Task<bool> UpdateProductDetailsAsync(int id, Product product);
-
         // === CHECK EXISTENCE === \\
         Task<bool> ProductExistsAsync(int id);
-        Task<bool> UpdateProductNameExistsAsync(int id, string name);
-        Task<bool> AddProductNameExistsAsync(string name);
-        Task<bool> UpdateProductSkuExistsAsync(int id, string sku);
-        Task<bool> AddProductSkuExistsAsync(string sku);
+        Task<bool> OtherProductNameExistsAsync(int id, string name);
+        Task<bool> ProductNameExistsAsync(string name);
+        Task<bool> OtherProductSkuExistsAsync(int id, string sku);
+        Task<bool> ProductSkuExistsAsync(string sku);
 
         // === CHECK ACTIVE STATUS === \\
         Task<bool> IsProductActiveAsync(int id);

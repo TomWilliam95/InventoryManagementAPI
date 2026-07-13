@@ -84,13 +84,6 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(updatedPriceProduct.StatusCode, updatedPriceProduct);
         }
 
-        [HttpPatch("{id:int}/stock")]
-        public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProductStock(int id, UpdateProductStockRequestDTO dto)
-        {
-            var updatedStockProduct = await _productService.UpdateProductStockQuantity(id, dto);
-            return StatusCode(updatedStockProduct.StatusCode, updatedStockProduct);
-        }
-
         [HttpPatch("{id:int}/reorder-level")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProductReroderLevel(int id, UpdateProductReorderRequestDTO dto)

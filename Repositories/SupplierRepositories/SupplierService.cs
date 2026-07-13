@@ -129,8 +129,8 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                     EmailContact = supplier.EmailContact,
                     Address = supplier.Address,
                     IsActive = supplier.IsActive,
-                    Created = DateOnly.FromDateTime(DateTime.UtcNow),
-                    LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow)
+                    Created = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
                 };
                 // Save the supplier to the repository
                 var createdSupplier = await _supplierRepository.CreateSupplierAsync(newSupplier);
@@ -181,7 +181,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 supplier.EmailContact = updateSupplierDTO.EmailContact;
                 supplier.Address = updateSupplierDTO.Address;
                 supplier.IsActive = updateSupplierDTO.IsActive;
-                supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
+                supplier.LastUpdated = DateTime.UtcNow;
 
                 // Save the updated supplier through the repository
                 await _supplierRepository.UpdateSupplierAsync(supplier);
@@ -225,7 +225,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 
                 // Set the supplier active and update the timestamp
                 supplier.IsActive = true;
-                supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
+                supplier.LastUpdated = DateTime.UtcNow;
                 await _supplierRepository.SaveChangesAsync();
 
                 // Return the activated supplier details
@@ -267,7 +267,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 
                 // Set the supplier inactive and update the timestamp
                 supplier.IsActive = false;
-                supplier.LastUpdated = DateOnly.FromDateTime(DateTime.UtcNow);
+                supplier.LastUpdated = DateTime.UtcNow;
                 await _supplierRepository.SaveChangesAsync();
 
                 // Return the deactivated supplier details Api Response
@@ -519,6 +519,13 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             return (supplierExistsCheck.Supplier, null);
         }
 
+        /// <summary>
+        /// Validates the email format using the System.Net.Mail.MailAddress class. Returns true if the email is valid, false otherwise.
+        /// </summary>
+        /// <param name="email">The email address to validate.</param>
+        /// <returns>
+        /// Returns true if the email is valid, false otherwise.
+        /// </returns>
         private static bool IsValidEmail(string email)
         {
             try

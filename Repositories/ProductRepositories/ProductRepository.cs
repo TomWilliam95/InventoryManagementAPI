@@ -53,43 +53,26 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             return product;
         }
 
-        // === PUT === \\
-        public async Task<bool> UpdateProductDetailsAsync(int id, Product product)
-        {
-            var updatedProduct = await _context.Products.FindAsync(id);
-            if (updatedProduct == null) return false;
-
-            updatedProduct.Sku = product.Sku;
-            updatedProduct.Name = product.Name;
-            updatedProduct.Description = product.Description;
-            updatedProduct.CategoryID = product.CategoryID;
-            updatedProduct.SupplierID = product.SupplierID;
-            updatedProduct.Updated = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
         // === CHECK EXISTENCE === \\
         public async Task<bool> ProductExistsAsync(int id)
         {
             return await _context.Products.AnyAsync(p => p.ID == id);
         }
 
-        public async Task<bool> UpdateProductNameExistsAsync(int id, string name)
+        public async Task<bool> OtherProductNameExistsAsync(int id, string name)
         {
             return await _context.Products.AnyAsync(p => p.Name == name && p.ID != id);
         }
-        public async Task<bool> AddProductNameExistsAsync(string name)
+        public async Task<bool> ProductNameExistsAsync(string name)
         {
             return await _context.Products.AnyAsync(p => p.Name == name);
         }
 
-        public async Task<bool> UpdateProductSkuExistsAsync(int id, string sku)
+        public async Task<bool> OtherProductSkuExistsAsync(int id, string sku)
         {
             return await _context.Products.AnyAsync(p => p.Sku == sku && p.ID != id);
         }
-        public async Task<bool> AddProductSkuExistsAsync(string sku)
+        public async Task<bool> ProductSkuExistsAsync(string sku)
         {
             return await _context.Products.AnyAsync(p => p.Sku == sku);
         }

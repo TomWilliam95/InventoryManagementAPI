@@ -30,8 +30,8 @@ namespace InventoryManagementAPI.Models.CoreModels
         public required string Address { get; set; }
 
         public bool IsActive { get; set; }
-        public DateOnly Created { get; set; }
-        public DateOnly LastUpdated { get; set; }
+        public DateTime Created { get; set; }
+        public DateTime LastUpdated { get; set; }
 
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     }

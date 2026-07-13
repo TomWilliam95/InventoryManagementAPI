@@ -38,7 +38,7 @@ namespace InventoryManagementAPI.Models.CoreModels
         [Range(1, int.MaxValue)]
         public int SupplierID { get; set; }
         public bool IsActive { get; set; }
-        public DateOnly Created { get; set; }
+        public DateTime Created { get; set; }
         public DateTime Updated { get; set; }
 
         [ForeignKey(nameof(CategoryID))]

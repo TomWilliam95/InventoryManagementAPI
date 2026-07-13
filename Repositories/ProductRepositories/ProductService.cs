@@ -7,7 +7,7 @@ using InventoryManagementAPI.Repositories.SupplierRepositories;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositories
 {
-    public class ProductService: IProductService
+    public class ProductService : IProductService
     {
         private readonly IProductRepository _productRepo;
         private readonly ISupplierRepository _supplierRepo;
@@ -27,45 +27,20 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Retrieve all products from the repository
                 var productList = await _productRepo.GetAllProductsAsync();
 
-                // Check if the product list is empty and return a response accordingly
-                if (!productList.Any())
+                // Validate that the product list is not empty and return a response accordingly
+                var productListResult = ValidateProductGroupExists(productList);
+                if (productListResult.Products == null)
                 {
-                    return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No Products Found",
-                        StatusCode = 404
-                    };
+                    // Return an error response if no products were found
+                    return productListResult.Error!;
                 }
-                // Map the product list to a list of BulkProductResponseDTO objects
-                var productListResponse = productList.Select(p => new BulkProductResponseDTO
-                {
-                    ID = p.ID,
-                    Sku = p.Sku,
-                    Name = p.Name,
-                    QuantityInStock = p.QuantityInStock,
-                    Price = p.Price,
-                    IsActive = p.IsActive
-                }).ToList();
 
                 // Return a successful response with the product list
-                return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Successfully Retrieved All Products",
-                    Data = productListResponse,
-                    StatusCode = 200
-                };
+                return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved All Products");
             }
-            // Handle any exceptions that may occur while retrieving all products
             catch
             {
-                return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load products.",
-                    StatusCode = 500
-                };
+                return BuildCatchErrorResponseBulk("Internal error occurred, failed to load all products.");
             }
         }
 
@@ -74,29 +49,18 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Retrieve the product from the repository using the provided productId
-                var product = await _productRepo.GetProductAsync(productId);
-                // Check if the product is null (not found) and return a response accordingly
-                if (product == null)
+                var productResult = await ValidateProductExists(productId);
+                if (productResult.Product == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Not Found",
-                        StatusCode = 404
-                    };
+                    return productResult.Error!;
                 }
+
                 // Return a successful response with the product details
-                return CreateProductResponse(product, "Product Successfully Retrieved", 200);
+                return BuildProductResponse(productResult.Product, "Product Successfully Retrieved", 200);
             }
-            // Handle any exceptions that may occur while retrieving the product
             catch
             {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load product.",
-                    StatusCode = 500
-                };
+                return BuildCatchErrorResponseSingle("Internal error occurred, failed to load product.");
             }
         }
 
@@ -116,45 +80,20 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 }
                 // Retrieve the list of products for the specified category from the product repository
                 var productList = await _productRepo.GetProductsByCategory(categoryId);
+
                 // Check if the product list is empty and return a response accordingly
-                if (!productList.Any())
+                var productListResult = ValidateProductGroupExists(productList);
+                if (productListResult.Products == null)
                 {
-                    return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No Products Found for this Category",
-                        StatusCode = 404
-                    };
+                    return productListResult.Error!;
                 }
-                // Map the product list to a list of BulkProductResponseDTO objects
-                var dtoList = productList.Select(p => new BulkProductResponseDTO
-                {
-                    ID = p.ID,
-                    Sku = p.Sku,
-                    Name = p.Name,
-                    QuantityInStock = p.QuantityInStock,
-                    Price = p.Price,
-                    IsActive = p.IsActive
-                }).ToList();
 
                 // Return a successful response with the product list for the specified category
-                return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Successfully Retrieved Products by Category",
-                    Data = dtoList,
-                    StatusCode = 200
-                };
+                return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products By Category");
             }
-            // Handle any exceptions that may occur while retrieving products by category
             catch
             {
-                return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load products by category.",
-                    StatusCode = 500
-                };
+                return BuildCatchErrorResponseBulk("Internal error occurred, failed to load products by category.");
             }
         }
 
@@ -166,99 +105,46 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 var reorderList = await _productRepo.GetProductsBelowReorderLevelAsync();
 
                 // Check if any products need reordering and return a not found response if none exist
-                if(!reorderList.Any())
+                var productListResult = ValidateProductGroupExists(reorderList);
+                if (productListResult.Products == null)
                 {
-                    return(new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No Products Found Below Reorder Level",
-                        StatusCode = 404
-                    });
+                    return productListResult.Error!;
                 }
 
-                // Create a list of DTOs that only exposes the summary fields needed for bulk product responses
-                var dtoList = reorderList.Select(p => new BulkProductResponseDTO
-                {
-                    ID = p.ID,
-                    Sku = p.Sku,
-                    Name = p.Name,
-                    QuantityInStock = p.QuantityInStock,
-                    Price = p.Price,
-                    IsActive = p.IsActive
-                }).ToList();
-
                 // Return a successful response with all products that are below their reorder level
-                return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Successfully Retrieved Products Below Reorder Level",
-                    Data = dtoList,
-                    StatusCode = 200
-                };
+                return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products Below Reorder Level");
             }
-            // Handle any exceptions that may occur while retrieving products below reorder level
             catch
             {
-                return(new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load products below reorder level.",
-                    StatusCode = 500
-                });
+                return BuildCatchErrorResponseBulk("Internal error occurred, failed to load products below reorder level.");
             }
         }
 
         // === POST === \\
         public async Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
         {
-            //Validate the request body and required fields before proceeding with product creation
-            var result = ValidateDTO(dto, dto.Sku, dto.Name, dto.Description);
-            if(result != null)
+            //Validates DTO not null
+            var validateDtoResult = ValidateDTO(dto);
+            if (validateDtoResult != null)
             {
-                return result;
+                return validateDtoResult;
+            }
+
+            //Validate the required fields before proceeding with product creation
+            var validateFieldsResult = ValidateDtoFields(dto.Sku, dto.Name, dto.Description);
+            if (validateFieldsResult != null)
+            {
+                return validateFieldsResult;
             }
 
             try
             {
-                // Validate that the supplied SKU is not already in use by another product
-                if (await _productRepo.AddProductSkuExistsAsync(dto.Sku))
+                // Validate that the supplied SKU and Name dont exist
+                // and the Category and Supplier exist before creating the product
+                var validateExistenceResult = await ValidateDtoFieldsExist(dto);
+                if (validateExistenceResult != null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product SKU Already Exists",
-                        StatusCode = 400
-                    };
-                }
-                // Validate that the supplied Name is not already in use by another product
-                if (await _productRepo.AddProductNameExistsAsync(dto.Name))
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Name Already Exists",
-                        StatusCode = 400
-                    };
-                }
-                // Validate that the supplied supplier exists before creating the product
-                if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Supplier does not exist",
-                        StatusCode = 404
-                    };
-                }
-                // Validate that the supplied category exists before creating the product
-                if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category does not exist",
-                        StatusCode = 404
-                    };
+                    return validateExistenceResult;
                 }
 
                 // Create the product entity from the request DTO
@@ -273,7 +159,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Price = dto.Price,
                     SupplierID = dto.SupplierID,
                     IsActive = dto.IsActive,
-                    Created = DateOnly.FromDateTime(DateTime.Now),
+                    Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };
 
@@ -282,35 +168,32 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 var createdProductWithDetails = await _productRepo.GetProductAsync(createdProduct.ID);
                 if (createdProductWithDetails == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product was created but could not be retrieved.",
-                        StatusCode = 500
-                    };
+                    return BuildCatchErrorResponseSingle("Product was created but could not be retrieved.");
                 }
 
+                // Return an Error ApiResponse if either the category or supplier details are missing after creation
                 // Return a created response with the new product details
-                return CreateProductResponse(createdProductWithDetails, "Product was successfully created", 201);
+                return BuildProductResponse(createdProductWithDetails, "Product was successfully created", 201);
             }
-            // Handle any exceptions that may occur while creating the product
             catch
             {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success =false,
-                    Message = "Internal error occurred, failed to create product.",
-                    StatusCode = 500
-                };
-            } 
+                return BuildCatchErrorResponseSingle("Internal error occurred, failed to create product.");
+            }
         }
 
         // === PUT === \\
         public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductDetails(int id, UpdateProductDetailsRequestDTO dto)
         {
-            //validate the request body and required fields before proceeding with the update
-            var result = ValidateDTO(dto, dto.Sku, dto.Name, dto.Description);
-            if(result != null)
+            // Validates DTO not null
+            var validateDtoResult = ValidateDTO(dto);
+            if (validateDtoResult != null)
+            {
+                return validateDtoResult;
+            }
+
+            //validate the required fields before proceeding with the update
+            var result = ValidateDtoFields(dto.Sku, dto.Name, dto.Description);
+            if (result != null)
             {
                 return result;
             }
@@ -318,56 +201,19 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Validate that the supplied supplier exists before updating the product
-                var updateProduct = await _productRepo.GetProductAsync(id);
-                if(updateProduct == null)
+                var updateProductExistsResult = await ValidateProductExists(id);
+                if (updateProductExistsResult.Product == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Not Found",
-                        StatusCode = 404
-                    };
+                    return updateProductExistsResult.Error!;
                 }
-                // Validate that dto name is not already in use by another product, excluding the current product being updated
-                if (await _productRepo.UpdateProductNameExistsAsync(updateProduct.ID, dto.Name))
+
+                var validateExistenceResult = await UpdateValidateDtoFieldsExist(updateProductExistsResult.Product, dto);
+                if (validateExistenceResult != null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Name Already Exists",
-                        StatusCode = 400
-                    };
+                    return validateExistenceResult;
                 }
-                // Validate that dto SKU is not already in use by another product, excluding the current product being updated
-                if (await _productRepo.UpdateProductSkuExistsAsync(updateProduct.ID, dto.Sku))
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product SKU Already Exists",
-                        StatusCode = 400
-                    };
-                }
-                // Validate that the supplied category exists before updating the product
-                if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Category does not exist",
-                        StatusCode = 404
-                    };
-                }
-                // Validate that the supplied supplier exists before updating the product
-                if(!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Supplier does not exist",
-                        StatusCode = 404
-                    };
-                }
+                var updateProduct = updateProductExistsResult.Product;
+
 
                 // Update the product details with the values from the DTO
                 updateProduct.Sku = dto.Sku;
@@ -375,36 +221,27 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 updateProduct.Description = dto.Description;
                 updateProduct.CategoryID = dto.CategoryID;
                 updateProduct.SupplierID = dto.SupplierID;
+                updateProduct.Updated = DateTime.UtcNow;
 
                 // Persist the updated product details through the repository
-                await _productRepo.UpdateProductDetailsAsync(id, updateProduct);
+                await _productRepo.SaveChangesAsync();
 
                 // Reload the updated product with category and supplier details for the response
-                var findUpdatedProduct = await _productRepo.GetProductAsync(id);
+                var findUpdatedProduct = await _productRepo.GetProductAsync(updateProduct.ID);
 
                 // Check if the updated product could be retrieved successfully
                 if (findUpdatedProduct == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product was updated but could not be retrieved.",
-                        StatusCode = 500
-                    };
+                    return BuildCatchErrorResponseSingle("Product was updated but could not be retrieved.");
                 }
 
+                // Return an Error ApiResponse if either the category or supplier details are missing after the update
                 // Return a successful response with the updated product details
-                return CreateProductResponse(findUpdatedProduct, "Successfully Update Prodcut Details", 200);
+                return BuildProductResponse(findUpdatedProduct, "Successfully Updated Product Details", 200);
             }
-            // Handle any exceptions that may occur while updating product details
             catch
             {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to update product details.",
-                    StatusCode = 500
-                };
+                return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product details.");
             }
         }
 
@@ -426,81 +263,23 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Load the product before applying the price update
-                var product = await _productRepo.GetProductAsync(id);
-                //validate that the product exists before attempting to update its price
-                if (product == null)
+                var validateProductResult = await ValidateProductExists(id);
+                if(validateProductResult.Product == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Not Found",
-                        StatusCode = 404
-                    };
+                    return validateProductResult.Error!;
                 }
-                
+
                 // Update the price and save the change
-                product.Price = dto.Price;
+                validateProductResult.Product.Price = dto.Price;
+                validateProductResult.Product.Updated = DateTime.UtcNow;
                 await _productRepo.SaveChangesAsync();
 
                 // Return a successful response with the updated product details
-                return CreateProductResponse(product, "Price Successfully Updated", 200);
+                return BuildProductResponse(validateProductResult.Product, "Price Successfully Updated", 200);
             }
-            // Handle any exceptions that may occur while updating product price
             catch
             {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to update product price.",
-                    StatusCode = 500
-                };
-            }
-        }
-
-        public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductStockQuantity(int id, UpdateProductStockRequestDTO dto)
-        {
-            try
-            {
-                // Load the product before applying the stock quantity update
-                var product = await _productRepo.GetProductAsync(id);
-
-                if(product == null)
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Not Found",
-                        StatusCode = 404
-                    };
-                }
-                // Check if the requested stock value is different from the current stock value
-                if(dto.QuantityInStock == product.QuantityInStock)
-                {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "No stock update!",
-                        StatusCode = 400
-                    };
-                }
-
-                // Update the QuantityInStock property of the product
-                product.QuantityInStock = dto.QuantityInStock;
-                await _productRepo.SaveChangesAsync();
-
-                // Return a successful response with the updated product stock details
-                return CreateProductResponse(product, "ReOrderStock Levels Updated", 200);
-
-            }
-            // Handle any exceptions that may occur while updating product stock quantity
-            catch
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to update product stock quantity.",
-                    StatusCode = 500
-                };
+                return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product price.");
             }
         }
 
@@ -519,34 +298,25 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Load the product before applying the reorder level update
-                var product = await _productRepo.GetProductAsync(id);
-                if (product == null)
+                var productExistsResult = await ValidateProductExists(id);
+                if(productExistsResult.Product == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Not Found",
-                        StatusCode = 404
-                    };
+                    return productExistsResult.Error!;
                 }
+
                 // Update the ReorderLevel property of the product
                 // Save the changes to the database
-                product.ReorderLevel = dto.ReorderLevel;
+                productExistsResult.Product.ReorderLevel = dto.ReorderLevel;
+                productExistsResult.Product.Updated = DateTime.UtcNow;
                 await _productRepo.SaveChangesAsync();
 
                 // Return a successful response with the updated reorder level details
-                return CreateProductResponse(product, "ReOrderStock Levels Updated", 200);
+                return BuildProductResponse(productExistsResult.Product, "ReOrderStock Levels Updated", 200);
 
             }
-            // Handle any exceptions that may occur while updating product reorder level
             catch
             {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to update product reorder level.",
-                    StatusCode = 500
-                };
+                return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product reorder level.");
             }
         }
 
@@ -556,16 +326,13 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Load the product before attempting to activate it
-                var product = await _productRepo.GetProductAsync(id);
-                if(product == null)
+                var productExistsResult = await ValidateProductExists(id);
+                if(productExistsResult.Product == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Not Found",
-                        StatusCode = 404
-                    };
+                    return productExistsResult.Error!;
                 }
+
+                var product = productExistsResult.Product;
 
                 // Return a bad request response if the product is already active
                 if (product.IsActive)
@@ -584,17 +351,11 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 await _productRepo.SaveChangesAsync();
 
                 // Return a successful response with the activated product details
-                return CreateProductResponse(product, "Product activated successfully", 200);
+                return BuildProductResponse(product, "Product activated successfully", 200);
             }
-            // Handle any exceptions that may occur while activating the product
             catch
             {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to activate product.",
-                    StatusCode = 500
-                };
+                return BuildCatchErrorResponseSingle("Internal error occurred, failed to activate product.");
             }
         }
 
@@ -603,16 +364,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Load the product before attempting to deactivate it
-                var product = await _productRepo.GetProductAsync(id);
-                if(product == null)
+                var productExistsResult = await ValidateProductExists(id);
+                if(productExistsResult.Product == null)
                 {
-                    return new ApiResponse<SingleProductResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Product Not Found",
-                        StatusCode = 404
-                    };
+                    return productExistsResult.Error!;
                 }
+                var product = productExistsResult.Product;
 
                 // Return a bad request response if the product is already inactive
                 if (!product.IsActive)
@@ -631,24 +388,89 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 await _productRepo.SaveChangesAsync();
 
                 // Return a successful response with the deactivated product details
-                return CreateProductResponse(product, "Product deactivated successfully", 200);
+                return BuildProductResponse(product, "Product deactivated successfully", 200);
             }
-            // Handle any exceptions that may occur while deactivating the product
             catch
+            {
+                return BuildCatchErrorResponseSingle("Internal error occurred, failed to deactivate product.");
+            }
+        }
+
+
+
+        // === VALIDATION HELPER METHODS === \\
+
+        /// <summary>
+        /// Validates whether a product with the specified ID exists in the repository.
+        /// </summary>
+        /// <param name="id">The ID of the product to validate.</param>
+        /// <returns>A tuple containing the product (if found) and an ApiResponse (if not found).</returns>
+        private async Task<(Product? Product, ApiResponse<SingleProductResponseDTO>? Error)> ValidateProductExists(int id)
+        {
+            var product = await _productRepo.GetProductAsync(id);
+
+            if (product == null)
+            {
+                return (null, new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Product Not Found",
+                    StatusCode = 404
+                });
+            }
+            return (product, null);
+        }
+
+        /// <summary>
+        /// Validates the existence of product groups and retrieves all products if available.
+        /// </summary>
+        /// <param name="products">The collection of products to validate.</param>
+        /// <returns>A tuple containing a collection of BulkProductResponseDTO objects and null if products exist; 
+        /// otherwise, null and an ApiResponse indicating failure.</returns>
+        private (IEnumerable<BulkProductResponseDTO>? Products, ApiResponse<IEnumerable<BulkProductResponseDTO>>? Error) ValidateProductGroupExists(IEnumerable<Product> products)
+        {
+            if (products == null || !products.Any())
+            {
+                return (null, new ApiResponse<IEnumerable<BulkProductResponseDTO>>
+                {
+                    Success = false,
+                    Message = "No Products Found",
+                    StatusCode = 404
+                });
+            }
+            return (products.Select(p => new BulkProductResponseDTO
+            {
+                ID = p.ID,
+                Sku = p.Sku,
+                Name = p.Name,
+                QuantityInStock = p.QuantityInStock,
+                Price = p.Price,
+                IsActive = p.IsActive
+            }).ToList(), null);
+        }
+
+        /// <summary>
+        /// Validates the provided DTO object is not null.
+        /// </summary>
+        /// <param name="dto">The DTO object to validate.</param>
+        /// <returns>An ApiResponse object if the DTO is invalid, otherwise null.</returns>
+        private ApiResponse<SingleProductResponseDTO>? ValidateDTO(object? dto)
+        {
+            if (dto == null)
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
-                    Message = "Internal error occurred, failed to deactivate product.",
-                    StatusCode = 500
+                    Message = "Invalid DTO",
+                    StatusCode = 400
                 };
             }
+            return null;
         }
 
         /// <summary>
-        /// Validates the provided product DTO and its required fields (SKU, Name, Description) for correctness and completeness.
+        /// Validates the provided product DTO fields (SKU, Name, Description) for correctness and completeness.
         /// </summary>
-        /// <param name="dto"></param>
         /// <param name="sku"></param>
         /// <param name="name"></param>
         /// <param name="description"></param>
@@ -656,19 +478,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// If validation fails, returns an ApiResponse object with a failure message and status code 400.
         /// If Successful, returns null indicating that the DTO is valid.
         /// </returns>
-        private static ApiResponse<SingleProductResponseDTO>? ValidateDTO(Object dto, string sku, string name, string description)
+        private static ApiResponse<SingleProductResponseDTO>? ValidateDtoFields(string sku, string name, string description)
         {
-            // Validate that the request body was supplied
-            if (dto == null)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Request data was null",
-                    StatusCode = 400
-                };
-            }
-
             // Validate required product text fields before checking related entities
             if (string.IsNullOrWhiteSpace(sku) || string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(description))
             {
@@ -690,12 +501,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     StatusCode = 400
                 };
             }
-            if(sku.Length > 8)
+            if (sku.Length > 8)
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
-                    Message = "SKU ,ust be 8 characters",
+                    Message = "SKU must be 8 characters",
                     StatusCode = 400
                 };
             }
@@ -741,7 +552,111 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             return null;
         }
 
+        /// <summary>
+        /// Validates the existence of related entities (SKU, Name, Supplier, Category) for a product DTO before creation.
+        /// </summary>
+        /// <param name="dto">The product DTO to validate.</param>
+        /// <returns>Null if successful, otherwise an ApiResponse indicating the result of the validation failure.</returns>
+        private async Task<ApiResponse<SingleProductResponseDTO>?> ValidateDtoFieldsExist(CreateProductRequestDTO dto)
+        {
+            // Validate that the supplied SKU is not already in use by another product
+            if (await _productRepo.ProductSkuExistsAsync(dto.Sku))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Product SKU Already Exists",
+                    StatusCode = 400
+                };
+            }
+            // Validate that the supplied Name is not already in use by another product
+            if (await _productRepo.ProductNameExistsAsync(dto.Name))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Product Name Already Exists",
+                    StatusCode = 400
+                };
+            }
+
+            // Validate that the supplied supplier exists before creating the product
+            if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Supplier does not exist",
+                    StatusCode = 404
+                };
+            }
+            // Validate that the supplied category exists before creating the product
+            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category does not exist",
+                    StatusCode = 404
+                };
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Validates the existence of related entities (SKU, Name, Supplier, Category) for a product DTO before updating an existing product.
+        /// </summary>
+        /// <param name="updateProduct">The existing product being updated.</param>
+        /// <param name="dto">The product DTO containing the updated details.</param>
+        /// <returns>Null if successful, otherwise an ApiResponse indicating the result of the validation failure.</returns>
+        private async Task<ApiResponse<SingleProductResponseDTO>?> UpdateValidateDtoFieldsExist(Product updateProduct, UpdateProductDetailsRequestDTO dto)
+        {
+            // Validate that dto name is not already in use by another product, excluding the current product being updated
+            if (await _productRepo.OtherProductNameExistsAsync(updateProduct.ID, dto.Name))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Product Name Already Exists",
+                    StatusCode = 400
+                };
+            }
+            // Validate that dto SKU is not already in use by another product, excluding the current product being updated
+            if (await _productRepo.OtherProductSkuExistsAsync(updateProduct.ID, dto.Sku))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Product SKU Already Exists",
+                    StatusCode = 400
+                };
+            }
+            // Validate that the supplied category exists before updating the product
+            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Category does not exist",
+                    StatusCode = 404
+                };
+            }
+            // Validate that the supplied supplier exists before updating the product
+            if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Supplier does not exist",
+                    StatusCode = 404
+                };
+            }
+            return null;
+        }
+
+        
         // === RESPONSE HELPER METHOD === \\
+
         /// <summary>
         /// Creates an ApiResponse object for a single product, including its details and status information.
         /// Checks if the product's category and supplier are loaded before creating the response.
@@ -751,17 +666,18 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// <param name="message"></param>
         /// <param name="statusCode"></param>
         /// <returns>
-        /// If unsuccesful, returns an ApiResponse object with a failure message and status code 500.
+        /// If unsuccessful, returns an ApiResponse object with a failure message and status code 500.
         /// If successful, returns an ApiResponse object with the product details, success message, and provided status code.
         /// </returns>
-        private static ApiResponse<SingleProductResponseDTO> CreateProductResponse(Product product, string message, int statusCode)
+        /// 
+        private static ApiResponse<SingleProductResponseDTO> BuildProductResponse(Product product, string message, int statusCode)
         {
             if (product.Category is null || product.Supplier is null)
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
-                    Message = "Product category or supplier was not loaded.",
+                    Message = $"{message}, failed to retrieve either category or supplier details",
                     StatusCode = 500
                 };
             }
@@ -786,6 +702,53 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     IsActive = product.IsActive
                 },
                 StatusCode = statusCode
+            };
+        }
+
+        /// <summary>
+        /// Builds an error response for a single product operation, indicating that an internal error occurred.
+        /// </summary>
+        /// <param name="message">The error message to include in the response.</param>
+        /// <returns>An ApiResponse indicating the internal error.</returns>
+        private ApiResponse<SingleProductResponseDTO> BuildCatchErrorResponseSingle(string message)
+        {
+            return new ApiResponse<SingleProductResponseDTO>
+            {
+                Success = false,
+                Message = message,
+                StatusCode = 500
+            };
+        }
+
+        /// <summary>
+        /// Builds a successful response for bulk product operations, including a list of products and a success message.
+        /// </summary>
+        /// <param name="productDtoList">The list of product DTOs to include in the response.</param>
+        /// <param name="message">The success message to include in the response.</param>
+        /// <returns>An ApiResponse indicating the successful operation.</returns>
+        private ApiResponse<IEnumerable<BulkProductResponseDTO>> BuildBulkProductResponse(IEnumerable<BulkProductResponseDTO> productDtoList, string message)
+        {
+            return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
+            {
+                Success = true,
+                Message = message,
+                Data = productDtoList,
+                StatusCode = 200
+            };
+        }
+
+        /// <summary>
+        /// Builds an error response for bulk product operations, indicating that an internal error occurred.
+        /// </summary>
+        /// <param name="message">The error message to include in the response.</param>
+        /// <returns>An ApiResponse indicating the internal error.</returns>
+        private ApiResponse<IEnumerable<BulkProductResponseDTO>> BuildCatchErrorResponseBulk(string message)
+        {
+            return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
+            {
+                Success = false,
+                Message = message,
+                StatusCode = 500
             };
         }
     }

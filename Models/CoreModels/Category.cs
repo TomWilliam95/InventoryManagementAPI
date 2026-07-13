@@ -15,8 +15,8 @@ namespace InventoryManagementAPI.Models.CoreModels
         public string? Description { get; set; }
 
         public bool IsActive { get; set; }
-        public DateOnly Created { get; set; }
-        public DateOnly Updated { get; set; }
+        public DateTime Created { get; set; }
+        public DateTime Updated { get; set; }
 
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     }

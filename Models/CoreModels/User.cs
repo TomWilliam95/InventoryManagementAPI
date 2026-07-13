@@ -27,7 +27,7 @@ namespace InventoryManagementAPI.Models.CoreModels
 
         public DateTime LastLogin { get; set; }
         public DateTime LastUpdated { get; set; }
-        public DateOnly Created { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+        public DateTime Created { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
 
         public virtual ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();

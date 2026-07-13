@@ -42,7 +42,7 @@ namespace InventoryManagementAPI.Services
                     CategoryID = 1,
                     QuantityInStock = 420,
                     ReorderLevel = 69,
-                    Created = new DateOnly (2026, 1, 1),
+                    Created = new DateTime(2026, 1, 1),
                     Updated = new DateTime(2026, 1, 1),
                     Price = 123,
                     SupplierID = 1,
@@ -57,7 +57,7 @@ namespace InventoryManagementAPI.Services
                     CategoryID = 1,
                     QuantityInStock = 420,
                     ReorderLevel = 69,
-                    Created = new DateOnly(2026, 1, 1),
+                    Created = new DateTime(2026, 1, 1),
                     Updated = new DateTime(2026, 1, 1),
                     Price = 123.85m,
                     SupplierID = 2,
@@ -72,7 +72,7 @@ namespace InventoryManagementAPI.Services
                     CategoryID = 2,
                     QuantityInStock = 420,
                     ReorderLevel = 69,
-                    Created = new DateOnly(2026, 1, 1),
+                    Created = new DateTime(2026, 1, 1),
                     Updated = new DateTime(2026, 1, 1),
                     Price = 123.85m,
                     SupplierID = 2,
@@ -87,8 +87,8 @@ namespace InventoryManagementAPI.Services
                     Name = "Category1",
                     Description = "Category1 Description",
                     IsActive = true,
-                    Created = new DateOnly(2026, 1, 1),
-                    Updated = new DateOnly(2026, 1, 1)
+                    Created = new DateTime(2026, 1, 1),
+                    Updated = new DateTime(2026, 1, 1)
                 },
                 new Category
                 {
@@ -96,8 +96,8 @@ namespace InventoryManagementAPI.Services
                     Name = "Category2",
                     Description = "Category2 Description",
                     IsActive = true,
-                    Created = new DateOnly(2026, 1, 1),
-                    Updated = new DateOnly(2026, 1, 1)
+                    Created = new DateTime(2026, 1, 1),
+                    Updated = new DateTime(2026, 1, 1)
                 },
                 new Category
                 {
@@ -105,8 +105,8 @@ namespace InventoryManagementAPI.Services
                     Name = "Category3",
                     Description = "Category3 Description",
                     IsActive = true,
-                    Created = new DateOnly(2026, 1, 1),
-                    Updated = new DateOnly(2026, 1, 1)
+                    Created = new DateTime(2026, 1, 1),
+                    Updated = new DateTime(2026, 1, 1)
                 }
             );
 
@@ -120,8 +120,8 @@ namespace InventoryManagementAPI.Services
                     EmailContact = "TestSupplier1",
                     Address = "TestSupplier1",
                     IsActive = true,
-                    Created = new DateOnly(2026, 1, 1),
-                    LastUpdated = new DateOnly(2026, 1, 1)
+                    Created = new DateTime(2026, 1, 1),
+                    LastUpdated = new DateTime(2026, 1, 1)
                 },
                 new Supplier
                 {
@@ -132,8 +132,8 @@ namespace InventoryManagementAPI.Services
                     EmailContact = "TestSupplier2",
                     Address = "TestSupplier2",
                     IsActive = true,
-                    Created = new DateOnly(2026, 1, 1),
-                    LastUpdated = new DateOnly(2026, 1, 1)
+                    Created = new DateTime(2026, 1, 1),
+                    LastUpdated = new DateTime(2026, 1, 1)
                 },
                 new Supplier
                 {
@@ -144,8 +144,8 @@ namespace InventoryManagementAPI.Services
                     EmailContact = "TestSupplier3",
                     Address = "TestSupplier3",
                     IsActive = true,
-                    Created = new DateOnly(2026, 1, 1),
-                    LastUpdated = new DateOnly(2026, 1, 1)
+                    Created = new DateTime(2026, 1, 1),
+                    LastUpdated = new DateTime(2026, 1, 1)
                 }
             );
 

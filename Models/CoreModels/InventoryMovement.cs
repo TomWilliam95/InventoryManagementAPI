@@ -30,7 +30,7 @@ namespace InventoryManagementAPI.Models.CoreModels
         [StringLength(500)]
         public required string Reason { get; set; }
 
-        public DateTime Created { get; set; } = DateTime.Now;
+        public DateTime Created { get; set; } = DateTime.UtcNow;
 
         [ForeignKey(nameof(ProductId))]
         public virtual Product? Product { get; set; }

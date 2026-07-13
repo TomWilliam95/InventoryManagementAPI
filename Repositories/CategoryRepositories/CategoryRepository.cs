@@ -33,8 +33,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         // === PUT === \\
         public async Task UpdateCategoryAsync(Category category)
         {
-            _context.Suppliers.Update(category);
-
+            _context.Categories.Update(category);
             await _context.SaveChangesAsync();
         }
 

@@ -106,8 +106,8 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                     Name = dto.Name,
                     Description = dto.Description,
                     IsActive = dto.IsActive,
-                    Created = DateOnly.FromDateTime(DateTime.UtcNow),
-                    Updated = DateOnly.FromDateTime(DateTime.UtcNow),
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow,
                 };
 
                 // Save the new category to the repository
@@ -156,8 +156,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 //Assign the updated values from the DTO to the category entity
                 category.Name = dto.Name;
                 category.Description = dto.Description;
-                category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
-                category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
+                category.Updated = DateTime.UtcNow;
 
                 // Save the updated category to the repository
                 await _categoryRepository.UpdateCategoryAsync(category);
@@ -198,7 +197,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
 
                 //Set the category's IsActive property to true, update the Updated timestamp and save to database
                 category.IsActive = true;
-                category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
+                category.Updated = DateTime.UtcNow;
                 await _categoryRepository.SaveChangesAsync();
 
                 //Return the activated category details in the response DTO
@@ -236,7 +235,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
 
                 //Set the category's IsActive property to false and update the Updated timestamp
                 category.IsActive = false;
-                category.Updated = DateOnly.FromDateTime(DateTime.UtcNow);
+                category.Updated = DateTime.UtcNow;
                 await _categoryRepository.SaveChangesAsync();
 
                 //Return the deactivated category details in the response DTO
@@ -292,7 +291,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             return new ApiResponse<SingleCategoryResponseDTO>
             {
                 Success = true,
-                Message = "Category retrieved successfully.",
+                Message = message,
                 Data = new SingleCategoryResponseDTO
                 {
                     ID = category.ID,
@@ -328,7 +327,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         /// </summary>
         /// <param name="dto">The DTO to validate.</param>
         /// <returns>An ApiResponse indicating a failure if the DTO is null, otherwise null.</returns>
-        private ApiResponse<SingleCategoryResponseDTO>? ValidateDtoExists(object dto)
+        private ApiResponse<SingleCategoryResponseDTO>? ValidateDtoExists(object? dto)
         {
             if (dto == null)
             {

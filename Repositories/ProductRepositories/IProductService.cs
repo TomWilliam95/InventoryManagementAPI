@@ -20,7 +20,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
         // === PATCH === \\
         Task<ApiResponse<SingleProductResponseDTO>> UpdateProductPrice(int id, UpdateProductPriceRequestDTO dto);
-        Task<ApiResponse<SingleProductResponseDTO>> UpdateProductStockQuantity(int id, UpdateProductStockRequestDTO dto);
         Task<ApiResponse<SingleProductResponseDTO>> UpdateProductReorderLevel(int id, UpdateProductReorderRequestDTO dto);
 
         // === SET ACTIVE STATUS === \\
