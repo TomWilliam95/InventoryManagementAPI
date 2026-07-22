@@ -4,7 +4,10 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>671abaa6-2daa-4610-94d7-ccfb50760297</UserSecretsId>
+	  <UserSecretsId>671abaa6-2daa-4610-94d7-ccfb50760297</UserSecretsId>
+    <!-- The test project is nested below this project, so exclude its source
+         and generated files from the API project's default file discovery. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);InventoryManagementAPI.Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

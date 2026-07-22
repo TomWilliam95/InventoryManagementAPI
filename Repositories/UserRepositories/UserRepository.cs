@@ -24,7 +24,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
-
+        
         public async Task<User?> GetUserByIdAsync(int userId)
         {
             return await _context.Users.FindAsync(userId);
