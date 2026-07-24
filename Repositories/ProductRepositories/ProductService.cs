@@ -79,7 +79,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     };
                 }
                 // Retrieve the list of products for the specified category from the product repository
-                var productList = await _productRepo.GetProductsByCategory(categoryId);
+                var productList = await _productRepo.GetProductsByCategoryAsync(categoryId);
 
                 // Check if the product list is empty and return a response accordingly
                 var productListResult = ValidateProductGroupExists(productList);

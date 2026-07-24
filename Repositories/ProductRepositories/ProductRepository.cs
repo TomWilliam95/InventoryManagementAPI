@@ -27,7 +27,7 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
                 .Include(p => p.Supplier)
                 .FirstOrDefaultAsync(p => p.ID == id);
         }
-        public async Task<IEnumerable<Product>> GetProductsByCategory(int categoryId)
+        public async Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId)
         {
             return await _context.Products
                 .Include(p => p.Category)

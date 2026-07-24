@@ -8,7 +8,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositorys
         // === GET === \\
         Task<IEnumerable<Product>> GetAllProductsAsync();
         Task<Product?> GetProductAsync(int id);
-        Task<IEnumerable<Product>> GetProductsByCategory(int categoryId);
+        Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId);
         Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync();
 
         // === POST === \\

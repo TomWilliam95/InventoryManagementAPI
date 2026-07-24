@@ -22,7 +22,7 @@ namespace InventoryManagementAPI.Tests
             var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
 
             productRepository.Setup(repo => repo.GetProductAsync(It.IsAny<int>()))
-                .ReturnsAsync(CreateProduct(It.IsAny<string>()));
+                .ReturnsAsync(CreateProduct());
 
             // Act
             var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
@@ -67,25 +67,7 @@ namespace InventoryManagementAPI.Tests
             var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
 
             productRepository.Setup(repo => repo.GetProductAsync(It.IsAny<int>()))
-                .ReturnsAsync(new Product
-                {
-                    ID = It.IsAny<int>(),
-                    Sku = "TestSku",
-                    Name = "Test Product",
-                    Description = "Test Description",
-                    CategoryID = It.IsAny<int>(),
-                    SupplierID = It.IsAny<int>(),
-                    Category = null, // Simulate missing category data
-                    Supplier = new Supplier
-                    {
-                        ID = It.IsAny<int>(),
-                        Name = It.IsAny<string>(),
-                        ContactName = It.IsAny<string>(),
-                        PhoneContact = It.IsAny<string>(),
-                        EmailContact = It.IsAny<string>(),
-                        Address = It.IsAny<string>()
-                    }
-                });
+                .ReturnsAsync(CreateProductNullCategory());
 
             // Act
             var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
@@ -104,22 +86,7 @@ namespace InventoryManagementAPI.Tests
             //Arrange
             var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
             productRepository.Setup(repo => repo.GetProductAsync(It.IsAny<int>()))
-                .ReturnsAsync(new Product
-                {
-                    ID = It.IsAny<int>(),
-                    Sku = "TestSku",
-                    Name = "Test Product",
-                    Description = "Test Description",
-                    CategoryID = It.IsAny<int>(),
-                    SupplierID = It.IsAny<int>(),
-                    Category = new Category
-                    {
-                        ID = It.IsAny<int>(),
-                        Name = It.IsAny<string>(),
-                        Description = It.IsAny<string>()
-                    },
-                    Supplier = null // Simulate missing supplier data
-                });
+                .ReturnsAsync(CreateProductNullSupplier());
 
             // Act
             var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
@@ -163,9 +130,9 @@ namespace InventoryManagementAPI.Tests
             repo.GetAllProductsAsync()).
             ReturnsAsync(new List<Product>
             {
-                CreateProduct(It.IsAny<string>()),
-                CreateProduct(It.IsAny<string>()),
-                CreateProduct(It.IsAny<string>())
+                CreateProduct(),
+                CreateProduct(),
+                CreateProduct()
             });
 
             //Act
@@ -227,6 +194,106 @@ namespace InventoryManagementAPI.Tests
         }
 
 
+        // === GET PRODUCTS BY CATEGORY TESTS === \\
+        [Fact]
+        public async Task GetProductsByCategory_Success_Return200()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            productRepository.Setup(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()))
+                .ReturnsAsync(new List<Product>
+                {
+                    CreateProduct(),
+                    CreateProduct(),
+                    CreateProduct()
+                });
+
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.GetProductsByCategory(It.IsAny<int>());
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.Equal(200, result.StatusCode);
+            Assert.Equal("Successfully Retrieved Products By Category", result.Message);
+
+            //Verify
+            categoryRepository.Verify(repo => repo.CategoryExistsAsync(It.IsAny<int>()), Times.Once);
+            productRepository.Verify(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetProductsByCategory_NullCategory_Return404()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(false);
+
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.GetProductsByCategory(It.IsAny<int>());
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(404, result.StatusCode);
+            Assert.Equal("Category Not Found", result.Message);
+
+            //Verify
+            categoryRepository.Verify(repo => repo.CategoryExistsAsync(It.IsAny<int>()), Times.Once);
+            productRepository.Verify(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetProductsByCategory_NullProducts_Return404()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            productRepository.Setup(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()))
+                .ReturnsAsync([]);
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.GetProductsByCategory(It.IsAny<int>());
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(404, result.StatusCode);
+            Assert.Equal("No Products Found", result.Message);
+            //Verify
+            categoryRepository.Verify(repo => repo.CategoryExistsAsync(It.IsAny<int>()), Times.Once);
+            productRepository.Verify(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetProductsByCategory_ThrowException_Return500()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            productRepository.Setup(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()))
+                .ThrowsAsync(new Exception("Database connection error"));
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.GetProductsByCategory(It.IsAny<int>());
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(500, result.StatusCode);
+            Assert.Equal("Internal error occurred, failed to load products by category.", result.Message);
+            //Verify
+            categoryRepository.Verify(repo => repo.CategoryExistsAsync(It.IsAny<int>()), Times.Once);
+            productRepository.Verify(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()), Times.Once);
+        }
+
+
+
         // === CREATE MOQ REPO HELPER METHOD === \\
         private (Mock<IProductRepository>, Mock<ISupplierRepository>, Mock<ICategoryRepository>) CreateMockRepo()
         {
@@ -237,13 +304,13 @@ namespace InventoryManagementAPI.Tests
         }
 
         // === CREATE PRODUCT HELPER METHOD === \\
-        private Product CreateProduct(string testName)
+        private Product CreateProduct()
         {
             return new Product
             {
                 ID = It.IsAny<int>(),
-                Sku = testName,
-                Name = testName,
+                Sku = It.IsAny<string>(),
+                Name = It.IsAny<string>(),
                 Description = It.IsAny<string>(),
                 CategoryID = It.IsAny<int>(),
                 SupplierID = It.IsAny<int>(),
@@ -262,6 +329,49 @@ namespace InventoryManagementAPI.Tests
                     EmailContact = It.IsAny<string>(),
                     Address = It.IsAny<string>()
                 }
+            };
+        }
+
+        private Product CreateProductNullCategory()
+        {
+            return new Product
+            {
+                ID = It.IsAny<int>(),
+                Sku = It.IsAny<string>(),
+                Name = It.IsAny<string>(),
+                Description = It.IsAny<string>(),
+                CategoryID = It.IsAny<int>(),
+                SupplierID = It.IsAny<int>(),
+                Category = null,
+                Supplier = new Supplier
+                {
+                    ID = It.IsAny<int>(),
+                    Name = It.IsAny<string>(),
+                    ContactName = It.IsAny<string>(),
+                    PhoneContact = It.IsAny<string>(),
+                    EmailContact = It.IsAny<string>(),
+                    Address = It.IsAny<string>()
+                }
+            };
+        }
+
+        private Product CreateProductNullSupplier()
+        {
+            return new Product
+            {
+                ID = It.IsAny<int>(),
+                Sku = It.IsAny<string>(),
+                Name = It.IsAny<string>(),
+                Description = It.IsAny<string>(),
+                CategoryID = It.IsAny<int>(),
+                SupplierID = It.IsAny<int>(),
+                Category = new Category
+                {
+                    ID = It.IsAny<int>(),
+                    Name = It.IsAny<string>(),
+                    Description = It.IsAny<string>()
+                },
+                Supplier = null
             };
         }
     }
