@@ -292,6 +292,68 @@ namespace InventoryManagementAPI.Tests
             productRepository.Verify(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()), Times.Once);
         }
 
+        // === GET PRODUCTS BELOW REORDER LEVEL TESTS === \\
+        [Fact]
+        public async Task GetProductsBelowReorderLevel_Success_Return200()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            productRepository.Setup(productRepository => productRepository.GetProductsBelowReorderLevelAsync())
+                .ReturnsAsync(new List<Product>
+                {
+                    CreateProduct(),
+                    CreateProduct(),
+                    CreateProduct()
+                });
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.GetProductsBelowReorderLevel();
+            //Assert
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.Equal(200, result.StatusCode);
+            Assert.Equal("Successfully Retrieved Products Below Reorder Level", result.Message);
+            //Verify
+            productRepository.Verify(productRepository => productRepository.GetProductsBelowReorderLevelAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetProductsBelowReorderLevel_NoProducts_Return404()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            productRepository.Setup(productRepository => productRepository.GetProductsBelowReorderLevelAsync())
+                .ReturnsAsync([]);
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.GetProductsBelowReorderLevel();
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(404, result.StatusCode);
+            Assert.Equal("No products below reorder level found.", result.Message);
+            //Verify
+            productRepository.Verify(productRepository => productRepository.GetProductsBelowReorderLevelAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetProductsBelowReorderLevel_ThrowException_Return500()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            productRepository.Setup(productRepository => productRepository.GetProductsBelowReorderLevelAsync())
+                .ThrowsAsync(new Exception("Database connection error"));
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.GetProductsBelowReorderLevel();
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(500, result.StatusCode);
+            Assert.Equal("Internal error occurred, failed to load products below reorder level.", result.Message);
+            //Verify
+            productRepository.Verify(productRepository => productRepository.GetProductsBelowReorderLevelAsync(), Times.Once);
+        }
 
 
         // === CREATE MOQ REPO HELPER METHOD === \\
@@ -373,6 +435,15 @@ namespace InventoryManagementAPI.Tests
                 },
                 Supplier = null
             };
+        }
+
+        private Product CreateProductReorderTest(string name, int quantity, int reorderLevel)
+        {
+            var product = CreateProduct();
+            product.Name = name;
+            product.ReorderLevel = reorderLevel;
+            product.QuantityInStock  = quantity;
+            return product;
         }
     }
 }
