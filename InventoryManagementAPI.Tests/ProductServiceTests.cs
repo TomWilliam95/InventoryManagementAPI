@@ -1,4 +1,5 @@
 ﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
@@ -331,7 +332,7 @@ namespace InventoryManagementAPI.Tests
             Assert.NotNull(result);
             Assert.False(result.Success);
             Assert.Equal(404, result.StatusCode);
-            Assert.Equal("No products below reorder level found.", result.Message);
+            Assert.Equal("No Products Found", result.Message);
             //Verify
             productRepository.Verify(productRepository => productRepository.GetProductsBelowReorderLevelAsync(), Times.Once);
         }
@@ -355,6 +356,255 @@ namespace InventoryManagementAPI.Tests
             productRepository.Verify(productRepository => productRepository.GetProductsBelowReorderLevelAsync(), Times.Once);
         }
 
+
+        // ===  CREATE PRODUCT SERVICE HELPER METHOD === \\
+        [Fact]
+        public async Task CreateProduct_Success_Return201()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            categoryRepository.Setup(categoryRepository => categoryRepository.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            supplierRepository.Setup(supplierRepository => supplierRepository.SupplierExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            productRepository.Setup(productRepository => productRepository.AddProductAsync(It.IsAny<Product>()))
+                .ReturnsAsync(CreateProduct());
+            productRepository.Setup(repo => repo.GetProductAsync(It.IsAny<int>()))
+                .ReturnsAsync(CreateProduct());
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct(new CreateProductRequestDTO
+            {
+                Sku = "SKU12345",
+                Name = "Test Product",
+                Description = "Test Description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = 10.0m,
+                QuantityInStock = 100,
+                ReorderLevel = 5,
+                IsActive = true
+            });
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.Equal(201, result.StatusCode);
+            Assert.Equal("Product Successfully Created", result.Message);
+            //Verify
+            categoryRepository.Verify(categoryRepository => categoryRepository.CategoryExistsAsync(It.IsAny<int>()), Times.Once);
+            supplierRepository.Verify(supplierRepository => supplierRepository.SupplierExistsAsync(It.IsAny<int>()), Times.Once);
+            productRepository.Verify(productRepository => productRepository.AddProductAsync(It.IsAny<Product>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateProduct_NameDuplicate_Return400()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            productRepository.Setup(repo => repo.ProductNameExistsAsync(It.IsAny<string>()))
+                .ReturnsAsync(true);
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct(new CreateProductRequestDTO
+            {
+                Sku = "SKU12345",
+                Name = "Test Product",
+                Description = "Test Description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = 10.0m,
+                ReorderLevel = 5
+            });
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(400, result.StatusCode);
+            Assert.Equal("Product Name Already Exists", result.Message);
+            //Verify
+            productRepository.Verify(repo => repo.ProductNameExistsAsync(It.IsAny<string>()), Times.Once);
+            productRepository.Verify(repo => repo.AddProductAsync(It.IsAny<Product>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateProduct_SkuDuplicate_Return400()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            productRepository.Setup(repo => repo.ProductSkuExistsAsync(It.IsAny<string>()))
+                .ReturnsAsync(true);
+
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct(new CreateProductRequestDTO
+            {
+                Sku = "SKU12345",
+                Name = "Test Product",
+                Description = "Test Description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = 10.0m,
+                ReorderLevel = 5
+            });
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(400, result.StatusCode);
+            Assert.Equal("Product with the same SKU already exists.", result.Message);
+            //Verify
+            productRepository.Verify(repo => repo.ProductSkuExistsAsync(It.IsAny<string>()), Times.Once);
+            productRepository.Verify(repo => repo.AddProductAsync(It.IsAny<Product>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateProduct_CategoryNull_Return404()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(false);
+            supplierRepository.Setup(repo => repo.SupplierExistsAsync(It.IsAny<int>())).
+                ReturnsAsync(true);
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct(new CreateProductRequestDTO
+            {
+                Sku = "SKU12345",
+                Name = "Test Product",
+                Description = "Test Description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = 10.0m,
+                ReorderLevel = 5
+            });
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(404, result.StatusCode);
+            Assert.Equal("Category does not exist", result.Message);
+            //Verify
+            categoryRepository.Verify(repo => repo.CategoryExistsAsync(It.IsAny<int>()), Times.Once);
+            productRepository.Verify(repo => repo.AddProductAsync(It.IsAny<Product>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateProduct_SupplierNull_Return404()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            supplierRepository.Setup(repo => repo.SupplierExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(false);
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct(new CreateProductRequestDTO
+            {
+                Sku = "SKU12345",
+                Name = "Test Product",
+                Description = "Test Description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = 10.0m,
+                ReorderLevel = 5
+            });
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(404, result.StatusCode);
+            Assert.Equal("Supplier does not exist", result.Message);
+            //Verify
+            supplierRepository.Verify(repo => repo.SupplierExistsAsync(It.IsAny<int>()), Times.Once);
+            productRepository.Verify(repo => repo.AddProductAsync(It.IsAny<Product>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateProduct_InvalidPrice_Return400()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            supplierRepository.Setup(repo => repo.SupplierExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct(new CreateProductRequestDTO
+            {
+                Sku = "SKU12345",
+                Name = "Test Product",
+                Description = "Test Description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = -10.0m,
+                ReorderLevel = 5
+            });
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(400, result.StatusCode);
+            Assert.Equal("Price must be greater than zero", result.Message);
+            //Verify
+            productRepository.VerifyNoOtherCalls();
+            supplierRepository.VerifyNoOtherCalls();
+            categoryRepository.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task CreateProduct_InvalidData_Return400()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo();
+            supplierRepository.Setup(repo => repo.SupplierExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct((CreateProductRequestDTO)null!);
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(400, result.StatusCode);
+            Assert.Equal("Invalid DTO", result.Message);
+            //Verify
+            productRepository.VerifyNoOtherCalls();
+            supplierRepository.VerifyNoOtherCalls();
+            categoryRepository.VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public async Task CreateProduct_ThrowException_Return500()
+        {
+            //Arrange
+            var (productRepository, supplierRepository, categoryRepository) = CreateMockRepo(); 
+            supplierRepository.Setup(repo => repo.SupplierExistsAsync(It.IsAny<int>()))
+                .ReturnsAsync(true);
+            categoryRepository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>())).ReturnsAsync(true);
+            productRepository.Setup(repo => repo.AddProductAsync(It.IsAny<Product>()))
+                .ThrowsAsync(new Exception("Database connection error"));
+            //Act
+            var service = new ProductService(productRepository.Object, supplierRepository.Object, categoryRepository.Object);
+            var result = await service.AddProduct(new CreateProductRequestDTO
+            {
+                Sku = "SKU12345",
+                Name = "Test Product",
+                Description = "Test Description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = 10.0m,
+                ReorderLevel = 5
+            });
+            //Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.Equal(500, result.StatusCode);
+            Assert.Equal("Internal error occurred, failed to create product.", result.Message);
+            //Verify
+            productRepository.Verify(repo => repo.AddProductAsync(It.IsAny<Product>()), Times.Once);
+        }
 
         // === CREATE MOQ REPO HELPER METHOD === \\
         private (Mock<IProductRepository>, Mock<ISupplierRepository>, Mock<ICategoryRepository>) CreateMockRepo()
@@ -417,6 +667,7 @@ namespace InventoryManagementAPI.Tests
             };
         }
 
+
         private Product CreateProductNullSupplier()
         {
             return new Product
@@ -435,15 +686,6 @@ namespace InventoryManagementAPI.Tests
                 },
                 Supplier = null
             };
-        }
-
-        private Product CreateProductReorderTest(string name, int quantity, int reorderLevel)
-        {
-            var product = CreateProduct();
-            product.Name = name;
-            product.ReorderLevel = reorderLevel;
-            product.QuantityInStock  = quantity;
-            return product;
         }
     }
 }

@@ -137,6 +137,16 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 return validateFieldsResult;
             }
 
+            //Validate Price
+            if(dto.Price <= 0) { 
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Price must be greater than zero",
+                    StatusCode = 400
+                };
+            }
+
             try
             {
                 // Validate that the supplied SKU and Name dont exist
@@ -173,7 +183,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 // Return an Error ApiResponse if either the category or supplier details are missing after creation
                 // Return a created response with the new product details
-                return BuildProductResponse(createdProductWithDetails, "Product was successfully created", 201);
+                return BuildProductResponse(createdProductWithDetails, "Product Successfully Created", 201);
             }
             catch
             {
@@ -565,7 +575,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
-                    Message = "Product SKU Already Exists",
+                    Message = "Product with the same SKU already exists.",
                     StatusCode = 400
                 };
             }
