@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace InventoryManagementAPI.Tests
 {
+    // CategoryService is the real class under test. ICategoryRepository is
+    // mocked so these tests can simulate found, missing, duplicate, and error
+    // cases without requiring a database.
     public class CategoryServiceTests
     {
         // === GetSingleCategory Tests === \\
@@ -40,6 +43,9 @@ namespace InventoryManagementAPI.Tests
             Assert.True(result.Success);
             Assert.Equal(200, result.StatusCode);
             Assert.Equal("Category retrieved successfully.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.GetCategoryByIdAsync(1), Times.Once);
         }
 
         [Fact]
@@ -72,6 +78,9 @@ namespace InventoryManagementAPI.Tests
             Assert.False(result.Success);
             Assert.Equal(404, result.StatusCode);
             Assert.Equal("Category not found.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.GetCategoryByIdAsync(999), Times.Once);
         }
 
         [Fact]
@@ -88,9 +97,13 @@ namespace InventoryManagementAPI.Tests
             var result = await service.GetSingleCategory(1);
 
             // === Assert === \\
+            Assert.NotNull(result);
             Assert.False(result.Success);
             Assert.Equal(500, result.StatusCode);
             Assert.Equal("Internal error occurred, failed to load category.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()), Times.Once);
         }
 
 
@@ -116,6 +129,9 @@ namespace InventoryManagementAPI.Tests
             Assert.True(result.Success);
             Assert.Equal(200, result.StatusCode);
             Assert.Equal("Categories retrieved successfully.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.GetAllCategoriesAsync(), Times.Once);
         }
 
         [Fact]
@@ -136,6 +152,9 @@ namespace InventoryManagementAPI.Tests
             Assert.False(result.Success);
             Assert.Equal(404, result.StatusCode);
             Assert.Equal("No categories found.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.GetAllCategoriesAsync(), Times.Once);
         }
 
         [Fact]
@@ -150,9 +169,13 @@ namespace InventoryManagementAPI.Tests
             var service = new CategoryService(repository.Object);
             var result = await service.GetAllCategories();
             // === Assert === \\
+            Assert.NotNull(result);
             Assert.False(result.Success);
             Assert.Equal(500, result.StatusCode);
             Assert.Equal("Internal error occurred, failed to load categories.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.GetAllCategoriesAsync(), Times.Once);
         }
 
 
@@ -293,6 +316,9 @@ namespace InventoryManagementAPI.Tests
             Assert.False(result.Success);
             Assert.Equal(500, result.StatusCode);
             Assert.Equal("Internal error occurred, failed to add category.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>()), Times.Once);
         }
 
 
@@ -454,6 +480,9 @@ namespace InventoryManagementAPI.Tests
             Assert.False(result.Success);
             Assert.Equal(500, result.StatusCode);
             Assert.Equal("Internal error occurred, failed to update category.", result.Message);
+
+            // Verify
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Once);
         }
 
 

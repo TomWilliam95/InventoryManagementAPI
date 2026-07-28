@@ -83,7 +83,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 var supplier = supplierExists.Supplier;
 
                 // Build and return the response DTO from the supplier entity
-                return BuildSupplierResponseDTO(supplier, "Supplier successfully retrieved", 200);
+                return BuildSupplierResponseDTO(supplier, "Supplier retrieved successfully.", 200);
             }
             catch
             {
