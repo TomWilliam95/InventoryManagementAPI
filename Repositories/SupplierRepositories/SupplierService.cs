@@ -1,5 +1,6 @@
 ﻿using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierDTO_s;
+using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
 
 namespace InventoryManagementAPI.Repositories.SupplierRepositories
@@ -134,6 +135,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 };
                 // Save the supplier to the repository
                 var createdSupplier = await _supplierRepository.CreateSupplierAsync(newSupplier);
+                await _supplierRepository.SaveChangesAsync();
 
                 return BuildSupplierResponseDTO(createdSupplier, "Supplier successfully created", 201);
             }
@@ -155,6 +157,17 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 return dtoValidationResult;
             }
 
+            //Validate that the RowVersion is provided for concurrency control
+            if (updateSupplierDTO.RowVersion == null || updateSupplierDTO.RowVersion.Length == 0)
+            {
+                return new ApiResponse<SupplierResponseDTO>
+                {
+                    Success = false,
+                    Message = "RowVersion is required for concurrency control.",
+                    StatusCode = 400
+                };
+            }
+
             // Validate the supplier DTO for required fields and correct formats
             var validationResult = ValidateDtoFields(updateSupplierDTO.Name, updateSupplierDTO.ContactName, updateSupplierDTO.EmailContact, updateSupplierDTO.PhoneContact, updateSupplierDTO.Address);
             if (validationResult != null)
@@ -174,6 +187,17 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 //Assign the existing supplier entity to a variable for updating
                 var supplier = validateAgainstExisting.Supplier;
 
+                //Validate that the RowVersion matches for concurrency control
+                if (!supplier.RowVersion.SequenceEqual(updateSupplierDTO.RowVersion))
+                {
+                    return new ApiResponse<SupplierResponseDTO>
+                    {
+                        Success = false,
+                        Message = "Concurrency conflict: The supplier has been modified by another process. Please reload and try again.",
+                        StatusCode = 409
+                    };
+                }
+
                 // Apply the updateSupplierDTO values to the supplier entity
                 supplier.Name = updateSupplierDTO.Name;
                 supplier.ContactName = updateSupplierDTO.ContactName;
@@ -184,10 +208,14 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 supplier.LastUpdated = DateTime.UtcNow;
 
                 // Save the updated supplier through the repository
-                await _supplierRepository.UpdateSupplierAsync(supplier);
+                await _supplierRepository.SaveChangesAsync();
 
                 // Return the updated supplier details in the response
                 return BuildSupplierResponseDTO(supplier, "Supplier details successfully updated", 200);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
             }
             catch
             {
@@ -231,6 +259,10 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 // Return the activated supplier details
                 return BuildSupplierResponseDTO(supplier, "Supplier successfully activated", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildCatchErrorResponse("Internal error occurred, failed to activate supplier.");
@@ -272,6 +304,10 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 
                 // Return the deactivated supplier details Api Response
                 return BuildSupplierResponseDTO(supplier, "Supplier successfully deactivated", 200);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
             }
             catch
             {
@@ -350,6 +386,20 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 Success = false,
                 Message = message,
                 StatusCode = 500
+            };
+        }
+
+        /// <summary>
+        /// Builds an ApiResponse for handling concurrency conflicts during supplier updates.
+        /// </summary>
+        /// <returns></returns>
+        private ApiResponse<SupplierResponseDTO> BuildConcurrencyCatchErrorResponse()
+        {
+            return new ApiResponse<SupplierResponseDTO>
+            {
+                Success = false,
+                Message = "Concurrency conflict occurred while updating the supplier. Please try again.",
+                StatusCode = 409
             };
         }
 

@@ -29,15 +29,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         public async Task<Supplier> CreateSupplierAsync(Supplier supplier)
         {
             await _context.Suppliers.AddAsync(supplier);
-            await _context.SaveChangesAsync();
             return supplier;
-        }
-
-        // === PUT === \\
-        public async Task UpdateSupplierAsync(Supplier updatedSupplierData)
-        {
-            _context.Suppliers.Update(updatedSupplierData);
-            await _context.SaveChangesAsync();
         }
 
         // === CHECK EXISTENCE === \\

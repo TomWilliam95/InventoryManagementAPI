@@ -36,9 +36,9 @@ namespace InventoryManagementAPI.Services
                 new Product
                 {
                     ID = 1,
-                    Sku = "Test",
-                    Name = "Test",
-                    Description = "Test",
+                    Sku = "Test1",
+                    Name = "Test1",
+                    Description = "Test1",
                     CategoryID = 1,
                     QuantityInStock = 420,
                     ReorderLevel = 69,

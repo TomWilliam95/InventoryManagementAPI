@@ -3,6 +3,7 @@ using InventoryManagementAPI.Models.DTO_s.MovementDTO_s;
 using InventoryManagementAPI.Models.Enums;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.UserRepositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 {
@@ -420,7 +421,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 {
                     Success = false,
                     Message = "Invalid movement type for adjustment.",
-                    StatusCode = 400
+                    StatusCode = 400 
                 };
             }
 
@@ -466,10 +467,19 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 }
 
                 // Update the product's stock quantity and record the movement
-                await UpdateDatabaseAndReturnResponse(dto, movement);
+                await UpdateDatabaseAndReturnResponse(product, movement);
 
                 // Return the response with the movement details
                 return ReturnResponse(dto, movement, product, user);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "Concurrency error occurred while recording inventory adjustment. Please try again.",
+                    StatusCode = 409
+                };
             }
             catch
             {
@@ -527,12 +537,21 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 movement.QuantityAfter = product.QuantityInStock + dto.Quantity;
 
                 // Update the product's stock quantity and record the movement
-                await UpdateDatabaseAndReturnResponse(dto, movement);
+                await UpdateDatabaseAndReturnResponse(product, movement);
 
                 // Return the response with the movement details
                 return ReturnResponse(dto, movement, product, user);
 
 
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "Concurrency error occurred while recording inventory adjustment. Please try again.",
+                    StatusCode = 409
+                };
             }
             catch
             {
@@ -599,10 +618,19 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 movement.QuantityAfter = product.QuantityInStock - dto.Quantity;
 
                 // Update the product's stock quantity and record the movement
-                await UpdateDatabaseAndReturnResponse(dto, movement);
+                await UpdateDatabaseAndReturnResponse(product, movement);
 
                 // Return the response with the movement details
                 return ReturnResponse(dto, movement, product, user);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "Concurrency error occurred while recording inventory adjustment. Please try again.",
+                    StatusCode = 409
+                };
             }
             catch
             {
@@ -774,16 +802,10 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         }
 
 
-        /// <summary>
-        /// Updates the inventory movement repository and adjusts the product's stock quantity based on the provided movement.
-        /// </summary>
-        /// <param name="dto">The data transfer object containing inventory movement details.</param>
-        /// <param name="movement">The inventory movement entity to be added to the repository.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        private async Task UpdateDatabaseAndReturnResponse(CreateInventoryMovementRequestDTO dto, InventoryMovement movement)
+       
+        private async Task UpdateDatabaseAndReturnResponse(Product product, InventoryMovement movement)
         {
-            var product = await _productRepository.GetProductAsync(dto.ProductId); // Ensure the product is retrieved before updating stock quantity
-            product!.QuantityInStock = movement.QuantityAfter; // Update the product's stock quantity
+            product.QuantityInStock = movement.QuantityAfter; // Update the product's stock quantity
 
             await _movementRepository.AddMovementAsync(movement);// Add the inventory movement to the repository
             await _productRepository.SaveChangesAsync(); // Save changes to the product repository

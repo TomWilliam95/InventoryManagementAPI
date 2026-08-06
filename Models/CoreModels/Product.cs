@@ -40,6 +40,8 @@ namespace InventoryManagementAPI.Models.CoreModels
         public bool IsActive { get; set; }
         public DateTime Created { get; set; }
         public DateTime Updated { get; set; }
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = [];
 
         [ForeignKey(nameof(CategoryID))]
         public virtual Category? Category { get; set; }

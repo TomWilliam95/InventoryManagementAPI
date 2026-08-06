@@ -58,7 +58,6 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         public async Task<InventoryMovement> AddMovementAsync(InventoryMovement movement)
         {
             await _context.InventoryMovements.AddAsync(movement);
-            await _context.SaveChangesAsync();
             return movement;
         }
 

@@ -17,7 +17,9 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         // === GET === \\
         public async Task<IEnumerable<Product>> GetAllProductsAsync()
         {
-            return await _context.Products.ToListAsync();
+            return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Supplier).ToListAsync();
         }
 
         public async Task<Product?> GetProductAsync(int id)
@@ -49,7 +51,6 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         public async Task<Product> AddProductAsync(Product product)
         {
             await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
             return product;
         }
 

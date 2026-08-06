@@ -32,6 +32,8 @@ namespace InventoryManagementAPI.Models.CoreModels
         public bool IsActive { get; set; }
         public DateTime Created { get; set; }
         public DateTime LastUpdated { get; set; }
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = [];
 
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     }

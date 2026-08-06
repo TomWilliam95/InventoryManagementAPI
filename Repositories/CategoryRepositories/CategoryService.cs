@@ -132,6 +132,16 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 // If the DTO is null, return the validation error response
                 return dtoValidationResponse;
             }
+            if(dto.RowVersion == null || dto.RowVersion.Length == 0)
+            {
+                // If the RowVersion is null or empty, return a validation error response
+                return new ApiResponse<SingleCategoryResponseDTO>
+                {
+                    Success = false,
+                    Message = "RowVersion is required for concurrency control.",
+                    StatusCode = 400,
+                };
+            }
             try
             {
                 // Validate the updated category name is not null, empty, or whitespace and check for duplicates
@@ -152,6 +162,16 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 //Assign the found category to a variable for easier access
                 var category = fetchCategoryResult.Category;
 
+                if(!category.RowVersion.SequenceEqual(dto.RowVersion))
+                {
+                    // If the RowVersion does not match, return a concurrency error response
+                    return new ApiResponse<SingleCategoryResponseDTO>
+                    {
+                        Success = false,
+                        Message = "The category has been modified by another process. Please reload and try again.",
+                        StatusCode = 409, // Conflict
+                    };
+                }
 
                 //Assign the updated values from the DTO to the category entity
                 category.Name = dto.Name;

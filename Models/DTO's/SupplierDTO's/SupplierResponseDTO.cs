@@ -8,5 +8,6 @@
         public required string PhoneContact { get; set; }
         public required string EmailContact { get; set; }
         public bool IsActive { get; set; }
+        public byte[] RowVersion { get; set; } = [];
     }
 }

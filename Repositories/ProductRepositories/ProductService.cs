@@ -4,6 +4,7 @@ using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PUT.STOCK;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.SupplierRepositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositories
 {
@@ -138,7 +139,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
 
             //Validate Price
-            if(dto.Price <= 0) { 
+            if (dto.Price <= 0)
+            {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
@@ -175,6 +177,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 // Save the product, then reload it with category and supplier details for the response mapping
                 var createdProduct = await _productRepo.AddProductAsync(product);
+                await _productRepo.SaveChangesAsync();
+
                 var createdProductWithDetails = await _productRepo.GetProductAsync(createdProduct.ID);
                 if (createdProductWithDetails == null)
                 {
@@ -201,6 +205,13 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 return validateDtoResult;
             }
 
+            // Validate that the RowVersion is provided for concurrency control
+            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            if(validateRowVersion != null)
+            {
+                return validateRowVersion;
+            }
+
             //validate the required fields before proceeding with the update
             var result = ValidateDtoFields(dto.Sku, dto.Name, dto.Description);
             if (result != null)
@@ -215,6 +226,13 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 if (updateProductExistsResult.Product == null)
                 {
                     return updateProductExistsResult.Error!;
+                }
+
+                //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
+                var validateRowVersionMatch = ValidateMatchRowVersion(updateProductExistsResult.Product, dto.RowVersion);
+                if (validateRowVersionMatch != null)
+                {
+                    return validateRowVersionMatch;
                 }
 
                 var validateExistenceResult = await UpdateValidateDtoFieldsExist(updateProductExistsResult.Product, dto);
@@ -249,6 +267,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Return a successful response with the updated product details
                 return BuildProductResponse(findUpdatedProduct, "Successfully Updated Product Details", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product details.");
@@ -270,13 +292,28 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     StatusCode = 400
                 };
             }
+
+            // Validate that the RowVersion is provided for concurrency control
+            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            if (validateRowVersion != null)
+            {
+                return validateRowVersion;
+            }
+
             try
             {
                 // Load the product before applying the price update
                 var validateProductResult = await ValidateProductExists(id);
-                if(validateProductResult.Product == null)
+                if (validateProductResult.Product == null)
                 {
                     return validateProductResult.Error!;
+                }
+
+                //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
+                var validateRowVersionMatch = ValidateMatchRowVersion(validateProductResult.Product, dto.RowVersion);
+                if (validateRowVersionMatch != null)
+                {
+                    return validateRowVersionMatch;
                 }
 
                 // Update the price and save the change
@@ -286,6 +323,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 // Return a successful response with the updated product details
                 return BuildProductResponse(validateProductResult.Product, "Price Successfully Updated", 200);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
             }
             catch
             {
@@ -305,13 +346,28 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     StatusCode = 400
                 };
             }
+
+            // Validate that the RowVersion is provided for concurrency control
+            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            if (validateRowVersion != null)
+            {
+                return validateRowVersion;
+            }
+
             try
             {
                 // Load the product before applying the reorder level update
                 var productExistsResult = await ValidateProductExists(id);
-                if(productExistsResult.Product == null)
+                if (productExistsResult.Product == null)
                 {
                     return productExistsResult.Error!;
+                }
+
+                //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
+                var validateRowVersionMatch = ValidateMatchRowVersion(productExistsResult.Product, dto.RowVersion);
+                if (validateRowVersionMatch != null)
+                {
+                    return validateRowVersionMatch;
                 }
 
                 // Update the ReorderLevel property of the product
@@ -323,6 +379,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Return a successful response with the updated reorder level details
                 return BuildProductResponse(productExistsResult.Product, "ReOrderStock Levels Updated", 200);
 
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
             }
             catch
             {
@@ -337,11 +397,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             {
                 // Load the product before attempting to activate it
                 var productExistsResult = await ValidateProductExists(id);
-                if(productExistsResult.Product == null)
+                if (productExistsResult.Product == null)
                 {
                     return productExistsResult.Error!;
                 }
-
                 var product = productExistsResult.Product;
 
                 // Return a bad request response if the product is already active
@@ -363,6 +422,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Return a successful response with the activated product details
                 return BuildProductResponse(product, "Product activated successfully", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildCatchErrorResponseSingle("Internal error occurred, failed to activate product.");
@@ -375,7 +438,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             {
                 // Load the product before attempting to deactivate it
                 var productExistsResult = await ValidateProductExists(id);
-                if(productExistsResult.Product == null)
+                if (productExistsResult.Product == null)
                 {
                     return productExistsResult.Error!;
                 }
@@ -399,6 +462,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 // Return a successful response with the deactivated product details
                 return BuildProductResponse(product, "Product deactivated successfully", 200);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
             }
             catch
             {
@@ -664,7 +731,45 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             return null;
         }
 
-        
+        /// <summary>
+        /// Validates the provided RowVersion byte array to ensure it is not null or empty.
+        /// </summary>
+        /// <param name="rowVersion">The RowVersion byte array to validate.</param>
+        /// <returns>An ApiResponse indicating the result of the validation.</returns>
+        private ApiResponse<SingleProductResponseDTO>? ValidateRowVersion(byte[] rowVersion)
+        {
+            if (rowVersion == null || rowVersion.Length == 0)
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "No RowVersion provided, unable to perform update",
+                    StatusCode = 400
+                };
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Validates that the provided RowVersion matches the RowVersion of the product in the database to ensure concurrency control.
+        /// </summary>
+        /// <param name="product">The product entity from the database.</param>
+        /// <param name="rowVersion">The RowVersion byte array to validate.</param>
+        /// <returns>An ApiResponse indicating the result of the validation.</returns>
+        private ApiResponse<SingleProductResponseDTO>? ValidateMatchRowVersion(Product product, byte[] rowVersion)
+        {
+            if (!product.RowVersion.SequenceEqual(rowVersion))
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "RowVersion mismatch, the product has been modified by another process.",
+                    StatusCode = 409
+                };
+            }
+            return null;
+        }
+
         // === RESPONSE HELPER METHOD === \\
 
         /// <summary>
@@ -709,7 +814,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Price = product.Price,
                     SupplierID = product.SupplierID,
                     SupplierName = product.Supplier.Name,
-                    IsActive = product.IsActive
+                    IsActive = product.IsActive,
+                    RowVersion = product.RowVersion
                 },
                 StatusCode = statusCode
             };
@@ -727,6 +833,19 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 Success = false,
                 Message = message,
                 StatusCode = 500
+            };
+        }
+        /// <summary>
+        /// Builds an error response for a single product operation, indicating that a concurrency error occurred during the update.
+        /// </summary>
+        /// <returns>An ApiResponse indicating the concurrency error.</returns>
+        private ApiResponse<SingleProductResponseDTO> BuildConcurrencyCatchErrorResponse()
+        {
+            return new ApiResponse<SingleProductResponseDTO>
+            {
+                Success = false,
+                Message = "Concurrency error occurred, failed to update product details.",
+                StatusCode = 409
             };
         }
 
@@ -760,6 +879,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 Message = message,
                 StatusCode = 500
             };
-        }
-    }
+        } 
+    } 
 }

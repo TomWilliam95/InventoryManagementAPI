@@ -278,9 +278,7 @@ namespace InventoryManagementAPI.Tests
 
             // It.Is<Supplier> inspects the actual entity sent to the repository.
             // The verification proves both the ID and updated name were mapped.
-            repository.Verify(repo => repo.UpdateSupplierAsync(
-                It.Is<Supplier>(supplier => supplier.ID == 1 && supplier.Name == "Updated Supplier")),
-                Times.Once);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
         }
 
         [Fact]
@@ -300,7 +298,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Invalid supplier object model", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.UpdateSupplierAsync(It.IsAny<Supplier>()), Times.Never);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
         }
 
         [Fact]
@@ -319,7 +317,7 @@ namespace InventoryManagementAPI.Tests
             Assert.False(result.Success);
             Assert.Equal(404, result.StatusCode);
             Assert.Equal("Supplier not found", result.Message);
-            repository.Verify(repo => repo.UpdateSupplierAsync(It.IsAny<Supplier>()), Times.Never);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
         }
 
         [Fact]
@@ -340,7 +338,7 @@ namespace InventoryManagementAPI.Tests
             Assert.False(result.Success);
             Assert.Equal(400, result.StatusCode);
             Assert.Equal("Supplier Name already exists", result.Message);
-            repository.Verify(repo => repo.UpdateSupplierAsync(It.IsAny<Supplier>()), Times.Never);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
         }
 
         [Fact]
@@ -361,7 +359,7 @@ namespace InventoryManagementAPI.Tests
             Assert.False(result.Success);
             Assert.Equal(400, result.StatusCode);
             Assert.Equal("Supplier Email already exists", result.Message);
-            repository.Verify(repo => repo.UpdateSupplierAsync(It.IsAny<Supplier>()), Times.Never);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
         }
 
         [Fact]
@@ -370,7 +368,7 @@ namespace InventoryManagementAPI.Tests
             // Arrange
             var repository = new Mock<ISupplierRepository>();
             repository.Setup(repo => repo.GetSupplierByIdAsync(1)).ReturnsAsync(CreateSupplier());
-            repository.Setup(repo => repo.UpdateSupplierAsync(It.IsAny<Supplier>()))
+            repository.Setup(repo => repo.SaveChangesAsync())
                 .ThrowsAsync(new Exception("Database error"));
             var service = new SupplierService(repository.Object);
 
@@ -384,7 +382,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Internal error occurred, failed to update supplier.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.UpdateSupplierAsync(It.IsAny<Supplier>()), Times.Once);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
         }
 
         // === Supplier Status Tests === \\

@@ -16,5 +16,6 @@ namespace InventoryManagementAPI.Models.DTO_s.ProductDTO_s
         public int SupplierID { get; set; }
         public required string SupplierName { get; set; } 
         public bool IsActive { get; set; }
+        public byte[] RowVersion { get; set; } = [];
     }
 }

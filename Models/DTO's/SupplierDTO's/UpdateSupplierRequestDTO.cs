@@ -25,5 +25,6 @@
         public required string Address { get; set; }
 
         public bool IsActive { get; set; }
+        public byte[] RowVersion { get; set; } = [];
     }
 }

@@ -11,9 +11,6 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         // === POST === \\
         Task<Supplier> CreateSupplierAsync(Supplier supplier);
 
-        // === PUT === \\
-        Task UpdateSupplierAsync(Supplier updatedSupplier);
-
         // === Check Exists === \\
         Task<bool> SupplierExistsAsync(int supplierId);
         Task<bool> SupplierNameExistsAsync(string supplierName);

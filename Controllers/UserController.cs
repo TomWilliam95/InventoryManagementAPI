@@ -1,4 +1,5 @@
-﻿using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
+﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Models.Enums;
 using InventoryManagementAPI.Repositories.UserRepositories;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +22,7 @@ namespace InventoryManagementAPI.Controllers
         // === GET === \\
         [HttpGet("{id:int}")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> GetSingleUser(int id)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> GetSingleUser(int id)
         {
             var user = await _userService.GetUserByIdAsync(id);
             return StatusCode(user.StatusCode, user);
@@ -29,7 +30,7 @@ namespace InventoryManagementAPI.Controllers
 
         [HttpGet]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<IEnumerable<UserResponseDTO>>>> GetAllUsers()
+        public async Task<ActionResult<ApiResponse<IEnumerable<UserResponseDTO>>>> GetAllUsers()
         {
             var users = await _userService.GetAllUsersAsync();
             return StatusCode(users.StatusCode, users);
@@ -37,7 +38,7 @@ namespace InventoryManagementAPI.Controllers
 
         [HttpGet("by-email/{email}")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> GetUserByEmail(string email)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> GetUserByEmail(string email)
         {
             var user = await _userService.GetUserByEmailAsync(email);
             return StatusCode(user.StatusCode, user);
@@ -45,7 +46,7 @@ namespace InventoryManagementAPI.Controllers
 
         [HttpGet("roles/{role}")]
         [Authorize(Roles = ("Admin"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<IEnumerable<UserResponseDTO>>>> GetUsersByRole(UserRoles role)
+        public async Task<ActionResult<ApiResponse<IEnumerable<UserResponseDTO>>>> GetUsersByRole(UserRoles role)
         {
             var users = await _userService.GetUsersByRoleAsync(role);
             return StatusCode(users.StatusCode, users);
@@ -55,7 +56,7 @@ namespace InventoryManagementAPI.Controllers
         // === POST === \\
         [HttpPost]
         [AllowAnonymous]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> CreateNewUser(CreateNewUserRequestDTO newUser)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> CreateNewUser(CreateNewUserRequestDTO newUser)
         {
             var user = await _userService.CreateUserAsync(newUser);
             return user.StatusCode switch
@@ -68,14 +69,14 @@ namespace InventoryManagementAPI.Controllers
         // === PATCH === \\
         [HttpPatch("{userId:int}/role")]
         [Authorize(Roles = ("Admin"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserRole(int userId, UpdateUserRoleRequestDTO newRole)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> UpdateUserRole(int userId, UpdateUserRoleRequestDTO newRole)
         {
             var user = await _userService.UpdateUserRoleAsync(userId, newRole);
             return StatusCode(user.StatusCode, user);
         }
 
         [HttpPatch("{userId:int}/password")]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserPassword(int userId, UpdateUserPasswordRequestDTO newPassword)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> UpdateUserPassword(int userId, UpdateUserPasswordRequestDTO newPassword)
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var admin = User.FindFirstValue(ClaimTypes.Role)!;
@@ -85,7 +86,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpPatch("{userId:int}/email")]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserEmail(int userId, UpdateUserEmailRequestDTO newEmail)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> UpdateUserEmail(int userId, UpdateUserEmailRequestDTO newEmail)
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!) ;
             var admin = User.FindFirstValue(ClaimTypes.Role)!;
@@ -95,7 +96,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpPatch("{userId:int}/username")]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> UpdateUserUsername(int userId, UpdateUserNameRequestDTO newUsername)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> UpdateUserUsername(int userId, UpdateUserNameRequestDTO newUsername)
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var admin = User.FindFirstValue(ClaimTypes.Role)!;
@@ -107,7 +108,7 @@ namespace InventoryManagementAPI.Controllers
         // === SET ACTIVE / INACTIVE === \\
         [HttpPatch("{userId:int}/activate")]
         [Authorize(Roles = ("Admin"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> ActivateUser(int userId)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> ActivateUser(int userId)
         {
             var user = await _userService.ActivateUserAsync(userId);
             return StatusCode(user.StatusCode, user);
@@ -115,7 +116,7 @@ namespace InventoryManagementAPI.Controllers
 
         [HttpPatch("{userId:int}/deactivate")]
         [Authorize(Roles = ("Admin"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<UserResponseDTO>>> DeactivateUser(int userId)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> DeactivateUser(int userId)
         {
             var user = await _userService.DeactivateUserAsync(userId);
             return StatusCode(user.StatusCode, user);

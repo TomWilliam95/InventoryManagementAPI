@@ -4,5 +4,6 @@
     {
         [Range(0, int.MaxValue)]
         public int ReorderLevel { get; set; }
+        public byte[] RowVersion { get; set; } = [];
     }
 }

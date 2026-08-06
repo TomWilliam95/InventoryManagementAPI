@@ -29,6 +29,8 @@ namespace InventoryManagementAPI.Models.CoreModels
         public DateTime LastUpdated { get; set; }
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = [];
 
         public virtual ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
     }

@@ -21,5 +21,6 @@ namespace InventoryManagementAPI.Models.DTO_s.ProductDTO_s
 
         [Range(1, int.MaxValue)]
         public int SupplierID { get; set; }
+        public byte[] RowVersion { get; set; } = [];
     }
 }

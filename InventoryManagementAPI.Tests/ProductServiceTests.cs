@@ -5,6 +5,7 @@ using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.SupplierRepositories;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -306,6 +307,7 @@ namespace InventoryManagementAPI.Tests
             productRepository.Verify(repo => repo.GetProductsByCategoryAsync(It.IsAny<int>()), Times.Once);
         }
 
+
         // === GET PRODUCTS BELOW REORDER LEVEL TESTS === \\
         [Fact]
         public async Task GetProductsBelowReorderLevel_Success_Return200()
@@ -370,7 +372,8 @@ namespace InventoryManagementAPI.Tests
         }
 
 
-        // ===  CREATE PRODUCT SERVICE HELPER METHOD === \\
+
+        // ===  CREATE PRODUCT SERVICE TESTS === \\
         [Fact]
         public async Task CreateProduct_Success_Return201()
         {
@@ -621,318 +624,546 @@ namespace InventoryManagementAPI.Tests
 
         // === UPDATE PRODUCT TESTS === \\
         [Fact]
-    public async Task UpdateProductDetails_ValidRequest_Returns200()
-    {
+        public async Task UpdateProductDetails_ValidRequest_Returns200()
+        {
+                // Arrange
+                var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+                var product = CreateProduct();
+                product.ID = 1;
+                productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+                supplierRepo.Setup(repo => repo.SupplierExistsAsync(2)).ReturnsAsync(true);
+                categoryRepo.Setup(repo => repo.CategoryExistsAsync(2)).ReturnsAsync(true);
+                var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+                // Act
+                var result = await service.UpdateProductDetails(1, CreateUpdateProductDTO());
+
+                // Assert
+                Assert.NotNull(result);
+                Assert.True(result.Success);
+                Assert.Equal(200, result.StatusCode);
+                Assert.Equal("Successfully Updated Product Details", result.Message);
+                Assert.Equal("Updated Product", result.Data!.Name);
+
+                // SaveChanges is the persistence boundary for this update. Times.Once
+                // ensures the valid request was saved exactly once.
+                productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+            }
+
+        [Fact]
+        public async Task UpdateProductDetails_NullRequest_Returns400()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductDetails(1, null!);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Invalid DTO", result.Message);
+
+        // Validation failed before persistence, so saving would be incorrect.
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProductDetails_ProductNotFound_Returns404()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        productRepo.Setup(repo => repo.GetProductAsync(99)).ReturnsAsync((Product?)null);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductDetails(99, CreateUpdateProductDTO());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(404, result.StatusCode);
+        Assert.Equal("Product Not Found", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProductDetails_DuplicateName_Returns400()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var product = CreateProduct();
+        product.ID = 1;
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+        productRepo.Setup(repo => repo.OtherProductNameExistsAsync(1, "Updated Product")).ReturnsAsync(true);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductDetails(1, CreateUpdateProductDTO());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Product Name Already Exists", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProductDetails_DuplicateSku_Returns400()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var product = CreateProduct();
+        product.ID = 1;
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+        productRepo.Setup(repo => repo.OtherProductSkuExistsAsync(1, "NEWSKU01")).ReturnsAsync(true);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductDetails(1, CreateUpdateProductDTO());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Product SKU Already Exists", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProductPrice_ValidPrice_Returns200()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var product = CreateProduct();
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductPrice(1, new UpdateProductPriceRequestDTO { Price = 25.50m });
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Price Successfully Updated", result.Message);
+        Assert.Equal(25.50m, result.Data!.Price);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateProductPrice_NonPositivePrice_Returns400()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductPrice(1, new UpdateProductPriceRequestDTO { Price = 0 });
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Invalid Price Entry", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProductPrice_ProductNotFound_Returns404()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        productRepo.Setup(repo => repo.GetProductAsync(99)).ReturnsAsync((Product?)null);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductPrice(99, new UpdateProductPriceRequestDTO { Price = 10 });
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(404, result.StatusCode);
+        Assert.Equal("Product Not Found", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateProductReorderLevel_ValidLevel_Returns200()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(CreateProduct());
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductReorderLevel(1,
+        new UpdateProductReorderRequestDTO { ReorderLevel = 8 });
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("ReOrderStock Levels Updated", result.Message);
+        Assert.Equal(8, result.Data!.ReorderLevel);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateProductReorderLevel_NegativeLevel_Returns400()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.UpdateProductReorderLevel(1,
+        new UpdateProductReorderRequestDTO { ReorderLevel = -1 });
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Invalid Reorder Level", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task ActivateProduct_InactiveProduct_Returns200()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var product = CreateProduct();
+        product.IsActive = false;
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.ActivateProduct(1);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Product activated successfully", result.Message);
+        Assert.True(result.Data!.IsActive);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task ActivateProduct_AlreadyActive_Returns400()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var product = CreateProduct();
+        product.IsActive = true;
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.ActivateProduct(1);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Product is already active", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeactivateProduct_ActiveProduct_Returns200()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var product = CreateProduct();
+        product.IsActive = true;
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.DeactivateProduct(1);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Product deactivated successfully", result.Message);
+        Assert.False(result.Data!.IsActive);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeactivateProduct_AlreadyInactive_Returns400()
+        {
+        // Arrange
+        var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+        var product = CreateProduct();
+        product.IsActive = false;
+        productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
+        var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+        // Act
+        var result = await service.DeactivateProduct(1);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Product is already inactive", result.Message);
+
+        // Verify
+        productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+
+        //ConcurrencyTests
+        [Fact]
+        public async Task UpdateProductDetailsConcurrencyTest_Success_ReturnsUpdatedRowVersion()
+        {
             // Arrange
             var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            product.ID = 1;
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            supplierRepo.Setup(repo => repo.SupplierExistsAsync(2)).ReturnsAsync(true);
-            categoryRepo.Setup(repo => repo.CategoryExistsAsync(2)).ReturnsAsync(true);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+
+            var originalRowVersion = new byte[] { 1, 2, 3, 4 };
+            var updatedRowVersion = new byte[] { 5, 6, 7, 8 };
+
+            var product = new Product
+            {
+                ID = 1,
+                Sku = "SKU00001",
+                Name = "Original Product",
+                Description = "Original product description",
+                CategoryID = 1,
+                SupplierID = 1,
+                Price = 10.00m,
+                QuantityInStock = 100,
+                ReorderLevel = 5,
+                IsActive = true,
+                RowVersion = originalRowVersion,
+
+                Category = new Category
+                {
+                    ID = 1,
+                    Name = "Test Category",
+                    Description = "Test category description"
+                },
+
+                Supplier = new Supplier
+                {
+                    ID = 1,
+                    Name = "Test Supplier",
+                    ContactName = "Test Contact",
+                    PhoneContact = "0400000000",
+                    EmailContact = "supplier@example.com",
+                    Address = "Test address"
+                }
+            };
+
+            productRepo
+                .Setup(repo => repo.GetProductAsync(product.ID))
+                .ReturnsAsync(product);
+
+            productRepo
+                .Setup(repo => repo.OtherProductNameExistsAsync(
+                    product.ID,
+                    "Updated Product Name"))
+                .ReturnsAsync(false);
+
+            productRepo
+                .Setup(repo => repo.OtherProductSkuExistsAsync(
+                    product.ID,
+                    "SKU00001"))
+                .ReturnsAsync(false);
+
+            categoryRepo
+                .Setup(repo => repo.CategoryExistsAsync(product.CategoryID))
+                .ReturnsAsync(true);
+
+            supplierRepo
+                .Setup(repo => repo.SupplierExistsAsync(product.SupplierID))
+                .ReturnsAsync(true);
+            productRepo
+                .Setup(repo => repo.SaveChangesAsync())
+                .Callback(() => product.RowVersion = updatedRowVersion);
+
+            var service = new ProductService(
+                productRepo.Object,
+                supplierRepo.Object,
+                categoryRepo.Object);
+            var request = new UpdateProductDetailsRequestDTO
+            {
+                Sku = "SKU00001",
+                Name = "Updated Product Name",
+                Description = "Updated product description",
+                CategoryID = 1,
+                SupplierID = 1
+            };
 
             // Act
-            var result = await service.UpdateProductDetails(1, CreateUpdateProductDTO());
+            var result = await service.UpdateProductDetails(product.ID, request);
 
             // Assert
-            Assert.NotNull(result);
             Assert.True(result.Success);
             Assert.Equal(200, result.StatusCode);
-            Assert.Equal("Successfully Updated Product Details", result.Message);
-            Assert.Equal("Updated Product", result.Data!.Name);
+            Assert.NotNull(result.Data);
 
-            // SaveChanges is the persistence boundary for this update. Times.Once
-            // ensures the valid request was saved exactly once.
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+            Assert.Equal(product.ID, result.Data.ID);
+            Assert.Equal("Updated Product Name", result.Data.Name);
+            Assert.Equal(updatedRowVersion, result.Data.RowVersion);
+            Assert.NotEqual(originalRowVersion, result.Data.RowVersion);
+
+            productRepo.Verify(
+                repo => repo.SaveChangesAsync(),
+                Times.Once);
         }
-
         [Fact]
-    public async Task UpdateProductDetails_NullRequest_Returns400()
-    {
+        public async Task UpdateProductDetailsConcurrencyTest_UpdateProductConflictingConcurrency_ThrowsExceptionNoUpdate()
+        {
             // Arrange
             var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+
+            var product = new Product
+            {
+                ID = 1,
+                Sku = "SKU00001",
+                Name = "Original Product",
+                Description = "Original product description",
+                CategoryID = 1,
+                SupplierID = 1,
+                RowVersion = new byte[] { 1, 2, 3, 4 },
+
+                Category = new Category
+                {
+                    ID = 1,
+                    Name = "Test Category",
+                    Description = "Test category description"
+                },
+
+                Supplier = new Supplier
+                {
+                    ID = 1,
+                    Name = "Test Supplier",
+                    ContactName = "Test Contact",
+                    PhoneContact = "0400000000",
+                    EmailContact = "supplier@example.com",
+                    Address = "Test address"
+                }
+            };
+
+            productRepo.Setup(repo => repo.GetProductAsync(product.ID)).ReturnsAsync(product);
+            categoryRepo.Setup(repo => repo.CategoryExistsAsync(product.CategoryID)).ReturnsAsync(true);
+            supplierRepo.Setup(repo => repo.SupplierExistsAsync(product.SupplierID)).ReturnsAsync(true);
+            productRepo.Setup(repo => repo.SaveChangesAsync()).ThrowsAsync(new DbUpdateConcurrencyException());
+
             var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
 
+            var request = new UpdateProductDetailsRequestDTO
+            {
+                Sku = "SKU00001",
+                Name = "Updated Product Name",
+                Description = "Updated product description",
+                CategoryID = 1,
+                SupplierID = 1
+            };
+
             // Act
-            var result = await service.UpdateProductDetails(1, null!);
+            var result = await service.UpdateProductDetails(product.ID, request);
 
             // Assert
-            Assert.NotNull(result);
             Assert.False(result.Success);
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Invalid DTO", result.Message);
+            Assert.Equal(409, result.StatusCode);
+            Assert.Null(result.Data);
 
-            // Validation failed before persistence, so saving would be incorrect.
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+            productRepo.Verify(
+                repo => repo.SaveChangesAsync(),
+                Times.Once);
+
         }
-
         [Fact]
-    public async Task UpdateProductDetails_ProductNotFound_Returns404()
-    {
-            // Arrange
+        public async Task UpdateProductCostConcurrencyTest_ConflictingConcurrency_Returns409()
+        {
+            //Arrange
             var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            productRepo.Setup(repo => repo.GetProductAsync(99)).ReturnsAsync((Product?)null);
+            productRepo.Setup(repo => repo.GetProductAsync(It.IsAny<int>())).ReturnsAsync(CreateProduct());
+            productRepo.Setup(repo => repo.SaveChangesAsync()).ThrowsAsync(new DbUpdateConcurrencyException());
+
             var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
 
-            // Act
-            var result = await service.UpdateProductDetails(99, CreateUpdateProductDTO());
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal(404, result.StatusCode);
-            Assert.Equal("Product Not Found", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
-
-        [Fact]
-    public async Task UpdateProductDetails_DuplicateName_Returns400()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            product.ID = 1;
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            productRepo.Setup(repo => repo.OtherProductNameExistsAsync(1, "Updated Product")).ReturnsAsync(true);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.UpdateProductDetails(1, CreateUpdateProductDTO());
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Product Name Already Exists", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
-
-        [Fact]
-    public async Task UpdateProductDetails_DuplicateSku_Returns400()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            product.ID = 1;
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            productRepo.Setup(repo => repo.OtherProductSkuExistsAsync(1, "NEWSKU01")).ReturnsAsync(true);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.UpdateProductDetails(1, CreateUpdateProductDTO());
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Product SKU Already Exists", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
-
-        [Fact]
-    public async Task UpdateProductPrice_ValidPrice_Returns200()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
             var result = await service.UpdateProductPrice(1, new UpdateProductPriceRequestDTO { Price = 25.50m });
 
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.Success);
-            Assert.Equal("Price Successfully Updated", result.Message);
-            Assert.Equal(25.50m, result.Data!.Price);
-
-            // Verify
+            Assert.False(result.Success);
+            Assert.Equal(409, result.StatusCode);
+            Assert.Null(result.Data);
             productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
         }
-
         [Fact]
-    public async Task UpdateProductPrice_NonPositivePrice_Returns400()
-    {
-            // Arrange
+        public async Task UpdateProductReorderLevelConcurrencyTest_ConflictingConcurrency_Returns409()
+        {
+            //Arrange
             var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+            productRepo.Setup(repo => repo.GetProductAsync(It.IsAny<int>())).ReturnsAsync(CreateProduct());
+            productRepo.Setup(repo => repo.SaveChangesAsync()).ThrowsAsync(new DbUpdateConcurrencyException());
             var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+            var result = await service.UpdateProductReorderLevel(1, new UpdateProductReorderRequestDTO { ReorderLevel = 10 });
 
-            // Act
-            var result = await service.UpdateProductPrice(1, new UpdateProductPriceRequestDTO { Price = 0 });
-
-            // Assert
-            Assert.NotNull(result);
             Assert.False(result.Success);
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Invalid Price Entry", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
-
-        [Fact]
-    public async Task UpdateProductPrice_ProductNotFound_Returns404()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            productRepo.Setup(repo => repo.GetProductAsync(99)).ReturnsAsync((Product?)null);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.UpdateProductPrice(99, new UpdateProductPriceRequestDTO { Price = 10 });
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal(404, result.StatusCode);
-            Assert.Equal("Product Not Found", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
-
-        [Fact]
-    public async Task UpdateProductReorderLevel_ValidLevel_Returns200()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(CreateProduct());
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.UpdateProductReorderLevel(1,
-                new UpdateProductReorderRequestDTO { ReorderLevel = 8 });
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.Success);
-            Assert.Equal("ReOrderStock Levels Updated", result.Message);
-            Assert.Equal(8, result.Data!.ReorderLevel);
-
-            // Verify
+            Assert.Equal(409, result.StatusCode);
+            Assert.Null(result.Data);
             productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
         }
-
         [Fact]
-    public async Task UpdateProductReorderLevel_NegativeLevel_Returns400()
-    {
-            // Arrange
+        public async Task ActivateProductConcurrencyTest_ConflictingConcurrency_Returns409()
+        {
+            //Arrange
             var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+            productRepo.Setup(repo => repo.GetProductAsync(It.IsAny<int>())).ReturnsAsync(CreateProduct());
+            productRepo.Setup(repo => repo.SaveChangesAsync()).ThrowsAsync(new DbUpdateConcurrencyException());
             var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.UpdateProductReorderLevel(1,
-                new UpdateProductReorderRequestDTO { ReorderLevel = -1 });
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Invalid Reorder Level", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
-
-        [Fact]
-    public async Task ActivateProduct_InactiveProduct_Returns200()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            product.IsActive = false;
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
             var result = await service.ActivateProduct(1);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.Success);
-            Assert.Equal("Product activated successfully", result.Message);
-            Assert.True(result.Data!.IsActive);
-
-            // Verify
+            Assert.False(result.Success);
+            Assert.Equal(409, result.StatusCode);
+            Assert.Null(result.Data);
+            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        }
+        [Fact]
+        public async Task DeactivateProductConcurrencyTest_ConflictingConcurrency_Returns409()
+        {
+            //Arrange
+            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
+            var testProduct = CreateProduct();
+            testProduct.IsActive = true;
+            
+            productRepo.Setup(repo => repo.GetProductAsync(It.IsAny<int>())).ReturnsAsync(testProduct);
+            productRepo.Setup(repo => repo.SaveChangesAsync()).ThrowsAsync(new DbUpdateConcurrencyException());
+            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
+            var result = await service.DeactivateProduct(testProduct.ID);
+            Assert.False(result.Success);
+            Assert.Equal(409, result.StatusCode);
+            Assert.Null(result.Data);
             productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
         }
 
-        [Fact]
-    public async Task ActivateProduct_AlreadyActive_Returns400()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            product.IsActive = true;
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.ActivateProduct(1);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Product is already active", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
-
-        [Fact]
-    public async Task DeactivateProduct_ActiveProduct_Returns200()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            product.IsActive = true;
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.DeactivateProduct(1);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.Success);
-            Assert.Equal("Product deactivated successfully", result.Message);
-            Assert.False(result.Data!.IsActive);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Once);
-        }
-
-        [Fact]
-    public async Task DeactivateProduct_AlreadyInactive_Returns400()
-    {
-            // Arrange
-            var (productRepo, supplierRepo, categoryRepo) = CreateMockRepo();
-            var product = CreateProduct();
-            product.IsActive = false;
-            productRepo.Setup(repo => repo.GetProductAsync(1)).ReturnsAsync(product);
-            var service = new ProductService(productRepo.Object, supplierRepo.Object, categoryRepo.Object);
-
-            // Act
-            var result = await service.DeactivateProduct(1);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal(400, result.StatusCode);
-            Assert.Equal("Product is already inactive", result.Message);
-
-            // Verify
-            productRepo.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        }
 
         // === CREATE MOQ REPO HELPER METHOD === \\
         private (Mock<IProductRepository>, Mock<ISupplierRepository>, Mock<ICategoryRepository>) CreateMockRepo()

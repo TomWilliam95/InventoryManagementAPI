@@ -2,6 +2,7 @@
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
 
 namespace InventoryManagementAPI.Repositories.UserRepositories
@@ -105,7 +106,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             //Validates the existence of the user DTO and checks for missing data. If the DTO is null, it returns a 404 Not Found response with an appropriate error message.
             var validateDtoExists = ValidateDtoExists(user, "User creation request data is missing.");
-            if(validateDtoExists != null)
+            if (validateDtoExists != null)
             {
                 return validateDtoExists;
             }
@@ -136,11 +137,14 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Attempts to create the new user in the repository and checks if the creation was successful.
                 var createdUser = await _userRepository.CreateUserAsync(newUser);
 
-                if(createdUser == null)
+                if (createdUser == null)
                 {
                     // If the creation fails (e.g., due to a database error), it returns a 500 Internal Server Error response.
                     return BuildSingleCatchErrorResponse("Internal error occurred, failed to create user.");
                 }
+
+                //Saves the changes to the repository to persist the new user in the database.
+                await _userRepository.SaveChangesAsync();
 
                 // Builds a response for the newly created user using the BuildUserResponse method and returns it with a 201 Created status code.
                 return BuildUserResponse(createdUser, "User created successfully", 201);
@@ -177,7 +181,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
             //Checks Jwt Claims to see if either Admin or Corrosponding User
             var authValidation = ValidateAuthentication(currentUserRole, currentUserId, userId);
-            if(authValidation != null)
+            if (authValidation != null)
             {
                 // If the user is not authorized to update the email (i.e., they are neither an admin nor the owner of the account), it returns a 403 Forbidden response.
                 return authValidation;
@@ -213,6 +217,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Builds a response for the updated user using the BuildUserResponse method and returns it with a 200 OK status code.
                 return BuildUserResponse(user, "Email updated successfully", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user email.");
@@ -242,7 +250,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
             //Checks Jwt Claims to see if either Admin or Corrosponding User
             var authValidation = ValidateAuthentication(currentUserRole, currentUserId, userId);
-            if(authValidation != null)
+            if (authValidation != null)
             {
                 // If the user is not authorized to update the username (i.e., they are neither an admin nor the owner of the account), it returns a 403 Forbidden response.
                 return authValidation;
@@ -266,6 +274,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 return BuildUserResponse(user, "UserName updated successfully", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user name.");
@@ -282,8 +294,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
 
             // Validates the new password for complexity requirements (length, uppercase, lowercase, digit, special character).
-            if (string.IsNullOrEmpty(passwordRequest.NewPassword) || passwordRequest.NewPassword.Length < 8 || !passwordRequest.NewPassword.Any(char.IsUpper) 
-                || !passwordRequest.NewPassword.Any(char.IsLower) || !passwordRequest.NewPassword.Any(char.IsDigit) 
+            if (string.IsNullOrEmpty(passwordRequest.NewPassword) || passwordRequest.NewPassword.Length < 8 || !passwordRequest.NewPassword.Any(char.IsUpper)
+                || !passwordRequest.NewPassword.Any(char.IsLower) || !passwordRequest.NewPassword.Any(char.IsDigit)
                 || !passwordRequest.NewPassword.Any(ch => !char.IsLetterOrDigit(ch)))
             {
                 return new ApiResponse<UserResponseDTO>
@@ -342,6 +354,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 return BuildUserResponse(user, "Password updated successfully", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user password.");
@@ -352,7 +368,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             //Validates the existence of the role update request DTO and checks for missing data.
             var validateDto = ValidateDtoExists(roleRequest, "Role update request data is missing.");
-            if(validateDto != null)
+            if (validateDto != null)
             {
                 return validateDto;
             }
@@ -387,6 +403,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Builds a response for the updated user using the BuildUserResponse method and returns it with a 200 OK status code.
                 return BuildUserResponse(user, "User role updated successfully", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user role.");
@@ -400,7 +420,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 // Retrieve the user before attempting to activate them
                 var userExists = await ValidateUserIdAsync(userId);
-                if(userExists.User == null)
+                if (userExists.User == null)
                 {
                     return userExists.Error!;
                 }
@@ -426,6 +446,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Return the activated user details
                 return BuildUserResponse(user, "User activated successfully", 200);
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to activate user.");
@@ -438,7 +462,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 // Retrieve the user before attempting to deactivate them
                 var userExists = await ValidateUserIdAsync(userId);
-                if(userExists.User == null)
+                if (userExists.User == null)
                 {
                     return userExists.Error!;
                 }
@@ -462,6 +486,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 // Return the deactivated user details
                 return BuildUserResponse(user, "User deactivated successfully", 200);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BuildConcurrencyCatchErrorResponse();
             }
             catch
             {
@@ -618,7 +646,6 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 IsActive = user.IsActive
             };
         }
-
         private ApiResponse<UserResponseDTO> BuildUserResponse(User user, string message, int statusCode)
         {
             return new ApiResponse<UserResponseDTO>
@@ -627,7 +654,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 Message = message,
                 Data = MapToUserResponseDto(user),
                 StatusCode = statusCode
-            }; 
+            };
         }
         private ApiResponse<IEnumerable<UserResponseDTO>> BuildBulkCatchErrorResponse(string message)
         {
@@ -645,6 +672,15 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 Success = false,
                 Message = message,
                 StatusCode = 500,
+            };
+        }
+        private ApiResponse<UserResponseDTO> BuildConcurrencyCatchErrorResponse()
+        {
+            return new ApiResponse<UserResponseDTO>
+            {
+                Success = false,
+                Message = "Concurrency error occurred, failed to update user. Please try again.",
+                StatusCode = 409,
             };
         }
     }
