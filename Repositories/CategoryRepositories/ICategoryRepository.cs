@@ -4,22 +4,22 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
 {
     public interface ICategoryRepository
     {
-        // === GET === \\
+        // === GET ===
         Task<IEnumerable<Category>> GetAllCategoriesAsync();
         Task<Category?> GetCategoryByIdAsync(int categoryId);
 
-        // === POST === \\
+        // === POST ===
         Task<Category> CreateCategoryAsync(Category category);
 
-        // === PUT === \\
+        // === PUT ===
         Task UpdateCategoryAsync(Category category);
 
-        // === CHECK EXISTENCE === \\
+        // === CHECK EXISTENCE ===
         Task<bool> CategoryExistsAsync(int categoryId);
         Task<bool> OtherCategoryNameExistsAsync(int categoryId, string categoryName);
         Task<bool> CategoryNameExistsASync(string categoryName);
 
-        // === SAVE CHANGES === \\
+        // === SAVE CHANGES ===
         Task SaveChangesAsync();
     }
 }

@@ -1,29 +1,30 @@
 ﻿using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
+using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PUT.STOCK;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositories
 {
     public interface IProductService
     {
-        // === GET === \\
+        // === GET ===
         Task<ApiResponse<SingleProductResponseDTO>> GetSingleProduct(int productId);
         Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetAllProducts();
         Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId);
         Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel();
 
-        // === POST === \\
+        // === POST ===
         Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto);
 
-        // === PUT === \\
+        // === PUT ===
         Task<ApiResponse<SingleProductResponseDTO>> UpdateProductDetails(int id, UpdateProductDetailsRequestDTO dto);
 
-        // === PATCH === \\
+        // === PATCH ===
         Task<ApiResponse<SingleProductResponseDTO>> UpdateProductPrice(int id, UpdateProductPriceRequestDTO dto);
         Task<ApiResponse<SingleProductResponseDTO>> UpdateProductReorderLevel(int id, UpdateProductReorderRequestDTO dto);
 
-        // === SET ACTIVE STATUS === \\
-        Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id);
-        Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id);
+        // === SET ACTIVE STATUS ===
+        Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id, UpdateProductStatusRequestDTO dto);
+        Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id, UpdateProductStatusRequestDTO dto);
     }
 }

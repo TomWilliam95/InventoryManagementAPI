@@ -14,7 +14,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             _context = context;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<IEnumerable<InventoryMovement>> GetAllMovementsAsync()
         {
             return await MovementWithDetails().ToListAsync();
@@ -54,14 +54,14 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 .ToListAsync();
         }
 
-        // === POST === \\
+        // === POST ===
         public async Task<InventoryMovement> AddMovementAsync(InventoryMovement movement)
         {
             await _context.InventoryMovements.AddAsync(movement);
             return movement;
         }
 
-        // === QUERY HELPER METHOD === \\
+        // === QUERY HELPER METHOD ===
         private IQueryable<InventoryMovement> MovementWithDetails()
         {
             return _context.InventoryMovements

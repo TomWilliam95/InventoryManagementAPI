@@ -17,7 +17,7 @@ namespace InventoryManagementAPI.Controllers
             _categoryService = categoryService;
         }
 
-        // === GET === \\
+        // === GET ===
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> GetCategory(int id)
         {
@@ -33,7 +33,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         
-        // === POST === \\
+        // === POST ===
         [HttpPost]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> AddCategory(CreateCategoryRequestDTO dto)
@@ -41,15 +41,15 @@ namespace InventoryManagementAPI.Controllers
             var addedCategory = await _categoryService.AddCategory(dto);
             return addedCategory.StatusCode switch
             {
-                201 when addedCategory.Data is not null => 
+                201 when addedCategory.Data is not null =>
                 CreatedAtAction(nameof(GetCategory), new { id = addedCategory.Data!.ID }, addedCategory),
-                
+
                 _ => StatusCode(addedCategory.StatusCode, addedCategory)
             };
         }
 
 
-        // === PUT === \\
+        // === PUT ===
         [HttpPut("{id:int}")]
         [Authorize(Policy = "AdminOrManager")]
         public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto)
@@ -58,20 +58,20 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(updatedCategory.StatusCode, updatedCategory);
         }
 
-        // === SET ACTIVE STATUS === \\
+        // === SET ACTIVE STATUS ===
         [HttpPatch("{id:int}/activate")]
         [Authorize(Policy = "AdminOrManager")]
-        public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> ActivateCategory(int id)
+        public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> ActivateCategory(int id, UpdateCategoryStatusRequestDTO dto)
         {
-            var activatedCategory = await _categoryService.ActivateCategory(id);
+            var activatedCategory = await _categoryService.ActivateCategory(id, dto);
             return StatusCode(activatedCategory.StatusCode, activatedCategory);
         }
 
         [HttpPatch("{id:int}/deactivate")]
         [Authorize(Policy = "AdminOrManager")]
-        public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> DeactivateCategory(int id)
+        public async Task<ActionResult<ApiResponse<SingleCategoryResponseDTO>>> DeactivateCategory(int id, UpdateCategoryStatusRequestDTO dto)
         {
-            var deactivatedCategory = await _categoryService.DeactivateCategory(id);
+            var deactivatedCategory = await _categoryService.DeactivateCategory(id, dto);
             return StatusCode(deactivatedCategory.StatusCode, deactivatedCategory);
         }
     }

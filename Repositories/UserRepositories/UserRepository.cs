@@ -14,7 +14,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             _context = context;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
             return await _context.Users.ToListAsync();
@@ -35,14 +35,14 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return await _context.Users.Where(u => u.Role == role).ToListAsync();
         }
 
-        // === POST === \\
+        // === POST ===
         public async Task<User> CreateUserAsync(User user)
         {
             await _context.Users.AddAsync(user);
             return user;
         }
 
-        // === CHECK EXISTENCE === \\
+        // === CHECK EXISTENCE ===
         public async Task<bool> EmailExistsAsync(string email)
         {
             return await _context.Users.AnyAsync(u => u.Email == email);
@@ -53,14 +53,14 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return await _context.Users.AnyAsync(u => u.ID == userId);
         }
 
-        // === CHECK ACTIVE STATUS === \\
+        // === CHECK ACTIVE STATUS ===
         public async Task<bool> IsUserActiveAsync(int userId)
         {
             var user = await _context.Users.FindAsync(userId);
             return user?.IsActive == true;
         }
 
-        // === SAVE CHANGES === \\
+        // === SAVE CHANGES ===
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

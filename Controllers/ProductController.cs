@@ -1,4 +1,5 @@
 ﻿using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
+using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PUT.STOCK;
 using InventoryManagementAPI.Repositories.ProductRepositories;
 using InventoryManagementAPI.Models.CoreModels;
@@ -19,7 +20,7 @@ namespace InventoryManagementAPI.Controllers
             _productService = productService;
         }
 
-        // === GET === \\
+        // === GET ===
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> GetProduct(int id)
         {
@@ -49,7 +50,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
 
-        // === POST === \\
+        // === POST ===
         [HttpPost]
         [Authorize(Policy =("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> AddProduct(CreateProductRequestDTO dto)
@@ -64,7 +65,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
 
-        // === PUT === \\
+        // === PUT ===
         [HttpPut("{id:int}")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProduct(int id, UpdateProductDetailsRequestDTO productDto)
@@ -75,7 +76,7 @@ namespace InventoryManagementAPI.Controllers
 
   
 
-        // === PATCH === \\
+        // === PATCH ===
         [HttpPatch("{id:int}/price")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> UpdateProductPrice (int id, UpdateProductPriceRequestDTO dto)
@@ -94,20 +95,20 @@ namespace InventoryManagementAPI.Controllers
 
 
 
-        // === SET ACTIVE/INACTIVE === \\
+        // === SET ACTIVE/INACTIVE ===
         [HttpPatch("{id:int}/activate")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> ActivateProduct(int id)
+        public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> ActivateProduct(int id, UpdateProductStatusRequestDTO dto)
         {
-            var activatedProduct = await _productService.ActivateProduct(id);
+            var activatedProduct = await _productService.ActivateProduct(id, dto);
             return StatusCode(activatedProduct.StatusCode, activatedProduct);
         }
 
         [HttpPatch("{id:int}/deactivate")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> DeactivateProduct(int id)
+        public async Task<ActionResult<ApiResponse<SingleProductResponseDTO>>> DeactivateProduct(int id, UpdateProductStatusRequestDTO dto)
         {
-            var deactivatedProduct = await _productService.DeactivateProduct(id);
+            var deactivatedProduct = await _productService.DeactivateProduct(id, dto);
             return StatusCode(deactivatedProduct.StatusCode, deactivatedProduct);
         }
     }

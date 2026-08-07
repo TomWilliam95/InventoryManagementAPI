@@ -13,14 +13,14 @@ namespace InventoryManagementAPI.Controllers
     [Authorize]
     public class InventoryMovementController : ControllerBase
     {
-        // === Dependencies === \\
+        // === Dependencies ===
         private readonly IInventoryMovementService _inventoryManagementService;
         public InventoryMovementController(IInventoryMovementService inventoryManagementService)
         {
             _inventoryManagementService = inventoryManagementService;
         }
 
-        // === GET === \\
+        // === GET ===
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<InventoryMovementResponseDTO>>> GetMovementById(int id)
         {
@@ -68,7 +68,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        // === POST === \\
+        // === POST ===
         [HttpPost]
         public async Task<ActionResult<ApiResponse<InventoryMovementResponseDTO>>> RecordMovement(CreateInventoryMovementRequestDTO dto)
         {
@@ -98,7 +98,7 @@ namespace InventoryManagementAPI.Controllers
 
             return result.StatusCode switch
             {
-                201 when result.Data is not null  => 
+                201 when result.Data is not null  =>
                 CreatedAtAction(nameof(GetMovementById), new { id = result.Data.ID }, result),
                 _ => StatusCode(result.StatusCode, result)
             };

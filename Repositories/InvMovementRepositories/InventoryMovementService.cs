@@ -19,7 +19,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             _userRepository = userRepository;
         }
         
-        // === GET === \\
+        // === GET ===
 
         public async Task<ApiResponse<InventoryMovementResponseDTO>> GetMovementByIdAsync(int movementId)
         {
@@ -137,7 +137,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             {
                 //Fetch the product from the repository to validate if it exists
                 var product = await _productRepository.GetProductAsync(productId);
-                if(product == null)
+                if (product == null)
                 {
                     return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
                     {
@@ -352,7 +352,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             {
                 // Fetch the movements associated with the specified movement type from the repository
                 var movements = await _movementRepository.GetMovementsByTypeAsync(movementType);
-                if(movements == null || !movements.Any())
+                if (movements == null || !movements.Any())
                 {
                     return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
                     {
@@ -401,18 +401,13 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
 
 
-        // === POST === \\
+        // === POST ===
 
         public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordAdjustmentAsync(CreateInventoryMovementRequestDTO dto)
         {
             // Assigns results of validationmethod
             var validationResult = RecordValidation(dto);
-            // If validation does succeed, will skip if statement
-            // If validation does not suceed returns ApiResponse from RecordValidation method
-            if (validationResult != null)
-            {
-                return validationResult;
-            }
+            if (validationResult != null) return validationResult;
 
             // Validate movement type for adjustment
             if (dto.Movement != MovementType.AdjustmentIncrease && dto.Movement != MovementType.AdjustmentDecrease)
@@ -421,7 +416,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 {
                     Success = false,
                     Message = "Invalid movement type for adjustment.",
-                    StatusCode = 400 
+                    StatusCode = 400
                 };
             }
 
@@ -429,12 +424,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             {
                 // Retrieve the product and user based on the provided IDs
                 var result = await GetProductAndUserAsync(dto);
-
-                // Check if there was an error in retrieving the product or user
-                if (result.Error != null)
-                {
-                    return result.Error;
-                }
+                if (result.Error != null) return result.Error;
 
                 // If both product and user are successfully retrieved, proceed with the adjustment
                 // and assign them to local variables for further processing
@@ -443,15 +433,12 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
                 // Validate stock availability for adjustment decrease
                 // Returns ApiResponse if validation not successful
-                if(dto.Movement == MovementType.AdjustmentDecrease)
+                if (dto.Movement == MovementType.AdjustmentDecrease)
                 {
                     var stockValidResult = ValidateStockAvailability(product, dto);
-                    if (stockValidResult != null)
-                    {
-                        return stockValidResult;
-                    }
+                    if (stockValidResult != null) return stockValidResult;
                 }
-                
+
                 //Create the InventoryMovement entity
                 var movement = CreateInventoryMovement(dto, product);
 
@@ -496,12 +483,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         {
             // Assigns results of validationmethod
             var validationResult = RecordValidation(dto);
-            // If validation does succeed, will skip if statement
-            // If validation does not suceed returns ApiResponse from RecordValidation method
-            if (validationResult != null)
-            {
-                return validationResult;
-            }
+            if (validationResult != null) return validationResult;
 
             // Validate movement type for adjustment
             if (dto.Movement != MovementType.StockIn && dto.Movement != MovementType.Purchase)
@@ -518,12 +500,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             {
                 // Retrieve the product and user based on the provided IDs
                 var result = await GetProductAndUserAsync(dto);
-
-                // Check if there was an error in retrieving the product or user
-                if (result.Error != null)
-                {
-                    return result.Error;
-                }
+                if (result.Error != null) return result.Error;
 
                 // If both product and user are successfully retrieved, proceed with the adjustment
                 // and assign them to local variables for further processing
@@ -568,12 +545,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         {
             // Assigns results of validationmethod
             var validationResult = RecordValidation(dto);
-            // If validation does succeed, will skip if statement
-            // If validation does not suceed returns ApiResponse from RecordValidation method
-            if (validationResult != null)
-            {
-                return validationResult;
-            }
+            if (validationResult != null) return validationResult;
 
             try
             {
@@ -590,12 +562,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
                 // Retrieve the product and user based on the provided IDs
                 var result = await GetProductAndUserAsync(dto);
-
-                // Check if there was an error in retrieving the product or user
-                if (result.Error != null)
-                {
-                    return result.Error;
-                }
+                if (result.Error != null) return result.Error;
 
                 // If both product and user are successfully retrieved, proceed with the adjustment
                 // and assign them to local variables for further processing
@@ -604,12 +571,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 
                 // Validate stock availability for adjustment decrease
                 var stockResult = ValidateStockAvailability(product, dto);
-
-                //Return ApiResponse if validation not successful
-                if (stockResult != null)
-                {
-                    return stockResult;
-                }
+                if (stockResult != null) return stockResult;
 
                 //Create the InventoryMovement entity
                 var movement = CreateInventoryMovement(dto, product);
@@ -655,7 +617,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         /// <returns></returns>
         private static ApiResponse<InventoryMovementResponseDTO>? RecordValidation(CreateInventoryMovementRequestDTO dto)
         {
-            // Validate quantity, cant be less than or equal to zero
+            // Validate quantity, can't be less than or equal to zero
             if (dto.Quantity <= 0)
             {
                 return new ApiResponse<InventoryMovementResponseDTO>
@@ -719,7 +681,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         /// Retrieves the product and user based on the provided IDs in the DTO.
         /// The parameter dto is used to extract the ProductId and UserID for retrieval.
         /// Checks if the product and user exist and are active, returning an ApiResponse with error details if either is not found or inactive.
-        /// 
+        ///
         /// Returns a tuple containing the retrieved Product, User, and an optional ApiResponse for error handling.
         /// Returns null for Product and User if either is not found, along with an error response in the ApiResponse.
         /// </summary>

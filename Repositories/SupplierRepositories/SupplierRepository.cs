@@ -6,14 +6,14 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 {
     public class SupplierRepository : ISupplierRepository
     {
-        // === CONSTRUCTOR DI === \\
+        // === CONSTRUCTOR DI ===
         private readonly InvManDBContext _context;
         public SupplierRepository(InvManDBContext context)
         {
             _context = context;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<IEnumerable<Supplier>> GetAllSuppliersAsync()
         {
             return await _context.Suppliers.ToListAsync();
@@ -25,14 +25,14 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
 
-        // === POST === \\
+        // === POST ===
         public async Task<Supplier> CreateSupplierAsync(Supplier supplier)
         {
             await _context.Suppliers.AddAsync(supplier);
             return supplier;
         }
 
-        // === CHECK EXISTENCE === \\
+        // === CHECK EXISTENCE ===
 
         public async Task<bool> SupplierExistsAsync(int supplierId)
         {
@@ -59,7 +59,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             return await _context.Suppliers.AnyAsync(s => s.EmailContact == supplierEmail && s.ID != supplierId);
         }
 
-        // === SAVE CHANGES === \\
+        // === SAVE CHANGES ===
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

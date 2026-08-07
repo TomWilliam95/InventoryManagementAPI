@@ -18,6 +18,6 @@ namespace InventoryManagementAPI.Models.DTO_s.MovementDTO_s
 
         [Required]
         [StringLength(500)]
-        public required string Reason { get; set; } 
+        public required string Reason { get; set; }
     }
 }

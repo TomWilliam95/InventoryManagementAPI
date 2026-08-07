@@ -12,5 +12,6 @@ namespace InventoryManagementAPI.Models.DTO_s.UserDTO_s
         public DateTime LastLogin { get; set; }
         public DateTime LastUpdated { get; set; }
         public bool IsActive { get; set; }
+        public byte[] RowVersion { get; set; } = [];
     }
 }

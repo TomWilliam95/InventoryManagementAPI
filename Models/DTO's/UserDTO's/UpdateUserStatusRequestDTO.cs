@@ -4,5 +4,7 @@ namespace InventoryManagementAPI.Models.DTO_s.UserDTO_s
     {
         [Required(ErrorMessage = "Active status is required.")]
         public bool IsActive { get; set; }
+
+        public byte[] RowVersion { get; set; } = [];
     }
 }

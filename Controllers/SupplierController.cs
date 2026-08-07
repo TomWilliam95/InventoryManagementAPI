@@ -17,7 +17,7 @@ namespace InventoryManagementAPI.Controllers
             _supplierService = supplierService;
         }
 
-        // === GET === \\
+        // === GET ===
         [HttpGet("{id:int}")]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SupplierResponseDTO>>> GetSingleSupplier(int id)
         {
@@ -32,7 +32,7 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(suppliers.StatusCode, suppliers);
         }
 
-        // === POST === \\
+        // === POST ===
         [HttpPost]
         [Authorize (Policy = ("AdminOrManager"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SupplierResponseDTO>>> AddSupplier(CreateSupplierRequestDTO supplierDTO)
@@ -45,7 +45,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === PUT === \\
+        // === PUT ===
         [HttpPut("{supplierId:int}")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SupplierResponseDTO>>> EditSupplierDetails(int supplierId, UpdateSupplierRequestDTO supplierDTO)
@@ -54,20 +54,20 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(updatedSupplier.StatusCode, updatedSupplier);
         }
 
-        // === SET ACTIVE STATUS === \\
+        // === SET ACTIVE STATUS ===
         [HttpPatch("{supplierId:int}/activate")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SupplierResponseDTO>>> ActivateSupplier(int supplierId)
+        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SupplierResponseDTO>>> ActivateSupplier(int supplierId, UpdateSupplierStatusRequestDTO dto)
         {
-            var activatedSupplier = await _supplierService.ActivateSupplierAsync(supplierId);
+            var activatedSupplier = await _supplierService.ActivateSupplierAsync(supplierId, dto);
             return StatusCode(activatedSupplier.StatusCode, activatedSupplier);
         }
 
         [HttpPatch("{supplierId:int}/deactivate")]
         [Authorize(Policy = ("AdminOrManager"))]
-        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SupplierResponseDTO>>> DeactivateSupplier(int supplierId)
+        public async Task<ActionResult<InventoryManagementAPI.Models.CoreModels.ApiResponse<SupplierResponseDTO>>> DeactivateSupplier(int supplierId, UpdateSupplierStatusRequestDTO dto)
         {
-            var deactivatedSupplier = await _supplierService.DeactivateSupplierAsync(supplierId);
+            var deactivatedSupplier = await _supplierService.DeactivateSupplierAsync(supplierId, dto);
             return StatusCode(deactivatedSupplier.StatusCode, deactivatedSupplier);
         }
     }

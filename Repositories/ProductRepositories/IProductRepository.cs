@@ -5,26 +5,26 @@ namespace InventoryManagementAPI.Repositories.ProductRepositorys
 {
     public interface IProductRepository
     {
-        // === GET === \\
+        // === GET ===
         Task<IEnumerable<Product>> GetAllProductsAsync();
         Task<Product?> GetProductAsync(int id);
         Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId);
         Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync();
 
-        // === POST === \\
+        // === POST ===
         Task<Product> AddProductAsync(Product product);
 
-        // === CHECK EXISTENCE === \\
+        // === CHECK EXISTENCE ===
         Task<bool> ProductExistsAsync(int id);
         Task<bool> OtherProductNameExistsAsync(int id, string name);
         Task<bool> ProductNameExistsAsync(string name);
         Task<bool> OtherProductSkuExistsAsync(int id, string sku);
         Task<bool> ProductSkuExistsAsync(string sku);
 
-        // === CHECK ACTIVE STATUS === \\
+        // === CHECK ACTIVE STATUS ===
         Task<bool> IsProductActiveAsync(int id);
 
-        // === Save Changes === \\
+        // === Save Changes ===
         Task SaveChangesAsync();
     }
 }

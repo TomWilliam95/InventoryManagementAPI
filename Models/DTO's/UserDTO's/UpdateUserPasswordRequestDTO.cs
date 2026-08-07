@@ -21,5 +21,7 @@ namespace InventoryManagementAPI.Models.DTO_s.UserDTO_s
             ErrorMessage = "New password must include uppercase, lowercase, digit, and special character."
         )]
         public string RetypePassword { get; set; } = string.Empty;
+
+        public byte[] RowVersion { get; set; } = [];
     }
 }

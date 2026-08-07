@@ -19,7 +19,7 @@ namespace InventoryManagementAPI.Controllers
             _userService = userService;
         }
 
-        // === GET === \\
+        // === GET ===
         [HttpGet("{id:int}")]
         [Authorize(Policy = ("AdminOrManager"))]
         public async Task<ActionResult<ApiResponse<UserResponseDTO>>> GetSingleUser(int id)
@@ -53,7 +53,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
 
-        // === POST === \\
+        // === POST ===
         [HttpPost]
         [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<UserResponseDTO>>> CreateNewUser(CreateNewUserRequestDTO newUser)
@@ -66,7 +66,7 @@ namespace InventoryManagementAPI.Controllers
             };
         }
 
-        // === PATCH === \\
+        // === PATCH ===
         [HttpPatch("{userId:int}/role")]
         [Authorize(Roles = ("Admin"))]
         public async Task<ActionResult<ApiResponse<UserResponseDTO>>> UpdateUserRole(int userId, UpdateUserRoleRequestDTO newRole)
@@ -88,7 +88,7 @@ namespace InventoryManagementAPI.Controllers
         [HttpPatch("{userId:int}/email")]
         public async Task<ActionResult<ApiResponse<UserResponseDTO>>> UpdateUserEmail(int userId, UpdateUserEmailRequestDTO newEmail)
         {
-            var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!) ;
+            var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var admin = User.FindFirstValue(ClaimTypes.Role)!;
 
             var user = await _userService.UpdateUserEmailAsync(userId, newEmail, currentUserId, admin);
@@ -105,20 +105,20 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(user.StatusCode, user);
         }
 
-        // === SET ACTIVE / INACTIVE === \\
+        // === SET ACTIVE / INACTIVE ===
         [HttpPatch("{userId:int}/activate")]
         [Authorize(Roles = ("Admin"))]
-        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> ActivateUser(int userId)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> ActivateUser(int userId, UpdateUserStatusRequestDTO statusRequest)
         {
-            var user = await _userService.ActivateUserAsync(userId);
+            var user = await _userService.ActivateUserAsync(userId, statusRequest);
             return StatusCode(user.StatusCode, user);
         }
 
         [HttpPatch("{userId:int}/deactivate")]
         [Authorize(Roles = ("Admin"))]
-        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> DeactivateUser(int userId)
+        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> DeactivateUser(int userId, UpdateUserStatusRequestDTO statusRequest)
         {
-            var user = await _userService.DeactivateUserAsync(userId);
+            var user = await _userService.DeactivateUserAsync(userId, statusRequest);
             return StatusCode(user.StatusCode, user);
         }
     }

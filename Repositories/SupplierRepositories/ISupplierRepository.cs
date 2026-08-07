@@ -4,21 +4,21 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 {
     public interface ISupplierRepository
     {
-        // === GET === \\
+        // === GET ===
         Task<IEnumerable<Supplier>> GetAllSuppliersAsync();
         Task<Supplier?> GetSupplierByIdAsync(int supplierId);
 
-        // === POST === \\
+        // === POST ===
         Task<Supplier> CreateSupplierAsync(Supplier supplier);
 
-        // === Check Exists === \\
+        // === Check Exists ===
         Task<bool> SupplierExistsAsync(int supplierId);
         Task<bool> SupplierNameExistsAsync(string supplierName);
         Task<bool> SupplierNameExistsForOtherSupplierAsync(int supplierId, string supplierName);
         Task<bool> SupplierEmailExistsAsync(string supplierEmail);
         Task<bool> SupplierEmailExistsForOtherSupplierAsync(int supplierId, string supplierEmail);
 
-        // === SAVE CHANGES === \\
+        // === SAVE CHANGES ===
         Task SaveChangesAsync();
     }
 }

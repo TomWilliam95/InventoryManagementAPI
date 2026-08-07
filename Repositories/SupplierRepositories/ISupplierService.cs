@@ -5,18 +5,18 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
 {
     public interface ISupplierService
     {
-        // === GET === \\
+        // === GET ===
         Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync();
         Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(int supplierId);
 
-        // === POST === \\
+        // === POST ===
         Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(CreateSupplierRequestDTO supplier);
 
-        // === PUT === \\
+        // === PUT ===
         Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(int supplierId, UpdateSupplierRequestDTO updatedSupplier);
 
-        // === SET ACTIVE STATUS === \\
-        Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId);
-        Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId);
+        // === SET ACTIVE STATUS ===
+        Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto);
+        Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto);
     }
 }

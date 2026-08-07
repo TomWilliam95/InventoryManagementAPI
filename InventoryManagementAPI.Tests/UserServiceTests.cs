@@ -2,6 +2,7 @@ using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Models.Enums;
 using InventoryManagementAPI.Repositories.UserRepositories;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace InventoryManagementAPI.Tests;
@@ -241,7 +242,7 @@ public class UserServiceTests
 
         // Act
         var result = await service.UpdateUserEmailAsync(
-            1, new UpdateUserEmailRequestDTO { Email = "new@example.com" }, 1, "Staff");
+            1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -262,7 +263,7 @@ public class UserServiceTests
 
         // Act
         var result = await service.UpdateUserEmailAsync(
-            1, new UpdateUserEmailRequestDTO { Email = "new@example.com" }, 2, "Staff");
+            1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 2, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -285,7 +286,7 @@ public class UserServiceTests
 
         // Act
         var result = await service.UpdateUserEmailAsync(
-            1, new UpdateUserEmailRequestDTO { Email = "used@example.com" }, 1, "Staff");
+            1, new UpdateUserEmailRequestDTO { Email = "used@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -306,7 +307,7 @@ public class UserServiceTests
 
         // Act
         var result = await service.UpdateUserNameAsync(
-            1, new UpdateUserNameRequestDTO { UserName = "bad name" }, 1, "Staff");
+            1, new UpdateUserNameRequestDTO { UserName = "bad name", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -332,7 +333,8 @@ public class UserServiceTests
         {
             CurrentPassword = "Password1!",
             NewPassword = "NewPassword2!",
-            RetypePassword = "NewPassword2!"
+            RetypePassword = "NewPassword2!",
+            RowVersion = CreateRowVersion()
         }, 1, "Staff");
 
         // Assert
@@ -358,7 +360,8 @@ public class UserServiceTests
         {
             CurrentPassword = "WrongPassword1!",
             NewPassword = "NewPassword2!",
-            RetypePassword = "NewPassword2!"
+            RetypePassword = "NewPassword2!",
+            RowVersion = CreateRowVersion()
         }, 1, "Staff");
 
         // Assert
@@ -381,7 +384,7 @@ public class UserServiceTests
 
         // Act
         var result = await service.UpdateUserRoleAsync(
-            1, new UpdateUserRoleRequestDTO { NewRole = UserRoles.Manager });
+            1, new UpdateUserRoleRequestDTO { NewRole = UserRoles.Manager, RowVersion = CreateRowVersion() });
 
         // Assert
         Assert.NotNull(result);
@@ -404,7 +407,7 @@ public class UserServiceTests
         var service = new UserService(repository.Object);
 
         // Act
-        var result = await service.ActivateUserAsync(1);
+        var result = await service.ActivateUserAsync(1, new UpdateUserStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
         // Assert
         Assert.NotNull(result);
@@ -425,7 +428,7 @@ public class UserServiceTests
         var service = new UserService(repository.Object);
 
         // Act
-        var result = await service.ActivateUserAsync(1);
+        var result = await service.ActivateUserAsync(1, new UpdateUserStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
         // Assert
         Assert.NotNull(result);
@@ -446,7 +449,7 @@ public class UserServiceTests
         var service = new UserService(repository.Object);
 
         // Act
-        var result = await service.DeactivateUserAsync(1);
+        var result = await service.DeactivateUserAsync(1, new UpdateUserStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
         // Assert
         Assert.NotNull(result);
@@ -455,6 +458,103 @@ public class UserServiceTests
         Assert.False(result.Data!.IsActive);
 
         // Verify
+        repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateUserEmail_MissingRowVersion_Returns400()
+    {
+        var repository = new Mock<IUserRepository>();
+        var service = new UserService(repository.Object);
+
+        var result = await service.UpdateUserEmailAsync(
+            1,
+            new UpdateUserEmailRequestDTO { Email = "new@example.com" },
+            1,
+            "Staff");
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        repository.Verify(repo => repo.GetUserByIdAsync(It.IsAny<int>()), Times.Never);
+        repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateUserEmail_InvalidRowVersion_Returns400()
+    {
+        var repository = new Mock<IUserRepository>();
+        var service = new UserService(repository.Object);
+
+        var result = await service.UpdateUserEmailAsync(
+            1,
+            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = [1, 2, 3, 4] },
+            1,
+            "Staff");
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        repository.Verify(repo => repo.GetUserByIdAsync(It.IsAny<int>()), Times.Never);
+        repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateUserEmail_StaleRowVersion_Returns409()
+    {
+        var repository = new Mock<IUserRepository>();
+        repository.Setup(repo => repo.GetUserByIdAsync(1)).ReturnsAsync(CreateUser());
+        var service = new UserService(repository.Object);
+
+        var result = await service.UpdateUserEmailAsync(
+            1,
+            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = [8, 7, 6, 5, 4, 3, 2, 1] },
+            1,
+            "Staff");
+
+        Assert.False(result.Success);
+        Assert.Equal(409, result.StatusCode);
+        repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateUserEmail_DatabaseConcurrencyException_Returns409()
+    {
+        var repository = new Mock<IUserRepository>();
+        repository.Setup(repo => repo.GetUserByIdAsync(1)).ReturnsAsync(CreateUser());
+        repository.Setup(repo => repo.SaveChangesAsync()).ThrowsAsync(new DbUpdateConcurrencyException());
+        var service = new UserService(repository.Object);
+
+        var result = await service.UpdateUserEmailAsync(
+            1,
+            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() },
+            1,
+            "Staff");
+
+        Assert.False(result.Success);
+        Assert.Equal(409, result.StatusCode);
+        repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateUserEmail_Success_ReturnsUpdatedRowVersion()
+    {
+        var repository = new Mock<IUserRepository>();
+        var user = CreateUser();
+        byte[] updatedRowVersion = [9, 10, 11, 12, 13, 14, 15, 16];
+        repository.Setup(repo => repo.GetUserByIdAsync(1)).ReturnsAsync(user);
+        repository.Setup(repo => repo.SaveChangesAsync())
+            .Callback(() => user.RowVersion = updatedRowVersion)
+            .Returns(Task.CompletedTask);
+        var service = new UserService(repository.Object);
+
+        var result = await service.UpdateUserEmailAsync(
+            1,
+            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() },
+            1,
+            "Staff");
+
+        Assert.True(result.Success);
+        Assert.Equal(200, result.StatusCode);
+        Assert.Equal(updatedRowVersion, result.Data!.RowVersion);
         repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
     }
 
@@ -469,7 +569,8 @@ public class UserServiceTests
             Email = "test@example.com",
             Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("Password1!"),
             Role = UserRoles.Staff,
-            IsActive = true
+            IsActive = true,
+            RowVersion = CreateRowVersion()
         };
     }
 
@@ -485,4 +586,6 @@ public class UserServiceTests
             RetypePassword = "Password1!"
         };
     }
+
+    private static byte[] CreateRowVersion() => [1, 2, 3, 4, 5, 6, 7, 8];
 }

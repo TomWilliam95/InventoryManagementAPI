@@ -6,23 +6,23 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 {
     public interface IUserService
     {
-        // === GET === \\
+        // === GET ===
         Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetAllUsersAsync();
         Task<ApiResponse<UserResponseDTO>> GetUserByIdAsync(int userId);
         Task<ApiResponse<UserResponseDTO>> GetUserByEmailAsync(string email);
         Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetUsersByRoleAsync(UserRoles role);
-        
-        // === POST === \\
+
+        // === POST ===
         Task<ApiResponse<UserResponseDTO>> CreateUserAsync(CreateNewUserRequestDTO user);
 
-        // === PATCH === \\
+        // === PATCH ===
         Task<ApiResponse<UserResponseDTO>> UpdateUserNameAsync(int userId, UpdateUserNameRequestDTO nameRequest, int currentUserId, string currentUserRole);
         Task<ApiResponse<UserResponseDTO>> UpdateUserEmailAsync(int userId, UpdateUserEmailRequestDTO emailRequest, int currentUserId, string currentUserRole);
         Task<ApiResponse<UserResponseDTO>> UpdateUserPasswordAsync(int userId, UpdateUserPasswordRequestDTO passwordRequest, int currentUserId, string currentUserRole);
         Task<ApiResponse<UserResponseDTO>> UpdateUserRoleAsync(int userId, UpdateUserRoleRequestDTO roleRequest);
 
-        // === SET ACTIVE / INACTIVE === \\
-        Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId);
-        Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId);
+        // === SET ACTIVE / INACTIVE ===
+        Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest);
+        Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest);
     }
 }

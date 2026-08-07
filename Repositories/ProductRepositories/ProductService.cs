@@ -1,5 +1,6 @@
 ﻿using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
+using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PUT.STOCK;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
@@ -20,7 +21,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             _categoryRepo = categoryRepo;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetAllProducts()
         {
             try
@@ -30,11 +31,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 // Validate that the product list is not empty and return a response accordingly
                 var productListResult = ValidateProductGroupExists(productList);
-                if (productListResult.Products == null)
-                {
-                    // Return an error response if no products were found
-                    return productListResult.Error!;
-                }
+                if (productListResult.Products == null) return productListResult.Error!;
 
                 // Return a successful response with the product list
                 return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved All Products");
@@ -51,10 +48,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             {
                 // Retrieve the product from the repository using the provided productId
                 var productResult = await ValidateProductExists(productId);
-                if (productResult.Product == null)
-                {
-                    return productResult.Error!;
-                }
+                if (productResult.Product == null) return productResult.Error!;
 
                 // Return a successful response with the product details
                 return BuildProductResponse(productResult.Product, "Product Successfully Retrieved", 200);
@@ -84,10 +78,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 // Check if the product list is empty and return a response accordingly
                 var productListResult = ValidateProductGroupExists(productList);
-                if (productListResult.Products == null)
-                {
-                    return productListResult.Error!;
-                }
+                if (productListResult.Products == null) return productListResult.Error!;
 
                 // Return a successful response with the product list for the specified category
                 return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products By Category");
@@ -107,10 +98,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
                 // Check if any products need reordering and return a not found response if none exist
                 var productListResult = ValidateProductGroupExists(reorderList);
-                if (productListResult.Products == null)
-                {
-                    return productListResult.Error!;
-                }
+                if (productListResult.Products == null) return productListResult.Error!;
 
                 // Return a successful response with all products that are below their reorder level
                 return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products Below Reorder Level");
@@ -121,22 +109,16 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-        // === POST === \\
+        // === POST ===
         public async Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
         {
             //Validates DTO not null
             var validateDtoResult = ValidateDTO(dto);
-            if (validateDtoResult != null)
-            {
-                return validateDtoResult;
-            }
+            if (validateDtoResult != null) return validateDtoResult;
 
             //Validate the required fields before proceeding with product creation
             var validateFieldsResult = ValidateDtoFields(dto.Sku, dto.Name, dto.Description);
-            if (validateFieldsResult != null)
-            {
-                return validateFieldsResult;
-            }
+            if (validateFieldsResult != null) return validateFieldsResult;
 
             //Validate Price
             if (dto.Price <= 0)
@@ -154,10 +136,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Validate that the supplied SKU and Name dont exist
                 // and the Category and Supplier exist before creating the product
                 var validateExistenceResult = await ValidateDtoFieldsExist(dto);
-                if (validateExistenceResult != null)
-                {
-                    return validateExistenceResult;
-                }
+                if (validateExistenceResult != null) return validateExistenceResult;
 
                 // Create the product entity from the request DTO
                 var product = new Product
@@ -195,51 +174,33 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-        // === PUT === \\
+        // === PUT ===
         public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductDetails(int id, UpdateProductDetailsRequestDTO dto)
         {
             // Validates DTO not null
             var validateDtoResult = ValidateDTO(dto);
-            if (validateDtoResult != null)
-            {
-                return validateDtoResult;
-            }
+            if (validateDtoResult != null) return validateDtoResult;
 
             // Validate that the RowVersion is provided for concurrency control
             var validateRowVersion = ValidateRowVersion(dto.RowVersion);
-            if(validateRowVersion != null)
-            {
-                return validateRowVersion;
-            }
+            if (validateRowVersion != null) return validateRowVersion;
 
             //validate the required fields before proceeding with the update
             var result = ValidateDtoFields(dto.Sku, dto.Name, dto.Description);
-            if (result != null)
-            {
-                return result;
-            }
+            if (result != null) return result;
 
             try
             {
                 // Validate that the supplied supplier exists before updating the product
                 var updateProductExistsResult = await ValidateProductExists(id);
-                if (updateProductExistsResult.Product == null)
-                {
-                    return updateProductExistsResult.Error!;
-                }
+                if (updateProductExistsResult.Product == null) return updateProductExistsResult.Error!;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
                 var validateRowVersionMatch = ValidateMatchRowVersion(updateProductExistsResult.Product, dto.RowVersion);
-                if (validateRowVersionMatch != null)
-                {
-                    return validateRowVersionMatch;
-                }
+                if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
                 var validateExistenceResult = await UpdateValidateDtoFieldsExist(updateProductExistsResult.Product, dto);
-                if (validateExistenceResult != null)
-                {
-                    return validateExistenceResult;
-                }
+                if (validateExistenceResult != null) return validateExistenceResult;
                 var updateProduct = updateProductExistsResult.Product;
 
 
@@ -279,7 +240,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
 
 
-        // === PATCH === \\
+        // === PATCH ===
         public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductPrice(int id, UpdateProductPriceRequestDTO dto)
         {
             // Validate that the new product price is greater than zero
@@ -295,26 +256,17 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
             // Validate that the RowVersion is provided for concurrency control
             var validateRowVersion = ValidateRowVersion(dto.RowVersion);
-            if (validateRowVersion != null)
-            {
-                return validateRowVersion;
-            }
+            if (validateRowVersion != null) return validateRowVersion;
 
             try
             {
                 // Load the product before applying the price update
                 var validateProductResult = await ValidateProductExists(id);
-                if (validateProductResult.Product == null)
-                {
-                    return validateProductResult.Error!;
-                }
+                if (validateProductResult.Product == null) return validateProductResult.Error!;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
                 var validateRowVersionMatch = ValidateMatchRowVersion(validateProductResult.Product, dto.RowVersion);
-                if (validateRowVersionMatch != null)
-                {
-                    return validateRowVersionMatch;
-                }
+                if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
                 // Update the price and save the change
                 validateProductResult.Product.Price = dto.Price;
@@ -349,26 +301,17 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
             // Validate that the RowVersion is provided for concurrency control
             var validateRowVersion = ValidateRowVersion(dto.RowVersion);
-            if (validateRowVersion != null)
-            {
-                return validateRowVersion;
-            }
+            if (validateRowVersion != null) return validateRowVersion;
 
             try
             {
                 // Load the product before applying the reorder level update
                 var productExistsResult = await ValidateProductExists(id);
-                if (productExistsResult.Product == null)
-                {
-                    return productExistsResult.Error!;
-                }
+                if (productExistsResult.Product == null) return productExistsResult.Error!;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
                 var validateRowVersionMatch = ValidateMatchRowVersion(productExistsResult.Product, dto.RowVersion);
-                if (validateRowVersionMatch != null)
-                {
-                    return validateRowVersionMatch;
-                }
+                if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
                 // Update the ReorderLevel property of the product
                 // Save the changes to the database
@@ -390,21 +333,26 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-        // === SET ACTIVE STATUS === \\
-        public async Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id)
+        // === SET ACTIVE STATUS ===
+        public async Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id, UpdateProductStatusRequestDTO dto)
         {
+            // Validate that the RowVersion is provided for concurrency control
+            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            if (validateRowVersion != null) return validateRowVersion;
+
             try
             {
                 // Load the product before attempting to activate it
                 var productExistsResult = await ValidateProductExists(id);
-                if (productExistsResult.Product == null)
-                {
-                    return productExistsResult.Error!;
-                }
+                if (productExistsResult.Product == null) return productExistsResult.Error!;
                 var product = productExistsResult.Product;
 
+                //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
+                var validateRowVersionMatch = ValidateMatchRowVersion(product, dto.RowVersion);
+                if (validateRowVersionMatch != null) return validateRowVersionMatch;
+
                 // Return a bad request response if the product is already active
-                if (product.IsActive)
+                if (product.IsActive || dto.IsActive)
                 {
                     return new ApiResponse<SingleProductResponseDTO>
                     {
@@ -432,20 +380,25 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-        public async Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id)
+        public async Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id, UpdateProductStatusRequestDTO dto)
         {
+            // Validate that the RowVersion is provided for concurrency control
+            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            if (validateRowVersion != null) return validateRowVersion;
+
             try
             {
                 // Load the product before attempting to deactivate it
                 var productExistsResult = await ValidateProductExists(id);
-                if (productExistsResult.Product == null)
-                {
-                    return productExistsResult.Error!;
-                }
+                if (productExistsResult.Product == null) return productExistsResult.Error!;
                 var product = productExistsResult.Product;
 
+                // Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
+                var validateRowVersionMatch = ValidateMatchRowVersion(product, dto.RowVersion);
+                if (validateRowVersionMatch != null) return validateRowVersionMatch;
+
                 // Return a bad request response if the product is already inactive
-                if (!product.IsActive)
+                if (!product.IsActive || !dto.IsActive)
                 {
                     return new ApiResponse<SingleProductResponseDTO>
                     {
@@ -475,7 +428,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
 
 
-        // === VALIDATION HELPER METHODS === \\
+        // === VALIDATION HELPER METHODS ===
 
         /// <summary>
         /// Validates whether a product with the specified ID exists in the repository.
@@ -502,7 +455,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// Validates the existence of product groups and retrieves all products if available.
         /// </summary>
         /// <param name="products">The collection of products to validate.</param>
-        /// <returns>A tuple containing a collection of BulkProductResponseDTO objects and null if products exist; 
+        /// <returns>A tuple containing a collection of BulkProductResponseDTO objects and null if products exist;
         /// otherwise, null and an ApiResponse indicating failure.</returns>
         private (IEnumerable<BulkProductResponseDTO>? Products, ApiResponse<IEnumerable<BulkProductResponseDTO>>? Error) ValidateProductGroupExists(IEnumerable<Product> products)
         {
@@ -568,7 +521,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 };
             }
             // Validate the length of the SKU field
-            //Ive decided this system will use 8 character SKUs, so this validation is in place to ensure that all SKUs are exactly 8 characters long.
+            // I've decided this system will use 8 character SKUs, so this validation is in place to ensure that all SKUs are exactly 8 characters long.
             if (sku.Length < 8)
             {
                 return new ApiResponse<SingleProductResponseDTO>
@@ -732,12 +685,13 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         }
 
         /// <summary>
-        /// Validates the provided RowVersion byte array to ensure it is not null or empty.
+        /// Validates that the provided RowVersion byte array is not null and has the expected length for concurrency control.
         /// </summary>
         /// <param name="rowVersion">The RowVersion byte array to validate.</param>
         /// <returns>An ApiResponse indicating the result of the validation.</returns>
         private ApiResponse<SingleProductResponseDTO>? ValidateRowVersion(byte[] rowVersion)
         {
+            //Validate that the RowVersion is provided for concurrency control
             if (rowVersion == null || rowVersion.Length == 0)
             {
                 return new ApiResponse<SingleProductResponseDTO>
@@ -747,6 +701,17 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     StatusCode = 400
                 };
             }
+            //Validate that the RowVersion is exactly 8 bytes long, as expected for concurrency control
+            if (rowVersion.Length != 8)
+            {
+                return new ApiResponse<SingleProductResponseDTO>
+                {
+                    Success = false,
+                    Message = "Invalid RowVersion provided, unable to perform update",
+                    StatusCode = 400
+                };
+            }
+
             return null;
         }
 
@@ -770,7 +735,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             return null;
         }
 
-        // === RESPONSE HELPER METHOD === \\
+        // === RESPONSE HELPER METHOD ===
 
         /// <summary>
         /// Creates an ApiResponse object for a single product, including its details and status information.
@@ -784,7 +749,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// If unsuccessful, returns an ApiResponse object with a failure message and status code 500.
         /// If successful, returns an ApiResponse object with the product details, success message, and provided status code.
         /// </returns>
-        /// 
+        ///
         private static ApiResponse<SingleProductResponseDTO> BuildProductResponse(Product product, string message, int statusCode)
         {
             if (product.Category is null || product.Supplier is null)
@@ -880,5 +845,5 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 StatusCode = 500
             };
         } 
-    } 
+    }
 }

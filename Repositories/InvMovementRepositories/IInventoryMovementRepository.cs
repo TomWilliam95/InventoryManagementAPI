@@ -5,7 +5,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 {
     public interface IInventoryMovementRepository
     {
-        // === GET === \\
+        // === GET ===
         Task<InventoryMovement?> GetMovementByIdAsync(int id);
         Task<IEnumerable<InventoryMovement>> GetAllMovementsAsync();
         Task<IEnumerable<InventoryMovement>> GetMovementsByProductIdAsync(int productId);
@@ -13,7 +13,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         Task<IEnumerable<InventoryMovement>> GetMovementsByTypeAsync(MovementType movementType);
         Task<IEnumerable<InventoryMovement>> GetMovementsByDateRangeAsync(DateTime startDate, DateTime endDate);
 
-        // === POST === \\
+        // === POST ===
         Task<InventoryMovement> AddMovementAsync(InventoryMovement movement);
     }
 }

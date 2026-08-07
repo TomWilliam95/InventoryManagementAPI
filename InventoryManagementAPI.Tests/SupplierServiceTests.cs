@@ -1,6 +1,7 @@
 ﻿using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierDTO_s;
 using InventoryManagementAPI.Repositories.SupplierRepositories;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -158,7 +159,7 @@ namespace InventoryManagementAPI.Tests
             repository.Verify(repo => repo.CreateSupplierAsync(It.IsAny<Supplier>()), Times.Once);
         }
 
-        
+
         [Fact]
         public async Task CreateSupplier_NullDto_Return400()
         {
@@ -397,7 +398,7 @@ namespace InventoryManagementAPI.Tests
             var service = new SupplierService(repository.Object);
 
             // Act
-            var result = await service.ActivateSupplierAsync(1);
+            var result = await service.ActivateSupplierAsync(1, new UpdateSupplierStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
             // Assert
             Assert.NotNull(result);
@@ -419,7 +420,7 @@ namespace InventoryManagementAPI.Tests
             var service = new SupplierService(repository.Object);
 
             // Act
-            var result = await service.ActivateSupplierAsync(99);
+            var result = await service.ActivateSupplierAsync(99, new UpdateSupplierStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
             // Assert
             Assert.NotNull(result);
@@ -440,7 +441,7 @@ namespace InventoryManagementAPI.Tests
             var service = new SupplierService(repository.Object);
 
             // Act
-            var result = await service.ActivateSupplierAsync(1);
+            var result = await service.ActivateSupplierAsync(1, new UpdateSupplierStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
             // Assert
             Assert.NotNull(result);
@@ -461,7 +462,7 @@ namespace InventoryManagementAPI.Tests
             var service = new SupplierService(repository.Object);
 
             // Act
-            var result = await service.DeactivateSupplierAsync(1);
+            var result = await service.DeactivateSupplierAsync(1, new UpdateSupplierStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
             // Assert
             Assert.NotNull(result);
@@ -483,7 +484,7 @@ namespace InventoryManagementAPI.Tests
             var service = new SupplierService(repository.Object);
 
             // Act
-            var result = await service.DeactivateSupplierAsync(99);
+            var result = await service.DeactivateSupplierAsync(99, new UpdateSupplierStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
             // Assert
             Assert.NotNull(result);
@@ -506,7 +507,7 @@ namespace InventoryManagementAPI.Tests
             var service = new SupplierService(repository.Object);
 
             // Act
-            var result = await service.DeactivateSupplierAsync(1);
+            var result = await service.DeactivateSupplierAsync(1, new UpdateSupplierStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
             // Assert
             Assert.NotNull(result);
@@ -531,7 +532,8 @@ namespace InventoryManagementAPI.Tests
                 PhoneContact = "1234567890",
                 EmailContact = "test@example.com",
                 Address = "123 Test St",
-                IsActive = true
+                IsActive = true,
+                RowVersion = CreateRowVersion()
             };
         }
 
@@ -559,14 +561,84 @@ namespace InventoryManagementAPI.Tests
                 PhoneContact = "0400000000",
                 EmailContact = "updated@example.com",
                 Address = "789 Updated St",
-                IsActive = true
+                IsActive = true,
+                RowVersion = CreateRowVersion()
             };
         }
+
+        [Fact]
+        public async Task UpdateSupplier_InvalidRowVersion_Returns400()
+        {
+            var repository = new Mock<ISupplierRepository>();
+            var service = new SupplierService(repository.Object);
+            var request = CreateUpdateSupplierDTO();
+            request.RowVersion = [1, 2, 3, 4];
+
+            var result = await service.UpdateSupplierAsync(1, request);
+
+            Assert.False(result.Success);
+            Assert.Equal(400, result.StatusCode);
+            repository.Verify(repo => repo.GetSupplierByIdAsync(It.IsAny<int>()), Times.Never);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateSupplier_StaleRowVersion_Returns409()
+        {
+            var repository = new Mock<ISupplierRepository>();
+            repository.Setup(repo => repo.GetSupplierByIdAsync(1)).ReturnsAsync(CreateSupplier());
+            var service = new SupplierService(repository.Object);
+            var request = CreateUpdateSupplierDTO();
+            request.RowVersion = [8, 7, 6, 5, 4, 3, 2, 1];
+
+            var result = await service.UpdateSupplierAsync(1, request);
+
+            Assert.False(result.Success);
+            Assert.Equal(409, result.StatusCode);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateSupplier_DatabaseConcurrencyException_Returns409()
+        {
+            var repository = new Mock<ISupplierRepository>();
+            repository.Setup(repo => repo.GetSupplierByIdAsync(1)).ReturnsAsync(CreateSupplier());
+            repository.Setup(repo => repo.SaveChangesAsync()).ThrowsAsync(new DbUpdateConcurrencyException());
+            var service = new SupplierService(repository.Object);
+
+            var result = await service.UpdateSupplierAsync(1, CreateUpdateSupplierDTO());
+
+            Assert.False(result.Success);
+            Assert.Equal(409, result.StatusCode);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateSupplier_Success_ReturnsUpdatedRowVersion()
+        {
+            var repository = new Mock<ISupplierRepository>();
+            var supplier = CreateSupplier();
+            byte[] updatedRowVersion = [9, 10, 11, 12, 13, 14, 15, 16];
+            repository.Setup(repo => repo.GetSupplierByIdAsync(1)).ReturnsAsync(supplier);
+            repository.Setup(repo => repo.SaveChangesAsync())
+                .Callback(() => supplier.RowVersion = updatedRowVersion)
+                .Returns(Task.CompletedTask);
+            var service = new SupplierService(repository.Object);
+
+            var result = await service.UpdateSupplierAsync(1, CreateUpdateSupplierDTO());
+
+            Assert.True(result.Success);
+            Assert.Equal(200, result.StatusCode);
+            Assert.Equal(updatedRowVersion, result.Data!.RowVersion);
+            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        }
+
+        private static byte[] CreateRowVersion() => [1, 2, 3, 4, 5, 6, 7, 8];
     }
 }
-            // Verify
-            // Verify
-            // Verify
-            // Verify
-            // Verify
-            // Verify
+// Verify
+// Verify
+// Verify
+// Verify
+// Verify
+// Verify

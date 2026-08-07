@@ -12,7 +12,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             _context = context;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<Category?> GetCategoryByIdAsync(int categoryId)
         {
             return await _context.Categories.FindAsync(categoryId);
@@ -22,7 +22,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             return await _context.Categories.ToListAsync();
         }
 
-        // === POST === \\
+        // === POST ===
         public async Task<Category> CreateCategoryAsync(Category category)
         {
             await _context.Categories.AddAsync(category);
@@ -30,14 +30,14 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             return category;
         }
 
-        // === PUT === \\
+        // === PUT ===
         public async Task UpdateCategoryAsync(Category category)
         {
             _context.Categories.Update(category);
             await _context.SaveChangesAsync();
         }
 
-        // === CHECK EXISTENCE === \\
+        // === CHECK EXISTENCE ===
         public async Task<bool> CategoryExistsAsync(int categoryId)
         {
             return await _context.Categories.AnyAsync(c => c.ID == categoryId);
@@ -52,7 +52,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             return await _context.Categories.AnyAsync(c => c.Name == categoryName);
         }
 
-        // === SAVE CHANGES === \\
+        // === SAVE CHANGES ===
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

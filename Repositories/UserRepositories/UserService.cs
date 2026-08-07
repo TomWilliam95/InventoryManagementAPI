@@ -15,7 +15,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             _userRepository = userRepository;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetAllUsersAsync()
         {
             try
@@ -63,11 +63,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
                 var userResult = await ValidateUserIdAsync(userId);
-                if (userResult.User == null)
-                {
-                    //Returns the error response if the user is not found
-                    return userResult.Error!;
-                }
+                if (userResult.User == null) return userResult.Error!;
                 return BuildUserResponse(userResult.User, "Successfully retrieved user!", 200);
             }
             catch
@@ -101,22 +97,16 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        // === POST === \\
+        // === POST ===
         public async Task<ApiResponse<UserResponseDTO>> CreateUserAsync(CreateNewUserRequestDTO user)
         {
             //Validates the existence of the user DTO and checks for missing data. If the DTO is null, it returns a 404 Not Found response with an appropriate error message.
             var validateDtoExists = ValidateDtoExists(user, "User creation request data is missing.");
-            if (validateDtoExists != null)
-            {
-                return validateDtoExists;
-            }
+            if (validateDtoExists != null) return validateDtoExists;
             // Validates the fields of the CreateNewUserRequestDTO to ensure that all required fields are present and correctly formatted.
             // If any validation fails, it returns a 400 Bad Request response with an appropriate error message.
             var validateFields = await ValidateCreateNewUserDtoFields(user);
-            if (validateFields != null)
-            {
-                return validateFields;
-            }
+            if (validateFields != null) return validateFields;
 
             // Create new user object and hash the password
             // Note: The password hashing is done using BCrypt with the EnhancedHashPassword method for improved security.
@@ -155,17 +145,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        // === PATCH === \\
+        // === PATCH ===
 
         public async Task<ApiResponse<UserResponseDTO>> UpdateUserEmailAsync(int userId, UpdateUserEmailRequestDTO emailRequest, int currentUserId, string currentUserRole)
         {
             //Validates the existence of the email update request DTO and checks for missing data.
             //If the DTO is null, it returns a 404 Not Found response with an appropriate error message.
             var validateDtoExists = ValidateDtoExists(emailRequest, "Email update request data is missing.");
-            if (validateDtoExists != null)
-            {
-                return validateDtoExists;
-            }
+            if (validateDtoExists != null) return validateDtoExists;
+
+            var rowVersionValidation = ValidateRowVersion(emailRequest.RowVersion);
+            if (rowVersionValidation != null) return rowVersionValidation;
 
             // Validates the new email format using a simple check for the presence of "@" and "." characters.
             // If the email is invalid, it returns a 400 Bad Request response.
@@ -179,24 +169,20 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 };
             }
 
-            //Checks Jwt Claims to see if either Admin or Corrosponding User
+            //Checks Jwt Claims to see if either Admin or corresponding User
             var authValidation = ValidateAuthentication(currentUserRole, currentUserId, userId);
-            if (authValidation != null)
-            {
-                // If the user is not authorized to update the email (i.e., they are neither an admin nor the owner of the account), it returns a 403 Forbidden response.
-                return authValidation;
-            }
+            if (authValidation != null) return authValidation;
 
             try
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
                 var result = await ValidateUserIdAsync(userId);
-                if (result.User == null)
-                {
-                    return result.Error!;
-                }
+                if (result.User == null) return result.Error!;
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User;
+
+                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, emailRequest.RowVersion);
+                if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 if (!string.Equals(user.Email, emailRequest.Email, StringComparison.OrdinalIgnoreCase)
                     && await _userRepository.EmailExistsAsync(emailRequest.Email))
@@ -231,10 +217,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             //Validates the existence of the username update request DTO and checks for missing data.
             var dtoValidation = ValidateDtoExists(nameRequest, "UserName update request data is missing.");
-            if (dtoValidation != null)
-            {
-                return dtoValidation;
-            }
+            if (dtoValidation != null) return dtoValidation;
+
+            var rowVersionValidation = ValidateRowVersion(nameRequest.RowVersion);
+            if (rowVersionValidation != null) return rowVersionValidation;
 
             // Validates the new username for length and character requirements (alphanumeric, no spaces).
             if (string.IsNullOrEmpty(nameRequest.UserName) || nameRequest.UserName.Length < 3 || nameRequest.UserName.Length > 50
@@ -248,24 +234,20 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 };
             }
 
-            //Checks Jwt Claims to see if either Admin or Corrosponding User
+            //Checks Jwt Claims to see if either Admin or corresponding User
             var authValidation = ValidateAuthentication(currentUserRole, currentUserId, userId);
-            if (authValidation != null)
-            {
-                // If the user is not authorized to update the username (i.e., they are neither an admin nor the owner of the account), it returns a 403 Forbidden response.
-                return authValidation;
-            }
+            if (authValidation != null) return authValidation;
 
             try
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
                 var result = await ValidateUserIdAsync(userId);
-                if (result.Error != null)
-                {
-                    return result.Error;
-                }
+                if (result.Error != null) return result.Error;
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User!;
+
+                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, nameRequest.RowVersion);
+                if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 // Saves the updated username to the user object and persists the changes to the repository.
                 user.UserName = nameRequest.UserName;
@@ -288,10 +270,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             //Validates the existence of the password update request DTO and checks for missing data.
             var dtoValidation = ValidateDtoExists(passwordRequest, "Password update request data is missing.");
-            if (dtoValidation != null)
-            {
-                return dtoValidation;
-            }
+            if (dtoValidation != null) return dtoValidation;
+
+            var rowVersionValidation = ValidateRowVersion(passwordRequest.RowVersion);
+            if (rowVersionValidation != null) return rowVersionValidation;
 
             // Validates the new password for complexity requirements (length, uppercase, lowercase, digit, special character).
             if (string.IsNullOrEmpty(passwordRequest.NewPassword) || passwordRequest.NewPassword.Length < 8 || !passwordRequest.NewPassword.Any(char.IsUpper)
@@ -317,25 +299,21 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 };
             }
 
-            //Checks Jwt Claims to see if either Admin or Corrosponding User
+            //Checks Jwt Claims to see if either Admin or corresponding User
             var authValidation = ValidateAuthentication(currentUserRole, currentUserId, userId);
-            if (authValidation != null)
-            {
-                // If the user is not authorized to update the username (i.e., they are neither an admin nor the owner of the account), it returns a 403 Forbidden response.
-                return authValidation;
-            }
+            if (authValidation != null) return authValidation;
 
             try
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
                 var result = await ValidateUserIdAsync(userId);
-                if (result.Error != null)
-                {
-                    return result.Error;
-                }
+                if (result.Error != null) return result.Error;
 
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User!;
+
+                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, passwordRequest.RowVersion);
+                if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 // Validates the current password provided by the user against the stored password hash using BCrypt's EnhancedVerify method.
                 if (!BCrypt.Net.BCrypt.EnhancedVerify(passwordRequest.CurrentPassword, user.Password_Hash))
@@ -368,10 +346,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             //Validates the existence of the role update request DTO and checks for missing data.
             var validateDto = ValidateDtoExists(roleRequest, "Role update request data is missing.");
-            if (validateDto != null)
-            {
-                return validateDto;
-            }
+            if (validateDto != null) return validateDto;
+
+            var rowVersionValidation = ValidateRowVersion(roleRequest.RowVersion);
+            if (rowVersionValidation != null) return rowVersionValidation;
 
             // Validates the new role provided in the request to ensure it is a valid UserRoles enum value. If the role is invalid, it returns a 400 Bad Request response.
             if (!Enum.IsDefined(typeof(UserRoles), roleRequest.NewRole))
@@ -387,13 +365,13 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
                 var userResult = await ValidateUserIdAsync(userId);
-                if (userResult.Error != null)
-                {
-                    return userResult.Error;
-                }
+                if (userResult.Error != null) return userResult.Error;
 
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = userResult.User!;
+
+                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, roleRequest.RowVersion);
+                if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 // Updates the user's role to the new role provided in the request and saves the changes to the repository.
                 user.Role = roleRequest.NewRole;
@@ -413,22 +391,28 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        // === SET ACTIVE / INACTIVE === \\
-        public async Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId)
+        // === SET ACTIVE / INACTIVE ===
+        public async Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest)
         {
+            var dtoValidation = ValidateDtoExists(statusRequest, "User status update request data is missing.");
+            if (dtoValidation != null) return dtoValidation;
+
+            var rowVersionValidation = ValidateRowVersion(statusRequest.RowVersion);
+            if (rowVersionValidation != null) return rowVersionValidation;
+
             try
             {
                 // Retrieve the user before attempting to activate them
                 var userExists = await ValidateUserIdAsync(userId);
-                if (userExists.User == null)
-                {
-                    return userExists.Error!;
-                }
+                if (userExists.User == null) return userExists.Error!;
 
                 var user = userExists.User;
 
+                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, statusRequest.RowVersion);
+                if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
+
                 // Return a bad request response if the user is already active
-                if (user.IsActive)
+                if (user.IsActive || !statusRequest.IsActive)
                 {
                     return new ApiResponse<UserResponseDTO>
                     {
@@ -456,20 +440,26 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId)
+        public async Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest)
         {
+            var dtoValidation = ValidateDtoExists(statusRequest, "User status update request data is missing.");
+            if (dtoValidation != null) return dtoValidation;
+
+            var rowVersionValidation = ValidateRowVersion(statusRequest.RowVersion);
+            if (rowVersionValidation != null) return rowVersionValidation;
+
             try
             {
                 // Retrieve the user before attempting to deactivate them
                 var userExists = await ValidateUserIdAsync(userId);
-                if (userExists.User == null)
-                {
-                    return userExists.Error!;
-                }
+                if (userExists.User == null) return userExists.Error!;
                 var user = userExists.User;
 
+                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, statusRequest.RowVersion);
+                if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
+
                 // Return a bad request response if the user is already inactive
-                if (!user.IsActive)
+                if (!user.IsActive || statusRequest.IsActive)
                 {
                     return new ApiResponse<UserResponseDTO>
                     {
@@ -499,9 +489,9 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
 
 
-        // === HELPER METHODS === \\
+        // === HELPER METHODS ===
 
-        // === Validation Methods === \\
+        // === Validation Methods ===
         private async Task<(User? User, ApiResponse<UserResponseDTO>? Error)> ValidateUserIdAsync(int userId)
         {
             // Retrieve the user and return a reusable not found response when missing
@@ -618,6 +608,46 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return null;
         }
 
+        private static ApiResponse<UserResponseDTO>? ValidateRowVersion(byte[]? rowVersion)
+        {
+            if (rowVersion == null || rowVersion.Length == 0)
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "RowVersion is required for concurrency control.",
+                    StatusCode = 400
+                };
+            }
+
+            if (rowVersion.Length != 8)
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "RowVersion must be exactly 8 bytes.",
+                    StatusCode = 400
+                };
+            }
+
+            return null;
+        }
+
+        private static ApiResponse<UserResponseDTO>? ValidateMatchingRowVersion(User user, byte[] rowVersion)
+        {
+            if (!user.RowVersion.SequenceEqual(rowVersion))
+            {
+                return new ApiResponse<UserResponseDTO>
+                {
+                    Success = false,
+                    Message = "The user has been modified by another process. Please reload and try again.",
+                    StatusCode = 409
+                };
+            }
+
+            return null;
+        }
+
         private static bool IsValidEmail(string email)
         {
             try
@@ -631,7 +661,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        // === BUILDER METHODS === \\
+        // === BUILDER METHODS ===
         private static UserResponseDTO MapToUserResponseDto(User user)
         {
             return new UserResponseDTO
@@ -643,7 +673,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 Created = user.Created,
                 LastLogin = user.LastLogin,
                 LastUpdated = user.LastUpdated,
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                RowVersion = user.RowVersion
             };
         }
         private ApiResponse<UserResponseDTO> BuildUserResponse(User user, string message, int statusCode)

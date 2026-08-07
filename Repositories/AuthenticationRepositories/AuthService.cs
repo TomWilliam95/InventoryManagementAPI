@@ -18,7 +18,7 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
         public async Task<ApiResponse<LoginResponseDTO>> LoginAsync(LoginRequestDTO loginRequestDTO)
         {
             // Validates that all fields have data
-            if(loginRequestDTO == null || string.IsNullOrEmpty(loginRequestDTO.Email) || string.IsNullOrEmpty(loginRequestDTO.Password))
+            if (loginRequestDTO == null || string.IsNullOrEmpty(loginRequestDTO.Email) || string.IsNullOrEmpty(loginRequestDTO.Password))
             {
                 return new ApiResponse<LoginResponseDTO>
                 {

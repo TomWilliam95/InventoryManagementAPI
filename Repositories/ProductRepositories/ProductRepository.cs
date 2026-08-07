@@ -7,14 +7,14 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
 {
     public class ProductRepository : IProductRepository
     {
-        // === CONSTRUCTOR DI === \\
+        // === CONSTRUCTOR DI ===
         private readonly InvManDBContext _context;
         public ProductRepository(InvManDBContext context)
         {
             _context = context;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<IEnumerable<Product>> GetAllProductsAsync()
         {
             return await _context.Products
@@ -47,14 +47,14 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
                 .ToListAsync();
         }
 
-        // === POST === \\
+        // === POST ===
         public async Task<Product> AddProductAsync(Product product)
         {
             await _context.Products.AddAsync(product);
             return product;
         }
 
-        // === CHECK EXISTENCE === \\
+        // === CHECK EXISTENCE ===
         public async Task<bool> ProductExistsAsync(int id)
         {
             return await _context.Products.AnyAsync(p => p.ID == id);
@@ -78,14 +78,14 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
             return await _context.Products.AnyAsync(p => p.Sku == sku);
         }
 
-        // === CHECK ACTIVE STATUS === \\
+        // === CHECK ACTIVE STATUS ===
         public async Task<bool> IsProductActiveAsync(int id)
         {
             var product = await _context.Products.FindAsync(id);
             return product?.IsActive == true;
         }
 
-        // === Save Changes === \\
+        // === Save Changes ===
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

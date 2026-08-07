@@ -14,7 +14,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             _supplierRepository = supplierRepository;
         }
 
-        // === GET === \\
+        // === GET ===
         public async Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync()
         {
             try
@@ -74,11 +74,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             {
                 // Retrieve the supplier by ID
                 var supplierExists = await FindSupplierById(supplierId);
-                if (supplierExists.Supplier == null)
-                {
-                    // Return the error response if the supplier does not exist
-                    return supplierExists.Error!;
-                }
+                if (supplierExists.Supplier == null) return supplierExists.Error!;
 
                 //Assign the existing supplier entity to a variable for building the response DTO
                 var supplier = supplierExists.Supplier;
@@ -93,33 +89,22 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
 
-        // === POST === \\
+        // === POST ===
         public async Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(CreateSupplierRequestDTO supplier)
         {
             // Validate that the request body was supplied
             var dtoValidationResult = ValidateDto(supplier);
-            if (dtoValidationResult != null)
-            {
-                // Return the validation error response if the DTO is null
-                return dtoValidationResult;
-            }
+            if (dtoValidationResult != null) return dtoValidationResult;
 
             // Validate the supplier DTO for required fields and correct formats
             var validationResult = ValidateDtoFields(supplier.Name, supplier.ContactName, supplier.EmailContact, supplier.PhoneContact, supplier.Address);
-            if (validationResult != null)
-            {
-                // Return the validation error response if any required fields are missing or incorrectly formatted
-                return validationResult;
-            }
+            if (validationResult != null) return validationResult;
 
             try
             {
                 // Validate that the supplier name and email do not already exist
                 var nameEmailCheckResult = await CheckNameEmailExistsAdd(supplier.Name, supplier.EmailContact);
-                if (nameEmailCheckResult != null)
-                {
-                    return nameEmailCheckResult;
-                }
+                if (nameEmailCheckResult != null) return nameEmailCheckResult;
 
                 // Create the supplier entity from the request DTO
                 var newSupplier = new Supplier
@@ -146,57 +131,32 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
 
-        // === PUT === \\
+        // === PUT ===
         public async Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(int supplierId, UpdateSupplierRequestDTO updateSupplierDTO)
         {
             //Validate that the request body was supplied
             var dtoValidationResult = ValidateDto(updateSupplierDTO);
-            if (dtoValidationResult != null)
-            {
-                // Return the validation error response if the DTO is null
-                return dtoValidationResult;
-            }
+            if (dtoValidationResult != null) return dtoValidationResult;
 
-            //Validate that the RowVersion is provided for concurrency control
-            if (updateSupplierDTO.RowVersion == null || updateSupplierDTO.RowVersion.Length == 0)
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion is required for concurrency control.",
-                    StatusCode = 400
-                };
-            }
+            //Validate that the RowVersion is provided and is of the correct length for concurrency control
+            var validateRowVersion = ValidateRowVersion(updateSupplierDTO.RowVersion);
+            if (validateRowVersion != null) return validateRowVersion;
 
             // Validate the supplier DTO for required fields and correct formats
             var validationResult = ValidateDtoFields(updateSupplierDTO.Name, updateSupplierDTO.ContactName, updateSupplierDTO.EmailContact, updateSupplierDTO.PhoneContact, updateSupplierDTO.Address);
-            if (validationResult != null)
-            {
-                // Return the validation error response if any required fields are missing or incorrectly formatted
-                return validationResult;
-            }
+            if (validationResult != null) return validationResult;
             try
             {
                 // Validate that the supplier ID exists and that the name and email do not already exist for another supplier
                 var validateAgainstExisting = await CheckIdNameEmailExistsUpdate(supplierId, updateSupplierDTO.Name, updateSupplierDTO.EmailContact);
-                if (validateAgainstExisting.Supplier == null)
-                {
-                    return validateAgainstExisting.Error!;
-                }
+                if (validateAgainstExisting.Supplier == null) return validateAgainstExisting.Error!;
 
                 //Assign the existing supplier entity to a variable for updating
                 var supplier = validateAgainstExisting.Supplier;
 
-                //Validate that the RowVersion matches for concurrency control
-                if (!supplier.RowVersion.SequenceEqual(updateSupplierDTO.RowVersion))
-                {
-                    return new ApiResponse<SupplierResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Concurrency conflict: The supplier has been modified by another process. Please reload and try again.",
-                        StatusCode = 409
-                    };
-                }
+                // Validate that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control
+                var validateMatchingRowVersion = ValidateMatchingRowVersion(supplier, updateSupplierDTO.RowVersion);
+                if (validateMatchingRowVersion != null) return validateMatchingRowVersion;
 
                 // Apply the updateSupplierDTO values to the supplier entity
                 supplier.Name = updateSupplierDTO.Name;
@@ -223,25 +183,27 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             }
         }
 
-        // === SET ACTIVE STATUS === \\
-        public async Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId)
+        // === SET ACTIVE STATUS ===
+        public async Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto)
         {
+            // Validate that the request body was supplied with a valid RowVersion for concurrency control
+            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            if (validateRowVersion != null) return validateRowVersion;
             try
             {
                 // Retrieve the supplier before attempting to activate it
                 var supplierExistsCheck = await FindSupplierById(supplierId);
-
-                if (supplierExistsCheck.Supplier == null)
-                {
-                    // Return the error response if the supplier does not exist
-                    return supplierExistsCheck.Error!;
-                }
+                if (supplierExistsCheck.Supplier == null) return supplierExistsCheck.Error!;
 
                 // Assign the existing supplier entity to a variable for updating
                 var supplier = supplierExistsCheck.Supplier;
 
+                // Validate that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control
+                var validateMatchingRowVersion = ValidateMatchingRowVersion(supplier, dto.RowVersion);
+                if (validateMatchingRowVersion != null) return validateMatchingRowVersion;
+
                 // Return a bad request response if the supplier is already active
-                if (supplier.IsActive)
+                if (supplier.IsActive || dto.IsActive)
                 {
                     return new ApiResponse<SupplierResponseDTO>
                     {
@@ -269,25 +231,26 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             }
         }
 
-        public async Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId)
+        public async Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto)
         {
+            // Validate that the request body was supplied with a valid RowVersion for concurrency control
+            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            if (validateRowVersion != null) return validateRowVersion;
             try
             {
                 // Retrieve the supplier before attempting to deactivate it
                 var supplierExistsCheck = await FindSupplierById(supplierId);
-
-                if (supplierExistsCheck.Supplier == null)
-                {
-                    // Return the error response if the supplier does not exist
-                    return supplierExistsCheck.Error!;
-                }
+                if (supplierExistsCheck.Supplier == null) return supplierExistsCheck.Error!;
 
                 // Assign the existing supplier entity to a variable for updating
                 var supplier = supplierExistsCheck.Supplier;
 
+                // Validate that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control
+                var validateMatchingRowVersion = ValidateMatchingRowVersion(supplier, dto.RowVersion);
+                if (validateMatchingRowVersion != null) return validateMatchingRowVersion;
 
                 // Return a bad request response if the supplier is already inactive
-                if (!supplier.IsActive)
+                if (!supplier.IsActive || !dto.IsActive)
                 {
                     return new ApiResponse<SupplierResponseDTO>
                     {
@@ -316,7 +279,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
 
-        // === FIND SUPPLIER BY ID HELPER METHOD === \\
+        // === FIND SUPPLIER BY ID HELPER METHOD ===
 
         /// <summary>
         /// Finds a supplier by ID.
@@ -341,7 +304,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
 
-        // === BUILD RESPONSE METHODS === \\
+        // === BUILD RESPONSE METHODS ===
 
         /// <summary>
         /// Builds an ApiResponse containing a SupplierResponseDTO from a Supplier entity, along with a message and status code.
@@ -361,7 +324,8 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
                 ContactName = supplier.ContactName,
                 PhoneContact = supplier.PhoneContact,
                 EmailContact = supplier.EmailContact,
-                IsActive = supplier.IsActive
+                IsActive = supplier.IsActive,
+                RowVersion = supplier.RowVersion
             };
             return new ApiResponse<SupplierResponseDTO>
             {
@@ -429,7 +393,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
         /// <summary>
-        /// Validates the supplier DTO for required fields and correct formats. 
+        /// Validates the supplier DTO for required fields and correct formats.
         /// </summary>
         /// <param name="name"></param>
         /// <param name="contactName"></param>
@@ -540,11 +504,7 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         {
             // Retrieve the supplier before applying updates
             var supplierExistsCheck = await FindSupplierById(supplierId);
-            if (supplierExistsCheck.Supplier == null)
-            {
-                // Return the error API response if the supplier does not exist
-                return (null, supplierExistsCheck.Error);
-            }
+            if (supplierExistsCheck.Supplier == null) return (null, supplierExistsCheck.Error);
 
             // Validate that the supplier name does not already exist for another supplier
             if (await _supplierRepository.SupplierNameExistsForOtherSupplierAsync(supplierId, name))
@@ -587,6 +547,55 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Validates the RowVersion for concurrency control.
+        /// </summary>
+        /// <param name="rowVersion">The RowVersion to validate.</param>
+        /// <returns>Returns an ApiResponse with validation errors if the RowVersion is invalid, or null if validation passes.</returns>
+        private ApiResponse<SupplierResponseDTO>? ValidateRowVersion(byte[]? rowVersion)
+        {
+            if (rowVersion == null || rowVersion.Length == 0)
+            {
+                return new ApiResponse<SupplierResponseDTO>
+                {
+                    Success = false,
+                    Message = "RowVersion is required for concurrency control.",
+                    StatusCode = 400
+                };
+            }
+
+            if (rowVersion.Length != 8)
+            {
+                return new ApiResponse<SupplierResponseDTO>
+                {
+                    Success = false,
+                    Message = "RowVersion must be 8 bytes long.",
+                    StatusCode = 400
+                };
+            }
+
+            return null;
+        }
+        /// <summary>
+        /// Validates that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control.
+        /// </summary>
+        /// <param name="supplier">The supplier entity to validate.</param>
+        /// <param name="rowVersion">The RowVersion to compare against the supplier's RowVersion.</param>
+        /// <returns>Returns an ApiResponse with validation errors if the RowVersion does not match, or null if validation passes.</returns>
+        private ApiResponse<SupplierResponseDTO>? ValidateMatchingRowVersion(Supplier supplier, byte[] rowVersion)
+        {
+            if (!supplier.RowVersion.SequenceEqual(rowVersion))
+            {
+                return new ApiResponse<SupplierResponseDTO>
+                {
+                    Success = false,
+                    Message = "Concurrency conflict: The supplier has been modified by another process. Please reload and try again.",
+                    StatusCode = 409
+                };
+            }
+            return null;
         }
     }
 }

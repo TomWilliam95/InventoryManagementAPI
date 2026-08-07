@@ -6,7 +6,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 {
     public interface IInventoryMovementService
     {
-        // === GET === \\
+        // === GET ===
         Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetProductMovementHistoryAsync(int productId);
         Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetAllMovementsAsync();
         Task<ApiResponse<InventoryMovementResponseDTO>> GetMovementByIdAsync(int movementId);
@@ -14,7 +14,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByMovementTypeAsync(MovementType movementType);
 
-        // === POST === \\
+        // === POST ===
         Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockInAsync(CreateInventoryMovementRequestDTO dto);
         Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockOutAsync(CreateInventoryMovementRequestDTO dto);
         Task<ApiResponse<InventoryMovementResponseDTO>> RecordAdjustmentAsync(CreateInventoryMovementRequestDTO dto);

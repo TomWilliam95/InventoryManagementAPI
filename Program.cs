@@ -52,15 +52,15 @@ namespace InventoryManagementAPI
             {
                 throw new InvalidOperationException("Missing Jwt:Key in configuration. Please check appsettings.json or user-secrets.");
             }
-            if(string.IsNullOrWhiteSpace(jwtSettings.Issuer))
+            if (string.IsNullOrWhiteSpace(jwtSettings.Issuer))
             {
                 throw new InvalidOperationException("Missing Jwt:Issuer in configuration. Please check appsettings.json or user-secrets.");
             }
-            if(string.IsNullOrWhiteSpace(jwtSettings.Audience))
+            if (string.IsNullOrWhiteSpace(jwtSettings.Audience))
             {
                 throw new InvalidOperationException("Missing Jwt:Audience in configuration. Please check appsettings.json or user-secrets.");
             }
-            if(jwtSettings.ExpirationInMinutes <= 0)
+            if (jwtSettings.ExpirationInMinutes <= 0)
             {
                 throw new InvalidOperationException("Invalid Jwt:ExpirationInMinutes in configuration. Please check appsettings.json or user-secrets.");
             }
@@ -138,7 +138,7 @@ namespace InventoryManagementAPI
 
             builder.Services.AddScoped<IInventoryMovementRepository, InventoryMovementRepository>();
             builder.Services.AddScoped<IInventoryMovementService, InventoryMovementService>();
-            
+
 
 
             builder.Services.AddControllers();
@@ -149,7 +149,7 @@ namespace InventoryManagementAPI
 
             var app = builder.Build();
 
-           
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
