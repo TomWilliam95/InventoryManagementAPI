@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels.UserModels;
 
 namespace InventoryManagementAPI.Repositories.JWT
 {

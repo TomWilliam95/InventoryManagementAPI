@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels.SupplierModels;
 using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,55 +14,42 @@ namespace InventoryManagementAPI.Repositories.SupplierRepositories
         }
 
         // === GET ===
-        public async Task<IEnumerable<Supplier>> GetAllSuppliersAsync()
+        public async Task<IEnumerable<Supplier>> GetAllSuppliersAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Suppliers.ToListAsync();
+            return await _context.Suppliers
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<Supplier?> GetSupplierByIdAsync(int supplierId)
+        public async Task<Supplier?> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            return await _context.Suppliers.FindAsync(supplierId);
+            return await _context.Suppliers.FindAsync(supplierId, cancellationToken);
         }
 
 
         // === POST ===
-        public async Task<Supplier> CreateSupplierAsync(Supplier supplier)
+        public async Task<Supplier> CreateSupplierAsync(Supplier supplier, CancellationToken cancellationToken = default)
         {
-            await _context.Suppliers.AddAsync(supplier);
+            await _context.Suppliers.AddAsync(supplier, cancellationToken);
             return supplier;
         }
 
         // === CHECK EXISTENCE ===
 
-        public async Task<bool> SupplierExistsAsync(int supplierId)
+        public async Task<bool> SupplierExistsAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            return await _context.Suppliers.AnyAsync(s => s.ID == supplierId);
+            return await _context.Suppliers.AnyAsync(s => s.ID == supplierId, cancellationToken);
         }
 
-        public async Task<bool> SupplierNameExistsAsync(string supplierName)
+        public async Task<bool> SupplierNameExistsAsync(string supplierName, CancellationToken cancellationToken = default)
         {
-            return await _context.Suppliers.AnyAsync(s => s.Name == supplierName);
+            return await _context.Suppliers.AnyAsync(s => s.Name == supplierName, cancellationToken);
         }
 
-        public async Task<bool> SupplierNameExistsForOtherSupplierAsync(int supplierId, string supplierName)
+        public async Task<bool> SupplierNameExistsForOtherSupplierAsync(int supplierId, string supplierName, CancellationToken cancellationToken = default)
         {
-            return await _context.Suppliers.AnyAsync(s => s.Name == supplierName && s.ID != supplierId);
+            return await _context.Suppliers.AnyAsync(s => s.Name == supplierName && s.ID != supplierId, cancellationToken);
         }
 
-        public async Task<bool> SupplierEmailExistsAsync(string supplierEmail)
-        {
-            return await _context.Suppliers.AnyAsync(s => s.EmailContact == supplierEmail);
-        }
-
-        public async Task<bool> SupplierEmailExistsForOtherSupplierAsync(int supplierId, string supplierEmail)
-        {
-            return await _context.Suppliers.AnyAsync(s => s.EmailContact == supplierEmail && s.ID != supplierId);
-        }
-
-        // === SAVE CHANGES ===
-        public async Task SaveChangesAsync()
-        {
-            await _context.SaveChangesAsync();
-        }
     }
 }

@@ -1,10 +1,8 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
-using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PUT.STOCK;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
-using InventoryManagementAPI.Repositories.SupplierRepositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositories
@@ -12,22 +10,22 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
     public class ProductService : IProductService
     {
         private readonly IProductRepository _productRepo;
-        private readonly ISupplierRepository _supplierRepo;
         private readonly ICategoryRepository _categoryRepo;
-        public ProductService(IProductRepository productRepo, ISupplierRepository supplierRepo, ICategoryRepository categoryRepo)
+        private readonly IUnitOfWork _unitOfWork;
+        public ProductService(IProductRepository productRepo, ICategoryRepository categoryRepo, IUnitOfWork unitOfWork)
         {
             _productRepo = productRepo;
-            _supplierRepo = supplierRepo;
             _categoryRepo = categoryRepo;
+            _unitOfWork = unitOfWork;
         }
 
         // === GET ===
-        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetAllProducts()
+        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetAllProducts(CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieve all products from the repository
-                var productList = await _productRepo.GetAllProductsAsync();
+                var productList = await _productRepo.GetAllProductsAsync(cancellationToken);
 
                 // Validate that the product list is not empty and return a response accordingly
                 var productListResult = ValidateProductGroupExists(productList);
@@ -36,22 +34,30 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Return a successful response with the product list
                 return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved All Products");
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildCatchErrorResponseBulk("Internal error occurred, failed to load all products.");
             }
         }
 
-        public async Task<ApiResponse<SingleProductResponseDTO>> GetSingleProduct(int productId)
+        public async Task<ApiResponse<SingleProductResponseDTO>> GetSingleProduct(int productId, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieve the product from the repository using the provided productId
-                var productResult = await ValidateProductExists(productId);
+                var productResult = await ValidateProductExists(productId, cancellationToken);
                 if (productResult.Product == null) return productResult.Error!;
 
                 // Return a successful response with the product details
                 return BuildProductResponse(productResult.Product, "Product Successfully Retrieved", 200);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -59,12 +65,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId)
+        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Check if the category exists using the category repository
-                if (!await _categoryRepo.CategoryExistsAsync(categoryId))
+                if (!await _categoryRepo.CategoryExistsAsync(categoryId, cancellationToken))
                 {
                     return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
                     {
@@ -74,7 +80,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     };
                 }
                 // Retrieve the list of products for the specified category from the product repository
-                var productList = await _productRepo.GetProductsByCategoryAsync(categoryId);
+                var productList = await _productRepo.GetProductsByCategoryAsync(categoryId, cancellationToken);
 
                 // Check if the product list is empty and return a response accordingly
                 var productListResult = ValidateProductGroupExists(productList);
@@ -83,18 +89,22 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Return a successful response with the product list for the specified category
                 return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products By Category");
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildCatchErrorResponseBulk("Internal error occurred, failed to load products by category.");
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel()
+        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel(CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieve all products where the current stock is below the configured reorder level
-                var reorderList = await _productRepo.GetProductsBelowReorderLevelAsync();
+                var reorderList = await _productRepo.GetProductsBelowReorderLevelAsync(cancellationToken);
 
                 // Check if any products need reordering and return a not found response if none exist
                 var productListResult = ValidateProductGroupExists(reorderList);
@@ -103,6 +113,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Return a successful response with all products that are below their reorder level
                 return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products Below Reorder Level");
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildCatchErrorResponseBulk("Internal error occurred, failed to load products below reorder level.");
@@ -110,7 +124,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         }
 
         // === POST ===
-        public async Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto)
+        public async Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto, CancellationToken cancellationToken = default)
         {
             //Validates DTO not null
             var validateDtoResult = ValidateDTO(dto);
@@ -133,9 +147,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
             try
             {
-                // Validate that the supplied SKU and Name dont exist
-                // and the Category and Supplier exist before creating the product
-                var validateExistenceResult = await ValidateDtoFieldsExist(dto);
+                // Validate that the supplied SKU and name are unique and the category exists.
+                var validateExistenceResult = await ValidateDtoFieldsExist(dto, cancellationToken);
                 if (validateExistenceResult != null) return validateExistenceResult;
 
                 // Create the product entity from the request DTO
@@ -145,28 +158,28 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Name = dto.Name,
                     Description = dto.Description,
                     CategoryID = dto.CategoryID,
-                    QuantityInStock = dto.QuantityInStock,
-                    ReorderLevel = dto.ReorderLevel,
                     Price = dto.Price,
-                    SupplierID = dto.SupplierID,
                     IsActive = dto.IsActive,
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };
 
-                // Save the product, then reload it with category and supplier details for the response mapping
-                var createdProduct = await _productRepo.AddProductAsync(product);
-                await _productRepo.SaveChangesAsync();
+                // Save the product, then reload it with category details for response mapping.
+                var createdProduct = await _productRepo.AddProductAsync(product, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                var createdProductWithDetails = await _productRepo.GetProductAsync(createdProduct.ID);
+                var createdProductWithDetails = await _productRepo.GetProductAsync(createdProduct.ID, cancellationToken);
                 if (createdProductWithDetails == null)
                 {
                     return BuildCatchErrorResponseSingle("Product was created but could not be retrieved.");
                 }
 
-                // Return an Error ApiResponse if either the category or supplier details are missing after creation
                 // Return a created response with the new product details
                 return BuildProductResponse(createdProductWithDetails, "Product Successfully Created", 201);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -175,7 +188,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         }
 
         // === PUT ===
-        public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductDetails(int id, UpdateProductDetailsRequestDTO dto)
+        public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductDetails(int id, UpdateProductDetailsRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validates DTO not null
             var validateDtoResult = ValidateDTO(dto);
@@ -191,15 +204,15 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
             try
             {
-                // Validate that the supplied supplier exists before updating the product
-                var updateProductExistsResult = await ValidateProductExists(id);
+                // Validate that the product and its requested category exist.
+                var updateProductExistsResult = await ValidateProductExists(id, cancellationToken);
                 if (updateProductExistsResult.Product == null) return updateProductExistsResult.Error!;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
                 var validateRowVersionMatch = ValidateMatchRowVersion(updateProductExistsResult.Product, dto.RowVersion);
                 if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
-                var validateExistenceResult = await UpdateValidateDtoFieldsExist(updateProductExistsResult.Product, dto);
+                var validateExistenceResult = await UpdateValidateDtoFieldsExist(updateProductExistsResult.Product, dto, cancellationToken);
                 if (validateExistenceResult != null) return validateExistenceResult;
                 var updateProduct = updateProductExistsResult.Product;
 
@@ -209,14 +222,13 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 updateProduct.Name = dto.Name;
                 updateProduct.Description = dto.Description;
                 updateProduct.CategoryID = dto.CategoryID;
-                updateProduct.SupplierID = dto.SupplierID;
                 updateProduct.Updated = DateTime.UtcNow;
 
                 // Persist the updated product details through the repository
-                await _productRepo.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Reload the updated product with category and supplier details for the response
-                var findUpdatedProduct = await _productRepo.GetProductAsync(updateProduct.ID);
+                // Reload the updated product with category details for the response.
+                var findUpdatedProduct = await _productRepo.GetProductAsync(updateProduct.ID, cancellationToken);
 
                 // Check if the updated product could be retrieved successfully
                 if (findUpdatedProduct == null)
@@ -224,13 +236,16 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     return BuildCatchErrorResponseSingle("Product was updated but could not be retrieved.");
                 }
 
-                // Return an Error ApiResponse if either the category or supplier details are missing after the update
                 // Return a successful response with the updated product details
                 return BuildProductResponse(findUpdatedProduct, "Successfully Updated Product Details", 200);
             }
             catch (DbUpdateConcurrencyException)
             {
                 return BuildConcurrencyCatchErrorResponse();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -241,7 +256,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
 
         // === PATCH ===
-        public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductPrice(int id, UpdateProductPriceRequestDTO dto)
+        public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductPrice(int id, UpdateProductPriceRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate that the new product price is greater than zero
             if (dto.Price <= 0.00m)
@@ -261,7 +276,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Load the product before applying the price update
-                var validateProductResult = await ValidateProductExists(id);
+                var validateProductResult = await ValidateProductExists(id, cancellationToken);
                 if (validateProductResult.Product == null) return validateProductResult.Error!;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
@@ -271,7 +286,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Update the price and save the change
                 validateProductResult.Product.Price = dto.Price;
                 validateProductResult.Product.Updated = DateTime.UtcNow;
-                await _productRepo.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Return a successful response with the updated product details
                 return BuildProductResponse(validateProductResult.Product, "Price Successfully Updated", 200);
@@ -280,61 +295,18 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product price.");
             }
         }
 
-        public async Task<ApiResponse<SingleProductResponseDTO>> UpdateProductReorderLevel(int id, UpdateProductReorderRequestDTO dto)
-        {
-            // Validate that the reorder level is not negative
-            if (dto.ReorderLevel < 0)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid Reorder Level",
-                    StatusCode = 400
-                };
-            }
-
-            // Validate that the RowVersion is provided for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
-            if (validateRowVersion != null) return validateRowVersion;
-
-            try
-            {
-                // Load the product before applying the reorder level update
-                var productExistsResult = await ValidateProductExists(id);
-                if (productExistsResult.Product == null) return productExistsResult.Error!;
-
-                //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
-                var validateRowVersionMatch = ValidateMatchRowVersion(productExistsResult.Product, dto.RowVersion);
-                if (validateRowVersionMatch != null) return validateRowVersionMatch;
-
-                // Update the ReorderLevel property of the product
-                // Save the changes to the database
-                productExistsResult.Product.ReorderLevel = dto.ReorderLevel;
-                productExistsResult.Product.Updated = DateTime.UtcNow;
-                await _productRepo.SaveChangesAsync();
-
-                // Return a successful response with the updated reorder level details
-                return BuildProductResponse(productExistsResult.Product, "ReOrderStock Levels Updated", 200);
-
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return BuildConcurrencyCatchErrorResponse();
-            }
-            catch
-            {
-                return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product reorder level.");
-            }
-        }
-
         // === SET ACTIVE STATUS ===
-        public async Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id, UpdateProductStatusRequestDTO dto)
+        public async Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id, UpdateProductStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate that the RowVersion is provided for concurrency control
             var validateRowVersion = ValidateRowVersion(dto.RowVersion);
@@ -343,7 +315,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Load the product before attempting to activate it
-                var productExistsResult = await ValidateProductExists(id);
+                var productExistsResult = await ValidateProductExists(id, cancellationToken);
                 if (productExistsResult.Product == null) return productExistsResult.Error!;
                 var product = productExistsResult.Product;
 
@@ -365,7 +337,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Set the product active and update the timestamp
                 product.IsActive = true;
                 product.Updated = DateTime.UtcNow;
-                await _productRepo.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Return a successful response with the activated product details
                 return BuildProductResponse(product, "Product activated successfully", 200);
@@ -374,13 +346,17 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildCatchErrorResponseSingle("Internal error occurred, failed to activate product.");
             }
         }
 
-        public async Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id, UpdateProductStatusRequestDTO dto)
+        public async Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id, UpdateProductStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate that the RowVersion is provided for concurrency control
             var validateRowVersion = ValidateRowVersion(dto.RowVersion);
@@ -389,7 +365,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             try
             {
                 // Load the product before attempting to deactivate it
-                var productExistsResult = await ValidateProductExists(id);
+                var productExistsResult = await ValidateProductExists(id, cancellationToken);
                 if (productExistsResult.Product == null) return productExistsResult.Error!;
                 var product = productExistsResult.Product;
 
@@ -411,7 +387,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Set the product inactive and update the timestamp
                 product.IsActive = false;
                 product.Updated = DateTime.UtcNow;
-                await _productRepo.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Return a successful response with the deactivated product details
                 return BuildProductResponse(product, "Product deactivated successfully", 200);
@@ -419,6 +395,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             catch (DbUpdateConcurrencyException)
             {
                 return BuildConcurrencyCatchErrorResponse();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -435,9 +415,9 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// </summary>
         /// <param name="id">The ID of the product to validate.</param>
         /// <returns>A tuple containing the product (if found) and an ApiResponse (if not found).</returns>
-        private async Task<(Product? Product, ApiResponse<SingleProductResponseDTO>? Error)> ValidateProductExists(int id)
+        private async Task<(Product? Product, ApiResponse<SingleProductResponseDTO>? Error)> ValidateProductExists(int id, CancellationToken cancellationToken = default)
         {
-            var product = await _productRepo.GetProductAsync(id);
+            var product = await _productRepo.GetProductAsync(id, cancellationToken);
 
             if (product == null)
             {
@@ -473,7 +453,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 ID = p.ID,
                 Sku = p.Sku,
                 Name = p.Name,
-                QuantityInStock = p.QuantityInStock,
                 Price = p.Price,
                 IsActive = p.IsActive
             }).ToList(), null);
@@ -583,14 +562,14 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         }
 
         /// <summary>
-        /// Validates the existence of related entities (SKU, Name, Supplier, Category) for a product DTO before creation.
+        /// Validates product uniqueness and category existence before creation.
         /// </summary>
         /// <param name="dto">The product DTO to validate.</param>
         /// <returns>Null if successful, otherwise an ApiResponse indicating the result of the validation failure.</returns>
-        private async Task<ApiResponse<SingleProductResponseDTO>?> ValidateDtoFieldsExist(CreateProductRequestDTO dto)
+        private async Task<ApiResponse<SingleProductResponseDTO>?> ValidateDtoFieldsExist(CreateProductRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate that the supplied SKU is not already in use by another product
-            if (await _productRepo.ProductSkuExistsAsync(dto.Sku))
+            if (await _productRepo.ProductSkuExistsAsync(dto.Sku, cancellationToken))
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
@@ -600,7 +579,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 };
             }
             // Validate that the supplied Name is not already in use by another product
-            if (await _productRepo.ProductNameExistsAsync(dto.Name))
+            if (await _productRepo.ProductNameExistsAsync(dto.Name, cancellationToken))
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
@@ -610,18 +589,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 };
             }
 
-            // Validate that the supplied supplier exists before creating the product
-            if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier does not exist",
-                    StatusCode = 404
-                };
-            }
             // Validate that the supplied category exists before creating the product
-            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
+            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID, cancellationToken))
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
@@ -634,15 +603,15 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         }
 
         /// <summary>
-        /// Validates the existence of related entities (SKU, Name, Supplier, Category) for a product DTO before updating an existing product.
+        /// Validates product uniqueness and category existence before updating an existing product.
         /// </summary>
         /// <param name="updateProduct">The existing product being updated.</param>
         /// <param name="dto">The product DTO containing the updated details.</param>
         /// <returns>Null if successful, otherwise an ApiResponse indicating the result of the validation failure.</returns>
-        private async Task<ApiResponse<SingleProductResponseDTO>?> UpdateValidateDtoFieldsExist(Product updateProduct, UpdateProductDetailsRequestDTO dto)
+        private async Task<ApiResponse<SingleProductResponseDTO>?> UpdateValidateDtoFieldsExist(Product updateProduct, UpdateProductDetailsRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate that dto name is not already in use by another product, excluding the current product being updated
-            if (await _productRepo.OtherProductNameExistsAsync(updateProduct.ID, dto.Name))
+            if (await _productRepo.OtherProductNameExistsAsync(updateProduct.ID, dto.Name, cancellationToken))
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
@@ -652,7 +621,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 };
             }
             // Validate that dto SKU is not already in use by another product, excluding the current product being updated
-            if (await _productRepo.OtherProductSkuExistsAsync(updateProduct.ID, dto.Sku))
+            if (await _productRepo.OtherProductSkuExistsAsync(updateProduct.ID, dto.Sku, cancellationToken))
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
@@ -662,22 +631,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 };
             }
             // Validate that the supplied category exists before updating the product
-            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID))
+            if (!await _categoryRepo.CategoryExistsAsync(dto.CategoryID, cancellationToken))
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
                     Message = "Category does not exist",
-                    StatusCode = 404
-                };
-            }
-            // Validate that the supplied supplier exists before updating the product
-            if (!await _supplierRepo.SupplierExistsAsync(dto.SupplierID))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier does not exist",
                     StatusCode = 404
                 };
             }
@@ -739,8 +698,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
 
         /// <summary>
         /// Creates an ApiResponse object for a single product, including its details and status information.
-        /// Checks if the product's category and supplier are loaded before creating the response.
-        /// Since product.Category and product.Supplier are virtual properties, they may not be loaded if lazy loading is not enabled or if they were not explicitly included in the query.
+        /// Checks that the product category is loaded before creating the response.
         /// </summary>
         /// <param name="product"></param>
         /// <param name="message"></param>
@@ -752,12 +710,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         ///
         private static ApiResponse<SingleProductResponseDTO> BuildProductResponse(Product product, string message, int statusCode)
         {
-            if (product.Category is null || product.Supplier is null)
+            if (product.Category is null)
             {
                 return new ApiResponse<SingleProductResponseDTO>
                 {
                     Success = false,
-                    Message = $"{message}, failed to retrieve either category or supplier details",
+                    Message = $"{message}, failed to retrieve category details",
                     StatusCode = 500
                 };
             }
@@ -774,11 +732,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Description = product.Description,
                     CategoryID = product.CategoryID,
                     CategoryName = product.Category.Name,
-                    QuantityInStock = product.QuantityInStock,
-                    ReorderLevel = product.ReorderLevel,
                     Price = product.Price,
-                    SupplierID = product.SupplierID,
-                    SupplierName = product.Supplier.Name,
                     IsActive = product.IsActive,
                     RowVersion = product.RowVersion
                 },

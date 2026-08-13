@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels.UserModels;
 using InventoryManagementAPI.Models.Enums;
 using InventoryManagementAPI.Repositories.UserRepositories;
 using System;
@@ -26,14 +26,14 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             await using var transaction = context.Database.BeginTransaction();
 
             var testUser = CreateTestUser();
-            await context.Users.AddAsync(testUser);
-            await context.SaveChangesAsync();
+            await context.Users.AddAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear(); // Clear the change tracker to ensure we fetch from the database
 
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.GetUserByIdAsync(testUser.ID);
+            var result = await repository.GetUserByIdAsync(testUser.ID, CancellationToken.None);
 
             // Assert
             Assert.NotNull(result);
@@ -48,7 +48,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.GetUserByIdAsync(int.MaxValue);
+            var result = await repository.GetUserByIdAsync(int.MaxValue, CancellationToken.None);
 
             //Assert
             Assert.Null(result);
@@ -64,15 +64,17 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testUser1 = CreateTestUser();
             testUser1.UserName = "TestUser1";
+            testUser1.Email = $"user1-{Guid.NewGuid():N}@example.com";
             var testUser2 = CreateTestUser();
             testUser2.UserName = "TestUser2";
-            await context.Users.AddRangeAsync(testUser1, testUser2);
-            await context.SaveChangesAsync();
+            testUser2.Email = $"user2-{Guid.NewGuid():N}@example.com";
+            await context.Users.AddRangeAsync([testUser1, testUser2], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new UserRepository(context);
             //Act
-            var result = await repository.GetAllUsersAsync();
+            var result = await repository.GetAllUsersAsync(CancellationToken.None);
 
             //Assert
             Assert.NotEmpty(result);
@@ -90,13 +92,13 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testUser = CreateTestUser();
             testUser.Email = "testEmail@example.com";
-            await context.AddAsync(testUser);
-            await context.SaveChangesAsync();
+            await context.AddAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear(); // Clear the change tracker to ensure we fetch from the database
 
             var repository = new UserRepository(context);
             //Act
-            var result = await repository.GetUserByEmailAsync(testUser.Email);
+            var result = await repository.GetUserByEmailAsync(testUser.Email, CancellationToken.None);
             //Assert
             Assert.NotNull(result);
             Assert.Equal(testUser.Email, result.Email);
@@ -110,7 +112,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var repository = new UserRepository(context);
             //Act
-            var result = await repository.GetUserByEmailAsync("nonexistent@example.com");
+            var result = await repository.GetUserByEmailAsync("nonexistent@example.com", CancellationToken.None);
             //Assert
             Assert.Null(result);
         }
@@ -123,27 +125,30 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             await using var context = _fixture.CreateContext();
             await using var transaction = context.Database.BeginTransaction();
 
+            var roleName = $"Admin-{Guid.NewGuid():N}";
+            var adminRole = new Role { Name = roleName };
             var testUser1 = CreateTestUser();
             testUser1.UserName = "AdminUser1";
-            testUser1.Role = UserRoles.Admin;
+            testUser1.Email = $"admin1-{Guid.NewGuid():N}@example.com";
+            testUser1.UserRoles.Add(new UserRole { Role = adminRole, Created = DateTime.UtcNow });
             var testUser2 = CreateTestUser();
-            testUser2.Role = UserRoles.Admin;
             testUser2.UserName = "AdminUser2";
+            testUser2.Email = $"admin2-{Guid.NewGuid():N}@example.com";
+            testUser2.UserRoles.Add(new UserRole { Role = adminRole, Created = DateTime.UtcNow });
 
-            await context.Users.AddRangeAsync(testUser1, testUser2);
-            await context.SaveChangesAsync();
+            await context.Users.AddRangeAsync([testUser1, testUser2], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.GetUsersByRoleAsync(UserRoles.Admin);
+            var result = await repository.GetUsersByRoleAsync(roleName, CancellationToken.None);
 
             //Assert
             Assert.NotEmpty(result);
             Assert.Contains(result, u => u.UserName == "AdminUser1");
             Assert.Contains(result, u => u.UserName == "AdminUser2");
-            Assert.All(result, u => Assert.Equal(UserRoles.Admin, u.Role));
         }
 
         [Fact]
@@ -153,21 +158,26 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             await using var context = _fixture.CreateContext();
             await using var transaction = context.Database.BeginTransaction();
 
+            var adminRoleName = $"Admin-{Guid.NewGuid():N}";
+            var adminRole = new Role { Name = adminRoleName };
+            var staffRole = new Role { Name = $"Staff-{Guid.NewGuid():N}" };
             var testUser1 = CreateTestUser();
             testUser1.UserName = "AdminUser1";
-            testUser1.Role = UserRoles.Admin;
+            testUser1.Email = $"admin-{Guid.NewGuid():N}@example.com";
+            testUser1.UserRoles.Add(new UserRole { Role = adminRole, Created = DateTime.UtcNow });
             var testUser2 = CreateTestUser();
-            testUser2.Role = UserRoles.Staff;
             testUser2.UserName = "StaffUser1";
+            testUser2.Email = $"staff-{Guid.NewGuid():N}@example.com";
+            testUser2.UserRoles.Add(new UserRole { Role = staffRole, Created = DateTime.UtcNow });
 
-            await context.Users.AddRangeAsync(testUser1, testUser2);
-            await context.SaveChangesAsync();
+            await context.Users.AddRangeAsync([testUser1, testUser2], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.GetUsersByRoleAsync(UserRoles.Admin);
+            var result = await repository.GetUsersByRoleAsync(adminRoleName, CancellationToken.None);
 
             //Assert
             Assert.NotEmpty(result);
@@ -184,14 +194,14 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             await using var transaction = context.Database.BeginTransaction();
 
             var testUser = CreateTestUser();
-            await context.Users.AddAsync(testUser);
-            await context.SaveChangesAsync();
+            await context.Users.AddAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.UserExistsAsync(testUser.ID);
+            var result = await repository.UserExistsAsync(testUser.ID, CancellationToken.None);
 
             //Assert
             Assert.True(result);
@@ -206,7 +216,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.UserExistsAsync(int.MaxValue);
+            var result = await repository.UserExistsAsync(int.MaxValue, CancellationToken.None);
 
             //Assert
             Assert.False(result);
@@ -222,14 +232,14 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testUser = CreateTestUser();
             testUser.Email = "testEmail@example.com";
-            await context.Users.AddAsync(testUser);
-            await context.SaveChangesAsync();
+            await context.Users.AddAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.EmailExistsAsync("testEmail@example.com");
+            var result = await repository.EmailExistsAsync("testEmail@example.com", CancellationToken.None);
 
             //Assert
             Assert.True(result);
@@ -244,7 +254,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.EmailExistsAsync("nonExisting@email.com");
+            var result = await repository.EmailExistsAsync("nonExisting@email.com", CancellationToken.None);
 
             //Assert
             Assert.False(result);
@@ -260,14 +270,14 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testUser = CreateTestUser();
             testUser.IsActive = true;
-            await context.Users.AddAsync(testUser);
-            await context.SaveChangesAsync();
+            await context.Users.AddAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.IsUserActiveAsync(testUser.ID);
+            var result = await repository.IsUserActiveAsync(testUser.ID, CancellationToken.None);
 
             //Assert
             Assert.True(result);
@@ -281,14 +291,14 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testUser = CreateTestUser();
             testUser.IsActive = false;
-            await context.Users.AddAsync(testUser);
-            await context.SaveChangesAsync();
+            await context.Users.AddAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new UserRepository(context);
 
             //Act
-            var result = await repository.IsUserActiveAsync(testUser.ID);
+            var result = await repository.IsUserActiveAsync(testUser.ID, CancellationToken.None);
 
             //Assert
             Assert.False(result);
@@ -306,13 +316,13 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var repository = new UserRepository(context);
             
             //Act
-            var result = await repository.CreateUserAsync(testUser);
-            await context.SaveChangesAsync();
+            var result = await repository.CreateUserAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             var userId = result.ID;
             context.ChangeTracker.Clear();
 
             //Assert
-            var persistedUser = await context.Users.FindAsync(userId);
+            var persistedUser = await context.Users.FindAsync([userId], CancellationToken.None);
             Assert.NotNull(persistedUser);
             Assert.Equal(testUser.UserName, persistedUser.UserName);
             Assert.Equal(testUser.Email, persistedUser.Email);

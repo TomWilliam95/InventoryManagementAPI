@@ -1,1 +1,5 @@
 global using System.ComponentModel.DataAnnotations;
+global using InventoryManagementAPI.Models.CoreModels.MovementModels;
+global using InventoryManagementAPI.Models.CoreModels.SupplierModels;
+global using InventoryManagementAPI.Models.CoreModels.UserModels;
+global using InventoryManagementAPI.Repositories.UnitOfWorkRepositories;

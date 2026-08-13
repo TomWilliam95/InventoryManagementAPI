@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Repositories.JWT;
 using InventoryManagementAPI.Repositories.UserRepositories;
@@ -9,13 +9,15 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
     {
         private readonly IUserRepository _userRepository;
         private readonly IJwtTokenService _jwtTokenRepository;
-        public AuthService(IUserRepository userRepository, IJwtTokenService jwtTokenRepository)
+        private readonly IUnitOfWork _unitOfWork;
+        public AuthService(IUserRepository userRepository, IJwtTokenService jwtTokenRepository, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
             _jwtTokenRepository = jwtTokenRepository;
+            _unitOfWork = unitOfWork;
         }
 
-        public async Task<ApiResponse<LoginResponseDTO>> LoginAsync(LoginRequestDTO loginRequestDTO)
+        public async Task<ApiResponse<LoginResponseDTO>> LoginAsync(LoginRequestDTO loginRequestDTO, CancellationToken cancellationToken = default)
         {
             // Validates that all fields have data
             if (loginRequestDTO == null || string.IsNullOrEmpty(loginRequestDTO.Email) || string.IsNullOrEmpty(loginRequestDTO.Password))
@@ -42,7 +44,7 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
             try
             {
                 // Retrieve the user by email before validating credentials
-                var user = await _userRepository.GetUserByEmailAsync(loginRequestDTO.Email);
+                var user = await _userRepository.GetUserWithRolesForAuthentication(loginRequestDTO.Email, cancellationToken);
                 if (user == null)
                 {
                     return new ApiResponse<LoginResponseDTO>
@@ -77,7 +79,7 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
 
                 // Updates the user's last login timestamp to the current UTC time and saves the changes to the repository.
                 user.LastLogin = DateTime.UtcNow;
-                await _userRepository.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return new ApiResponse<LoginResponseDTO>
                 {
@@ -91,6 +93,10 @@ namespace InventoryManagementAPI.Repositories.AuthenticationRepositories
                 };
             }
             // Handle any exceptions that may occur while authenticating the user
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return new ApiResponse<LoginResponseDTO>

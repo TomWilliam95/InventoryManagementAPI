@@ -17,6 +17,7 @@ namespace InventoryManagementAPI.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .UseCollation("SQL_Latin1_General_CP1_CI_AS")
                 .HasAnnotation("ProductVersion", "9.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -31,7 +32,9 @@ namespace InventoryManagementAPI.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
                     b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -52,46 +55,19 @@ namespace InventoryManagementAPI.Migrations
                         .HasColumnType("rowversion");
 
                     b.Property<DateTime>("Updated")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.HasKey("ID");
 
-                    b.ToTable("Categories");
+                    b.HasIndex("Name")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            ID = 1,
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Category1 Description",
-                            IsActive = true,
-                            Name = "Category1",
-                            RowVersion = new byte[0],
-                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            ID = 2,
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Category2 Description",
-                            IsActive = true,
-                            Name = "Category2",
-                            RowVersion = new byte[0],
-                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            ID = 3,
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Category3 Description",
-                            IsActive = true,
-                            Name = "Category3",
-                            RowVersion = new byte[0],
-                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        });
+                    b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.InventoryMovement", b =>
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.InventoryStock", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
@@ -104,12 +80,66 @@ namespace InventoryManagementAPI.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETDATE()");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReorderLevel")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("WarehouseID")
+                        .HasColumnType("int");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("WarehouseID");
+
+                    b.HasIndex("ProductID", "WarehouseID")
+                        .IsUnique();
+
+                    b.ToTable("InventoryStocks", t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryStock_Quantity_NonNegative", "[Quantity] >= 0");
+
+                            t.HasCheckConstraint("CK_InventoryStock_ReorderLevel_NonNegative", "[ReorderLevel] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.InventoryMovement", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("InventoryStockID")
+                        .HasColumnType("int");
+
                     b.Property<string>("Movement")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -130,11 +160,240 @@ namespace InventoryManagementAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("InventoryStockID");
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("InventoryMovements");
+                    b.ToTable("InventoryMovements", t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryMovements_QuantityAfter_NonNegative", "[QuantityAfter] >= 0");
+
+                            t.HasCheckConstraint("CK_InventoryMovements_QuantityBefore_NonNegative", "[QuantityBefore] >= 0");
+
+                            t.HasCheckConstraint("CK_InventoryMovements_Quantity_Positive", "[Quantity] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.PurchaseOrder", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ExpectedDeliveryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReceivedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SupplierID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SupplierReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("WarehouseID")
+                        .HasColumnType("int");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("CreatedByUserID");
+
+                    b.HasIndex("WarehouseID");
+
+                    b.HasIndex("SupplierID", "SupplierReference")
+                        .IsUnique()
+                        .HasFilter("[SupplierReference] IS NOT NULL");
+
+                    b.ToTable("PurchaseOrders");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.PurchaseOrderItem", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PurchaseOrderID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QuantityOrdered")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QuantityReceived")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("ProductID");
+
+                    b.HasIndex("PurchaseOrderID", "ProductID")
+                        .IsUnique();
+
+                    b.ToTable("PurchaseOrderItems", t =>
+                        {
+                            t.HasCheckConstraint("CK_PurchaseOrderItems_QuantityOrdered_Positive", "[QuantityOrdered] > 0");
+
+                            t.HasCheckConstraint("CK_PurchaseOrderItems_QuantityReceived_Valid", "[QuantityReceived] >= 0 AND [QuantityReceived] <= [QuantityOrdered]");
+
+                            t.HasCheckConstraint("CK_PurchaseOrderItems_UnitCost_NonNegative", "[UnitCost] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.SalesOrder", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CustomerID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomerReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DispatchedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RequiredDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("WarehouseID")
+                        .HasColumnType("int");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("CreatedByUserID");
+
+                    b.HasIndex("WarehouseID");
+
+                    b.HasIndex("CustomerID", "CustomerReference")
+                        .IsUnique()
+                        .HasFilter("[CustomerReference] IS NOT NULL");
+
+                    b.ToTable("SalesOrders");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.SalesOrderItem", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QuantityDispatched")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QuantityOrdered")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SalesOrderID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("ProductID");
+
+                    b.HasIndex("SalesOrderID", "ProductID")
+                        .IsUnique();
+
+                    b.ToTable("SalesOrderItems", t =>
+                        {
+                            t.HasCheckConstraint("CK_SalesOrderItems_DiscountAmount_NonNegative", "[DiscountAmount] >= 0");
+
+                            t.HasCheckConstraint("CK_SalesOrderItems_QuantityDispatched_Valid", "[QuantityDispatched] >= 0 AND [QuantityDispatched] <= [QuantityOrdered]");
+
+                            t.HasCheckConstraint("CK_SalesOrderItems_QuantityOrdered_Positive", "[QuantityOrdered] > 0");
+
+                            t.HasCheckConstraint("CK_SalesOrderItems_UnitPrice_NonNegative", "[UnitPrice] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Product", b =>
@@ -170,12 +429,6 @@ namespace InventoryManagementAPI.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("QuantityInStock")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ReorderLevel")
-                        .HasColumnType("int");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -187,6 +440,343 @@ namespace InventoryManagementAPI.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("CategoryID");
+
+                    b.HasIndex("Sku")
+                        .IsUnique();
+
+                    b.ToTable("Products", t =>
+                        {
+                            t.HasCheckConstraint("CK_Products_Price_Positive", "[Price] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.Permission", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.Role", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            ID = 1,
+                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Administrator role with full permissions",
+                            IsActive = true,
+                            Name = "Admin",
+                            RowVersion = new byte[0],
+                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            ID = 2,
+                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Manager role with stock management permissions and limited administrative capabilities",
+                            IsActive = true,
+                            Name = "Manager",
+                            RowVersion = new byte[0],
+                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            ID = 3,
+                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Standard staff role with limited permissions",
+                            IsActive = true,
+                            Name = "Staff",
+                            RowVersion = new byte[0],
+                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.RolePermission", b =>
+                {
+                    b.Property<int>("RoleID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermissionID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RoleID", "PermissionID");
+
+                    b.HasIndex("PermissionID");
+
+                    b.ToTable("RolePermissions");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.UserRole", b =>
+                {
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UserID", "RoleID");
+
+                    b.HasIndex("RoleID");
+
+                    b.ToTable("UserRoles");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.Supplier", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TaxNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("TaxNumber")
+                        .IsUnique()
+                        .HasFilter("[TaxNumber] IS NOT NULL");
+
+                    b.ToTable("Suppliers");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierAddress", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("AddressLine1")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AddressLine2")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("StateOrProvince")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SupplierID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("SupplierID", "Type")
+                        .IsUnique()
+                        .HasFilter("[IsPrimary] = 1");
+
+                    b.ToTable("SupplierAddresses");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierContact", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("SupplierAddressID")
+                        .HasColumnType("int");
+
                     b.Property<int>("SupplierID")
                         .HasColumnType("int");
 
@@ -197,64 +787,80 @@ namespace InventoryManagementAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.HasIndex("CategoryID");
+                    b.HasIndex("SupplierAddressID");
 
-                    b.HasIndex("SupplierID");
+                    b.HasIndex("SupplierID")
+                        .IsUnique()
+                        .HasFilter("[IsPrimary] = 1");
 
-                    b.ToTable("Products");
+                    b.ToTable("SupplierContacts");
+                });
 
-                    b.HasData(
-                        new
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierProduct", b =>
+                {
+                    b.Property<int>("SupplierID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPreferred")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LeadTimeDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MinimumOrderQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SupplierSku")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.HasKey("SupplierID", "ProductID");
+
+                    b.HasIndex("ProductID")
+                        .IsUnique()
+                        .HasFilter("[IsPreferred] = 1");
+
+                    b.HasIndex("SupplierID", "SupplierSku")
+                        .IsUnique()
+                        .HasFilter("[SupplierSku] IS NOT NULL");
+
+                    b.ToTable("SupplierProducts", t =>
                         {
-                            ID = 1,
-                            CategoryID = 1,
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Test1",
-                            IsActive = true,
-                            Name = "Test1",
-                            Price = 123m,
-                            QuantityInStock = 420,
-                            ReorderLevel = 69,
-                            RowVersion = new byte[0],
-                            Sku = "Test1",
-                            SupplierID = 1,
-                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            ID = 2,
-                            CategoryID = 1,
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Test2",
-                            IsActive = true,
-                            Name = "Test2",
-                            Price = 123.85m,
-                            QuantityInStock = 420,
-                            ReorderLevel = 69,
-                            RowVersion = new byte[0],
-                            Sku = "Test2",
-                            SupplierID = 2,
-                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            ID = 3,
-                            CategoryID = 2,
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Test3",
-                            IsActive = true,
-                            Name = "Test3",
-                            Price = 123.85m,
-                            QuantityInStock = 420,
-                            ReorderLevel = 69,
-                            RowVersion = new byte[0],
-                            Sku = "Test3",
-                            SupplierID = 2,
-                            Updated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                            t.HasCheckConstraint("CK_SupplierProducts_LeadTimeDays_NonNegative", "[LeadTimeDays] >= 0");
+
+                            t.HasCheckConstraint("CK_SupplierProducts_MinimumOrderQuantity_Positive", "[MinimumOrderQuantity] > 0");
+
+                            t.HasCheckConstraint("CK_SupplierProducts_UnitCost_NonNegative", "[UnitCost] >= 0");
                         });
                 });
 
-            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Supplier", b =>
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.UserModels.Customer", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
@@ -262,37 +868,27 @@ namespace InventoryManagementAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("ContactName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                    b.Property<string>("BillingAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("EmailContact")
+                    b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasMaxLength(254)
-                        .HasColumnType("nvarchar(254)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("LastName")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("PhoneContact")
-                        .IsRequired()
+                    b.Property<string>("Phone")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
@@ -302,53 +898,26 @@ namespace InventoryManagementAPI.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("ShippingAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("Updated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UserID")
+                        .HasColumnType("int");
+
                     b.HasKey("ID");
 
-                    b.ToTable("Suppliers");
+                    b.HasIndex("UserID")
+                        .IsUnique()
+                        .HasFilter("[UserID] IS NOT NULL");
 
-                    b.HasData(
-                        new
-                        {
-                            ID = 1,
-                            Address = "TestSupplier1",
-                            ContactName = "TestSupplier1",
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            EmailContact = "TestSupplier1",
-                            IsActive = true,
-                            LastUpdated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "TestSupplier1",
-                            PhoneContact = "TestSupplier1",
-                            RowVersion = new byte[0]
-                        },
-                        new
-                        {
-                            ID = 2,
-                            Address = "TestSupplier2",
-                            ContactName = "TestSupplier2",
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            EmailContact = "TestSupplier2",
-                            IsActive = true,
-                            LastUpdated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "TestSupplier2",
-                            PhoneContact = "TestSupplier2",
-                            RowVersion = new byte[0]
-                        },
-                        new
-                        {
-                            ID = 3,
-                            Address = "TestSupplier3",
-                            ContactName = "TestSupplier3",
-                            Created = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            EmailContact = "TestSupplier3",
-                            IsActive = true,
-                            LastUpdated = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "TestSupplier3",
-                            PhoneContact = "TestSupplier3",
-                            RowVersion = new byte[0]
-                        });
+                    b.ToTable("Customers");
                 });
 
-            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.User", b =>
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.UserModels.User", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
@@ -374,23 +943,21 @@ namespace InventoryManagementAPI.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETDATE()");
 
-                    b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Password_Hash")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.Property<string>("UserName")
                         .IsRequired()
@@ -399,26 +966,205 @@ namespace InventoryManagementAPI.Migrations
 
                     b.HasKey("ID");
 
+                    b.HasIndex("Email")
+                        .IsUnique();
+
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.InventoryMovement", b =>
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Warehouse", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("Created")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("Updated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Warehouses");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.InventoryStock", b =>
                 {
                     b.HasOne("InventoryManagementAPI.Models.CoreModels.Product", "Product")
-                        .WithMany("InventoryMovements")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .WithMany("InventoryStocks")
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("InventoryManagementAPI.Models.CoreModels.User", "User")
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.Warehouse", "Warehouse")
+                        .WithMany("InventoryStocks")
+                        .HasForeignKey("WarehouseID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.InventoryMovement", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.InventoryStock", "InventoryStock")
+                        .WithMany("InventoryMovements")
+                        .HasForeignKey("InventoryStockID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.UserModels.User", "User")
                         .WithMany("InventoryMovements")
                         .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("InventoryStock");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.PurchaseOrder", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.UserModels.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.SupplierModels.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.PurchaseOrderItem", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.MovementModels.PurchaseOrder", "PurchaseOrder")
+                        .WithMany("PurchaseOrderItems")
+                        .HasForeignKey("PurchaseOrderID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");
 
-                    b.Navigation("User");
+                    b.Navigation("PurchaseOrder");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.SalesOrder", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.UserModels.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.UserModels.Customer", "Customer")
+                        .WithMany("SalesOrders")
+                        .HasForeignKey("CustomerID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.SalesOrderItem", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.MovementModels.SalesOrder", "SalesOrder")
+                        .WithMany("Items")
+                        .HasForeignKey("SalesOrderID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesOrder");
                 });
 
             modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Product", b =>
@@ -426,18 +1172,106 @@ namespace InventoryManagementAPI.Migrations
                     b.HasOne("InventoryManagementAPI.Models.CoreModels.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InventoryManagementAPI.Models.CoreModels.Supplier", "Supplier")
-                        .WithMany("Products")
-                        .HasForeignKey("SupplierID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.RolePermission", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.RolePermissions.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.RolePermissions.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.UserRole", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.RolePermissions.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.UserModels.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierAddress", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.SupplierModels.Supplier", "Supplier")
+                        .WithMany("SupplierAddresses")
+                        .HasForeignKey("SupplierID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierContact", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierAddress", "SupplierAddress")
+                        .WithMany("SupplierContacts")
+                        .HasForeignKey("SupplierAddressID")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.SupplierModels.Supplier", "Supplier")
+                        .WithMany("SupplierContacts")
+                        .HasForeignKey("SupplierID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("SupplierAddress");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierProduct", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.Product", "Product")
+                        .WithMany("SupplierProducts")
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.SupplierModels.Supplier", "Supplier")
+                        .WithMany("SupplierProducts")
+                        .HasForeignKey("SupplierID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.UserModels.Customer", b =>
+                {
+                    b.HasOne("InventoryManagementAPI.Models.CoreModels.UserModels.User", "User")
+                        .WithOne()
+                        .HasForeignKey("InventoryManagementAPI.Models.CoreModels.UserModels.Customer", "UserID")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Category", b =>
@@ -445,19 +1279,69 @@ namespace InventoryManagementAPI.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.InventoryStock", b =>
+                {
+                    b.Navigation("InventoryMovements");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.PurchaseOrder", b =>
+                {
+                    b.Navigation("PurchaseOrderItems");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.MovementModels.SalesOrder", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Product", b =>
                 {
-                    b.Navigation("InventoryMovements");
+                    b.Navigation("InventoryStocks");
+
+                    b.Navigation("SupplierProducts");
                 });
 
-            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Supplier", b =>
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.Permission", b =>
                 {
-                    b.Navigation("Products");
+                    b.Navigation("RolePermissions");
                 });
 
-            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.User", b =>
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.RolePermissions.Role", b =>
+                {
+                    b.Navigation("RolePermissions");
+
+                    b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.Supplier", b =>
+                {
+                    b.Navigation("SupplierAddresses");
+
+                    b.Navigation("SupplierContacts");
+
+                    b.Navigation("SupplierProducts");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.SupplierModels.SupplierAddress", b =>
+                {
+                    b.Navigation("SupplierContacts");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.UserModels.Customer", b =>
+                {
+                    b.Navigation("SalesOrders");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.UserModels.User", b =>
                 {
                     b.Navigation("InventoryMovements");
+
+                    b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("InventoryManagementAPI.Models.CoreModels.Warehouse", b =>
+                {
+                    b.Navigation("InventoryStocks");
                 });
 #pragma warning restore 612, 618
         }

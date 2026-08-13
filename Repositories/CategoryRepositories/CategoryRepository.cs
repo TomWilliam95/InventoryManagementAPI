@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,49 +13,45 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === GET ===
-        public async Task<Category?> GetCategoryByIdAsync(int categoryId)
+        public async Task<Category?> GetCategoryByIdAsync(int categoryId, CancellationToken cancellationToken = default)
         {
-            return await _context.Categories.FindAsync(categoryId);
+            return await _context.Categories.FindAsync(categoryId, cancellationToken);
         }
-        public async Task<IEnumerable<Category>> GetAllCategoriesAsync()
+        public async Task<IEnumerable<Category>> GetAllCategoriesAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Categories.ToListAsync();
+            return await _context.Categories
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
 
         // === POST ===
-        public async Task<Category> CreateCategoryAsync(Category category)
+        public async Task<Category> CreateCategoryAsync(Category category, CancellationToken cancellationToken = default)
         {
-            await _context.Categories.AddAsync(category);
-            await _context.SaveChangesAsync();
+            await _context.Categories.AddAsync(category, cancellationToken);
             return category;
         }
 
         // === PUT ===
-        public async Task UpdateCategoryAsync(Category category)
+        public Task UpdateCategoryAsync(Category category, CancellationToken cancellationToken = default)
         {
             _context.Categories.Update(category);
-            await _context.SaveChangesAsync();
+            return Task.CompletedTask;
         }
 
         // === CHECK EXISTENCE ===
-        public async Task<bool> CategoryExistsAsync(int categoryId)
+        public async Task<bool> CategoryExistsAsync(int categoryId, CancellationToken cancellationToken = default)
         {
-            return await _context.Categories.AnyAsync(c => c.ID == categoryId);
+            return await _context.Categories.AnyAsync(c => c.ID == categoryId, cancellationToken);
         }
 
-        public async Task<bool> OtherCategoryNameExistsAsync(int categoryId, string categoryName)
+        public async Task<bool> OtherCategoryNameExistsAsync(int categoryId, string categoryName, CancellationToken cancellationToken = default)
         {
-            return await _context.Categories.AnyAsync(c => c.Name == categoryName && c.ID != categoryId);
+            return await _context.Categories.AnyAsync(c => c.Name == categoryName && c.ID != categoryId, cancellationToken);
         }
-        public async Task<bool> CategoryNameExistsASync(string categoryName)
+        public async Task<bool> CategoryNameExistsASync(string categoryName, CancellationToken cancellationToken = default)
         {
-            return await _context.Categories.AnyAsync(c => c.Name == categoryName);
+            return await _context.Categories.AnyAsync(c => c.Name == categoryName, cancellationToken);
         }
 
-        // === SAVE CHANGES ===
-        public async Task SaveChangesAsync()
-        {
-            await _context.SaveChangesAsync();
-        }
     }
 }

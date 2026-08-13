@@ -1,8 +1,12 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels.MovementModels;
+using InventoryManagementAPI.Models.CoreModels.UserModels;
 using InventoryManagementAPI.Models.DTO_s.MovementDTO_s;
 using InventoryManagementAPI.Models.Enums;
+using InventoryManagementAPI.Repositories.InventoryStockRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.UserRepositories;
+using InventoryManagementAPI.Repositories.WarehouseRepositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagementAPI.Repositories.InvMovementRepositories
@@ -12,21 +16,28 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         private readonly IInventoryMovementRepository _movementRepository;
         private readonly IProductRepository _productRepository;
         private readonly IUserRepository _userRepository;
-        public InventoryMovementService(IInventoryMovementRepository movementRepository, IProductRepository productRepository, IUserRepository userRepository)
+        private readonly IWarehouseRepository _warehouseRepository;
+        private readonly IInventoryStockRepository _inventoryStockRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        public InventoryMovementService(IInventoryMovementRepository movementRepository, IProductRepository productRepository,
+            IUserRepository userRepository, IWarehouseRepository warehouseRepository, IInventoryStockRepository inventoryStockRepository, IUnitOfWork unitOfWork)
         {
             _movementRepository = movementRepository;
             _productRepository = productRepository;
             _userRepository = userRepository;
+            _warehouseRepository = warehouseRepository;
+            _inventoryStockRepository = inventoryStockRepository;
+            _unitOfWork = unitOfWork;
         }
-        
+
         // === GET ===
 
-        public async Task<ApiResponse<InventoryMovementResponseDTO>> GetMovementByIdAsync(int movementId)
+        public async Task<ApiResponse<InventoryMovementResponseDTO>> GetMovementByIdAsync(int movementId, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Fetch the movement from the repository
-                var movement = await _movementRepository.GetMovementByIdAsync(movementId);
+                var movement = await _movementRepository.GetMovementByIdAsync(movementId, cancellationToken);
                 // Validate the movementId
                 if (movement == null)
                 {
@@ -42,9 +53,11 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 var movementResponse = new InventoryMovementResponseDTO
                 {
                     ID = movement.ID,
-                    ProductId = movement.ProductId,
-                    ProductName = movement.Product!.Name,
-                    ProductSku = movement.Product.Sku,
+                    InventoryStockID = movement.InventoryStockID,
+                    ProductId = movement.InventoryStock.ProductID,
+                    ProductName = movement.InventoryStock.Product.Name,
+                    WarehouseID = movement.InventoryStock.WarehouseID,
+                    WarehouseName = movement.InventoryStock.Warehouse.Name,
                     Quantity = movement.Quantity,
                     QuantityBefore = movement.QuantityBefore,
                     QuantityAfter = movement.QuantityAfter,
@@ -64,211 +77,106 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                     StatusCode = 200
                 };
             }
-            // Handle any exceptions that may occur while retrieving the movement
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
-                return new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load inventory movement.",
-                    StatusCode = 500
-                };
+                return ReturnErrorResponse("Internal error occurred, failed to load inventory movement.", 500);
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetAllMovementsAsync()
+        public async Task<ApiResponse<IEnumerable<InventoryMovementResponseDTO>>> GetAllMovementsAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 // Fetch all movements from the repository
-                var movements = await _movementRepository.GetAllMovementsAsync();
-
-                // Validate if any movements were found
-                if (movements == null || !movements.Any())
-                {
-                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No movements found.",
-                        StatusCode = 404
-                    };
-                }
-
-                // Map the movements to the response DTOs
-                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
-                {
-                    ID = m.ID,
-                    ProductId = m.ProductId,
-                    ProductName = m.Product!.Name,
-                    Quantity = m.Quantity,
-                    QuantityBefore = m.QuantityBefore,
-                    QuantityAfter = m.QuantityAfter,
-                    Movement = m.Movement,
-                    UserID = m.UserID,
-                    UserName = m.User!.UserName,
-                    Reason = m.Reason,
-                    Created = m.Created
-                });
+                var movements = await _movementRepository.GetAllMovementsAsync(cancellationToken);
 
                 // Return the response with the list of movements
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Movements retrieved successfully.",
-                    Data = movementResponse,
-                    StatusCode = 200
-                };
+                return BuildAndReturnBulkGetResponse(movements);
             }
-            // Handle any exceptions that may occur while retrieving all movements
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load inventory movements.",
-                    StatusCode = 500
-                };
+                return ReturnBulkErrorResponse("Internal error occurred, failed to load inventory movements.", 500);
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetProductMovementHistoryAsync(int productId)
+        public async Task<ApiResponse<IEnumerable<InventoryMovementResponseDTO>>> GetProductMovementHistoryAsync(int productId, CancellationToken cancellationToken = default)
         {
             try
             {
                 //Fetch the product from the repository to validate if it exists
-                var product = await _productRepository.GetProductAsync(productId);
+                var product = await _productRepository.GetProductAsync(productId, cancellationToken);
                 if (product == null)
                 {
-                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                    return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
                     {
                         Success = false,
                         Message = "Product not found.",
                         StatusCode = 404
                     };
                 }
+
                 // Fetch the movement history for the specified product
-                var movements = await _movementRepository.GetMovementsByProductIdAsync(productId);
+                var movements = await _movementRepository.GetMovementsByProductIdAsync(productId, cancellationToken);
 
                 // Validate if any movements were found for the specified product
-                if (movements == null || !movements.Any())
-                {
-                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No movement history found for the specified product.",
-                        StatusCode = 404
-                    };
-                }
-
-                // Map the movements to the response DTOs
-                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
-                {
-                    ID = m.ID,
-                    ProductId = m.ProductId,
-                    ProductName = m.Product!.Name,
-                    Quantity = m.Quantity,
-                    QuantityBefore = m.QuantityBefore,
-                    QuantityAfter = m.QuantityAfter,
-                    Movement = m.Movement,
-                    UserID = m.UserID,
-                    UserName = m.User!.UserName,
-                    Reason = m.Reason,
-                    Created = m.Created
-                });
-
-                // Return the response with the movement history for the specified product
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Product movement history retrieved successfully.",
-                    Data = movementResponse,
-                    StatusCode = 200
-                };
+                // If movements are found, return a response with the list of movements for the specified product
+                return BuildAndReturnBulkGetResponse(movements);
             }
-            // Handle any exceptions that may occur while retrieving product movement history
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load product movement history.",
-                    StatusCode = 500
-                };
+                return ReturnBulkErrorResponse("Internal error occurred, failed to load product movement history.", 500);
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByUserIdAsync(int userId)
+        public async Task<ApiResponse<IEnumerable<InventoryMovementResponseDTO>>> GetMovementsByUserIdAsync(int userId, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Fetch the user from the repository to validate if it exists
-                var user = await _userRepository.GetUserByIdAsync(userId);
+                var user = await _userRepository.GetUserByIdAsync(userId, cancellationToken);
                 if (user == null)
                 {
-                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                    return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
                     {
                         Success = false,
                         Message = "User not found.",
                         StatusCode = 404
                     };
                 }
-
                 // Fetch the movements associated with the specified user ID
-                var movements = await _movementRepository.GetMovementsByUserIdAsync(userId);
+                var movements = await _movementRepository.GetMovementsByUserIdAsync(userId, cancellationToken);
 
                 // Validate if any movements were found for the specified user
-                if (movements == null || !movements.Any())
-                {
-                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No movements found for the specified user.",
-                        StatusCode = 404
-                    };
-                }
-
-                // Map the movements to the response DTOs
-                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
-                {
-                    ID = m.ID,
-                    ProductId = m.ProductId,
-                    ProductName = m.Product!.Name,
-                    Quantity = m.Quantity,
-                    QuantityBefore = m.QuantityBefore,
-                    QuantityAfter = m.QuantityAfter,
-                    Movement = m.Movement,
-                    UserID = m.UserID,
-                    UserName = m.User!.UserName,
-                    Reason = m.Reason,
-                    Created = m.Created
-                });
-
-                // Return the response with the movements for the specified user
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Movements retrieved successfully for the specified user.",
-                    Data = movementResponse,
-                    StatusCode = 200
-                };
+                // If movements are found, return a response with the list of movements for the specified user
+                return BuildAndReturnBulkGetResponse(movements);
             }
-            // Handle any exceptions that may occur while retrieving user movement history
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load user movement history.",
-                    StatusCode = 500
-                };
+                return ReturnBulkErrorResponse("Internal error occurred, failed to load user movement history.", 500);
             }
         }
-        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<ApiResponse<IEnumerable<InventoryMovementResponseDTO>>> GetMovementsByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
         {
             // Validate the date range
             if (startDate > endDate)
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
                 {
                     Success = false,
                     Message = "Start date cannot be later than end date.",
@@ -278,7 +186,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             // Validate that the start date is not in the future
             if (startDate > DateTime.UtcNow)
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
                 {
                     Success = false,
                     Message = "Start date cannot be in the future.",
@@ -288,60 +196,27 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             try
             {
                 // Fetch the movements within the specified date range from the repository
-                var movements = await _movementRepository.GetMovementsByDateRangeAsync(startDate, endDate);
+                var movements = await _movementRepository.GetMovementsByDateRangeAsync(startDate, endDate, cancellationToken);
 
-                // Validate if any movements were found for the specified date range
-                if (movements == null || !movements.Any())
-                {
-                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No movements found for the specified date range.",
-                        StatusCode = 404
-                    };
-                }
-
-                // Map the movements to the response DTOs
-                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
-                {
-                    ID = m.ID,
-                    ProductId = m.ProductId,
-                    ProductName = m.Product!.Name,
-                    Quantity = m.Quantity,
-                    QuantityBefore = m.QuantityBefore,
-                    QuantityAfter = m.QuantityAfter,
-                    Movement = m.Movement,
-                    UserID = m.UserID,
-                    UserName = m.User!.UserName,
-                    Reason = m.Reason,
-                    Created = m.Created
-                });
-                // Return the response with the movements for the specified date range
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Movements retrieved successfully for the specified date range.",
-                    Data = movementResponse,
-                    StatusCode = 200
-                };
+                // Validate if any movements were found within the specified date range
+                // If movements are found, return a response with the list of movements within the specified date range
+                return BuildAndReturnBulkGetResponse(movements);
             }
-            // Handle any exceptions that may occur while retrieving movements by date range
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load movement history by date range.",
-                    StatusCode = 500
-                };
+                return ReturnBulkErrorResponse("Internal error occurred, failed to load movement history by date range.", 500);
             }
         }
-        public async Task<ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>> GetMovementsByMovementTypeAsync(MovementType movementType)
+        public async Task<ApiResponse<IEnumerable<InventoryMovementResponseDTO>>> GetMovementsByMovementTypeAsync(MovementType movementType, CancellationToken cancellationToken = default)
         {
             // Validate the movement type
             if (Enum.IsDefined(typeof(MovementType), movementType) == false)
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
+                return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
                 {
                     Success = false,
                     Message = "Invalid movement type.",
@@ -351,59 +226,25 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             try
             {
                 // Fetch the movements associated with the specified movement type from the repository
-                var movements = await _movementRepository.GetMovementsByTypeAsync(movementType);
-                if (movements == null || !movements.Any())
-                {
-                    return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No movements found for the specified movement type.",
-                        StatusCode = 404
-                    };
-                }
+                var movements = await _movementRepository.GetMovementsByTypeAsync(movementType, cancellationToken);
 
-                // Map the movements to the response DTOs
-                var movementResponse = movements.Select(m => new BulkInventoryMovementResponseDTO
-                {
-                    ID = m.ID,
-                    ProductId = m.ProductId,
-                    ProductName = m.Product!.Name,
-                    Quantity = m.Quantity,
-                    QuantityBefore = m.QuantityBefore,
-                    QuantityAfter = m.QuantityAfter,
-                    Movement = m.Movement,
-                    UserID = m.UserID,
-                    UserName = m.User!.UserName,
-                    Reason = m.Reason,
-                    Created = m.Created
-                });
-
-                // Return the response with the movements for the specified movement type
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Movements retrieved successfully for the specified movement type.",
-                    Data = movementResponse,
-                    StatusCode = 200
-                };
+                // Validate if any movements were found for the specified movement type
+                // If movements are found, return a response with the list of movements for the specified movement type
+                return BuildAndReturnBulkGetResponse(movements);
             }
-            // Handle any exceptions that may occur while retrieving movements by type
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
-                return new ApiResponse<IEnumerable<BulkInventoryMovementResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load movement history by type.",
-                    StatusCode = 500
-                };
+                return ReturnBulkErrorResponse("Internal error occurred, failed to load movement history by movement type.", 500);
             }
         }
 
-
-
         // === POST ===
 
-        public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordAdjustmentAsync(CreateInventoryMovementRequestDTO dto)
+        public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordAdjustmentAsync(CreateInventoryMovementRequestDTO dto, int userId, CancellationToken cancellationToken = default)
         {
             // Assigns results of validationmethod
             var validationResult = RecordValidation(dto);
@@ -419,67 +260,70 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                     StatusCode = 400
                 };
             }
-
             try
             {
-                // Retrieve the product and user based on the provided IDs
-                var result = await GetProductAndUserAsync(dto);
+                //Validate userId Gathered by claims in the controller, to ensure the user exists and is active
+                var userValidationResult = await ValidateUserAsync(userId, cancellationToken);
+                if (userValidationResult.Error != null) return userValidationResult.Error;
+
+                // Retrieve the product and warehouse based on the provided IDs
+                var result = await GetProductAndWarehouseAsync(dto, cancellationToken);
                 if (result.Error != null) return result.Error;
 
-                // If both product and user are successfully retrieved, proceed with the adjustment
+                // If both product and warehouse are successfully retrieved, proceed with the adjustment
                 // and assign them to local variables for further processing
                 var product = result.Product!;
-                var user = result.User!;
+                var warehouse = result.Warehouse!;
+
+                var inventoryStockSearch = await ValidateInventoryStock(product.ID, warehouse.ID, cancellationToken);
+                if(inventoryStockSearch.Error != null) return inventoryStockSearch.Error;
+
+                var inventoryStock = inventoryStockSearch.InventoryStock!;
+
 
                 // Validate stock availability for adjustment decrease
                 // Returns ApiResponse if validation not successful
                 if (dto.Movement == MovementType.AdjustmentDecrease)
                 {
-                    var stockValidResult = ValidateStockAvailability(product, dto);
+                    var stockValidResult = ValidateStockAvailability(inventoryStock, dto);
                     if (stockValidResult != null) return stockValidResult;
                 }
 
                 //Create the InventoryMovement entity
-                var movement = CreateInventoryMovement(dto, product);
+                var movement = CreateInventoryMovement(dto, inventoryStock, userValidationResult.User!);
 
 
                 // Calculate the updated quantity based on the movement type
                 if (dto.Movement == MovementType.AdjustmentIncrease)
                 {
-                    movement.QuantityAfter = product.QuantityInStock + dto.Quantity;
+                    movement.QuantityAfter = inventoryStock.Quantity + dto.Quantity;
                 }
                 else if (dto.Movement == MovementType.AdjustmentDecrease)
                 {
-                    movement.QuantityAfter = product.QuantityInStock - dto.Quantity;
+                    movement.QuantityAfter = inventoryStock.Quantity - dto.Quantity;
                 }
 
                 // Update the product's stock quantity and record the movement
-                await UpdateDatabaseAndReturnResponse(product, movement);
+                await UpdateDatabaseAndReturnResponse(inventoryStock, movement, cancellationToken);
 
                 // Return the response with the movement details
-                return ReturnResponse(dto, movement, product, user);
+                return ReturnResponse(movement, inventoryStock);
             }
             catch (DbUpdateConcurrencyException)
             {
-                return new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Concurrency error occurred while recording inventory adjustment. Please try again.",
-                    StatusCode = 409
-                };
+                return ReturnErrorResponse("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
-                return new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to record inventory adjustment.",
-                    StatusCode = 500
-                };
+                return ReturnErrorResponse("Internal error occurred, failed to record inventory adjustment.", 500);
             }
         }
 
-        public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockInAsync(CreateInventoryMovementRequestDTO dto)
+        public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockInAsync(CreateInventoryMovementRequestDTO dto, int userId, CancellationToken cancellationToken = default)
         {
             // Assigns results of validationmethod
             var validationResult = RecordValidation(dto);
@@ -495,113 +339,119 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                     StatusCode = 400
                 };
             }
-
             try
             {
-                // Retrieve the product and user based on the provided IDs
-                var result = await GetProductAndUserAsync(dto);
+                //Validate User
+                var userValidationResult = await ValidateUserAsync(userId, cancellationToken);
+                if (userValidationResult.Error != null) return userValidationResult.Error;
+
+                // Retrieve the product and warehouse based on the provided IDs
+                var result = await GetProductAndWarehouseAsync(dto, cancellationToken);
                 if (result.Error != null) return result.Error;
 
-                // If both product and user are successfully retrieved, proceed with the adjustment
+                // If both product and warehouse are successfully retrieved, proceed with the adjustment
                 // and assign them to local variables for further processing
                 var product = result.Product!;
-                var user = result.User!;
+                var warehouse = result.Warehouse!;
+
+                // Validate inventory stock for the specified product and warehouse
+                var inventoryStockSearch = await ValidateInventoryStock(product.ID, warehouse.ID, cancellationToken);
+                if(inventoryStockSearch.Error != null) return inventoryStockSearch.Error;
+
+                var inventoryStock = inventoryStockSearch.InventoryStock!;
 
                 //Create the InventoryMovement entity
-                var movement = CreateInventoryMovement(dto, product);
+                var movement = CreateInventoryMovement(dto, inventoryStock, userValidationResult.User!);
 
                 // Calculate the updated quantity based on the movement type
-                movement.QuantityAfter = product.QuantityInStock + dto.Quantity;
+                movement.QuantityAfter = inventoryStock.Quantity + dto.Quantity;
 
                 // Update the product's stock quantity and record the movement
-                await UpdateDatabaseAndReturnResponse(product, movement);
+                await UpdateDatabaseAndReturnResponse(inventoryStock, movement, cancellationToken);
 
                 // Return the response with the movement details
-                return ReturnResponse(dto, movement, product, user);
+                return ReturnResponse(movement, inventoryStock);
 
 
             }
             catch (DbUpdateConcurrencyException)
             {
-                return new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Concurrency error occurred while recording inventory adjustment. Please try again.",
-                    StatusCode = 409
-                };
+                return ReturnErrorResponse("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
-                return new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to record stock in movement.",
-                    StatusCode = 500
-                };
+                return ReturnErrorResponse("Internal error occurred, failed to record stock in movement.", 500);
             }
         }
 
-        public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockOutAsync(CreateInventoryMovementRequestDTO dto)
+        public async Task<ApiResponse<InventoryMovementResponseDTO>> RecordStockOutAsync(CreateInventoryMovementRequestDTO dto, int userId, CancellationToken cancellationToken = default)
         {
             // Assigns results of validationmethod
             var validationResult = RecordValidation(dto);
             if (validationResult != null) return validationResult;
 
+            // Validate movement type for stock out
+            if (dto.Movement != MovementType.StockOut && dto.Movement != MovementType.Sale)
+            {
+                return new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "Invalid movement type for stock out.",
+                    StatusCode = 400
+                };
+            }
             try
             {
-                // Validate movement type for stock out
-                if (dto.Movement != MovementType.StockOut && dto.Movement != MovementType.Sale)
-                {
-                    return new ApiResponse<InventoryMovementResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Invalid movement type for stock out.",
-                        StatusCode = 400
-                    };
-                }
+                //Validate User
+                var userValidationResult = await ValidateUserAsync(userId, cancellationToken);
+                if (userValidationResult.Error != null) return userValidationResult.Error;
 
-                // Retrieve the product and user based on the provided IDs
-                var result = await GetProductAndUserAsync(dto);
+                // Retrieve the product and warehouse based on the provided IDs
+                var result = await GetProductAndWarehouseAsync(dto, cancellationToken);
                 if (result.Error != null) return result.Error;
 
-                // If both product and user are successfully retrieved, proceed with the adjustment
+                // If both product and warehouse are successfully retrieved, proceed with the adjustment
                 // and assign them to local variables for further processing
                 var product = result.Product!;
-                var user = result.User!;
+                var warehouse = result.Warehouse!;
+
+                //Validate inventory stock for the specified product and warehouse
+                var inventoryStockSearch = await ValidateInventoryStock(product.ID, warehouse.ID, cancellationToken);
+                if(inventoryStockSearch.Error != null) return inventoryStockSearch.Error;
+
+                var inventoryStock = inventoryStockSearch.InventoryStock!;
 
                 // Validate stock availability for adjustment decrease
-                var stockResult = ValidateStockAvailability(product, dto);
+                var stockResult = ValidateStockAvailability(inventoryStock, dto);
                 if (stockResult != null) return stockResult;
 
                 //Create the InventoryMovement entity
-                var movement = CreateInventoryMovement(dto, product);
+                var movement = CreateInventoryMovement(dto, inventoryStock, userValidationResult.User!);
 
                 // Calculate the updated quantity based on the movement type
-                movement.QuantityAfter = product.QuantityInStock - dto.Quantity;
+                movement.QuantityAfter = inventoryStock.Quantity - dto.Quantity;
 
                 // Update the product's stock quantity and record the movement
-                await UpdateDatabaseAndReturnResponse(product, movement);
+                await UpdateDatabaseAndReturnResponse(inventoryStock, movement, cancellationToken);
 
                 // Return the response with the movement details
-                return ReturnResponse(dto, movement, product, user);
+                return ReturnResponse(movement, inventoryStock);
             }
             catch (DbUpdateConcurrencyException)
             {
-                return new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Concurrency error occurred while recording inventory adjustment. Please try again.",
-                    StatusCode = 409
-                };
+                return ReturnErrorResponse("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
-                return new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to record stock out movement.",
-                    StatusCode = 500
-                };
+                return ReturnErrorResponse("Internal error occurred, failed to record stock out movement.", 500);
             }
         }
 
@@ -652,6 +502,34 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             return null;
         }
 
+        /// <summary>
+        /// Validates if the user exists and is active based on the provided userId.
+        /// </summary>
+        /// <param name="userId">The ID of the user to validate.</param>
+        /// <returns>An ApiResponse indicating the validation result, or null if the user is valid.</returns>
+        private async Task<(User? User, ApiResponse<InventoryMovementResponseDTO>? Error)> ValidateUserAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            var user = await _userRepository.GetUserByIdAsync(userId, cancellationToken);
+            if (user == null)
+            {
+                return (null, new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "User not found.",
+                    StatusCode = 404
+                });
+            }
+            if (!await _userRepository.IsUserActiveAsync(user.ID, cancellationToken))
+            {
+                return (null, new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "User is not active.",
+                    StatusCode = 400
+                });
+            }
+            return (user, null);
+        }
 
         /// <summary>
         /// Validates if the product has sufficient stock for the requested movement.
@@ -661,9 +539,9 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         /// <param name="product"></param>
         /// <param name="dto"></param>
         /// <returns></returns>
-        private ApiResponse<InventoryMovementResponseDTO>? ValidateStockAvailability(Product product, CreateInventoryMovementRequestDTO dto)
+        private ApiResponse<InventoryMovementResponseDTO>? ValidateStockAvailability(InventoryStock stock, CreateInventoryMovementRequestDTO dto)
         {
-            if (product.QuantityInStock < dto.Quantity)
+            if (stock.Quantity < dto.Quantity)
             {
                 return new ApiResponse<InventoryMovementResponseDTO>
                 {
@@ -676,6 +554,38 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             return null;
         }
 
+        /// <summary>
+        /// Validates if the inventory stock exists and is active based on the provided productId and warehouseId.
+        /// </summary>
+        /// <param name="productId">The ID of the product to validate.</param>
+        /// <param name="warehouseId">The ID of the warehouse to validate.</param>
+        /// <returns>A tuple containing an ApiResponse indicating the validation result, and the InventoryStock if valid.</returns>
+        private async Task<(ApiResponse<InventoryMovementResponseDTO>? Error, InventoryStock? InventoryStock)> ValidateInventoryStock(int productId, int warehouseId, CancellationToken cancellationToken = default)
+        {
+            var inventoryStock = await _inventoryStockRepository.GetStockByProductAndWarehouseIDAsync(productId, warehouseId, cancellationToken);
+            if (inventoryStock == null)
+            {
+                return (new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "Inventory stock not found for the specified product and warehouse.",
+                    StatusCode = 404
+                }, null);
+            }
+
+            if(!inventoryStock.IsActive)
+            {
+                return (new ApiResponse<InventoryMovementResponseDTO>
+                {
+                    Success = false,
+                    Message = "Inventory stock is inactive for the specified product and warehouse.",
+                    StatusCode = 400
+                }, null);
+            }
+
+            // If inventory stock is found, return null indicating no errors
+            return (null, inventoryStock);
+        }
 
         /// <summary>
         /// Retrieves the product and user based on the provided IDs in the DTO.
@@ -687,10 +597,10 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        private async Task<(Product? Product, User? User, ApiResponse<InventoryMovementResponseDTO>? Error)> GetProductAndUserAsync(CreateInventoryMovementRequestDTO dto)
+        private async Task<(Product? Product, Warehouse? Warehouse, ApiResponse<InventoryMovementResponseDTO>? Error)> GetProductAndWarehouseAsync(CreateInventoryMovementRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Retrieve the product and user from their respective repositories
-            var product = await _productRepository.GetProductAsync(dto.ProductId);
+            var product = await _productRepository.GetProductAsync(dto.ProductID, cancellationToken);
             if (product == null)
             {
                 // Return an error response if the product is not found
@@ -702,7 +612,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 });
             }
             // Check if the product is active before proceeding
-            if (!await _productRepository.IsProductActiveAsync(product.ID))
+            if (!await _productRepository.IsProductActiveAsync(product.ID, cancellationToken))
             {
                 // Return an error response if the product is not active
                 return (null, null, new ApiResponse<InventoryMovementResponseDTO>
@@ -713,32 +623,33 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 });
             }
 
-            var user = await _userRepository.GetUserByIdAsync(dto.UserID);
-            if (user == null)
+            var warehouse = await _warehouseRepository.GetWarehouseByIdAsync(dto.WarehouseID, cancellationToken);
+            if (warehouse == null)
             {
                 // Return an error response if the user is not found
                 return (null, null, new ApiResponse<InventoryMovementResponseDTO>
                 {
                     Success = false,
-                    Message = "User not found.",
+                    Message = "Warehouse not found.",
                     StatusCode = 404
                 });
             }
-            // Check if the user is active before proceeding
-            if (! await _userRepository.IsUserActiveAsync(user.ID))
+            // Check if the warehouse is active before proceeding
+            if (!await _warehouseRepository.IsWarehouseActiveAsync(warehouse.ID, cancellationToken))
             {
-                // Return an error response if the user is not active
+                // Return an error response if the warehouse is not active
                 return (null, null, new ApiResponse<InventoryMovementResponseDTO>
                 {
                     Success = false,
-                    Message = "User is not active.",
+                    Message = "Warehouse is not active.",
                     StatusCode = 400
                 });
-            };
+            }
+            ;
 
             // If both product and user are found and active, return them along with a null error response
             //Return error as null, since both product and user are found successfully, and skip the error handling
-            return (product, user, null);
+            return (product, warehouse, null);
         }
 
 
@@ -749,28 +660,34 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         /// <param name="dto"></param>
         /// <param name="product"></param>
         /// <returns></returns>
-        private InventoryMovement CreateInventoryMovement(CreateInventoryMovementRequestDTO dto, Product product)
+        private InventoryMovement CreateInventoryMovement(CreateInventoryMovementRequestDTO dto, InventoryStock inventoryStock, User user)
         {
             return new InventoryMovement
             {
-                ProductId = dto.ProductId,
+                InventoryStockID = inventoryStock.ID,
+                UserID = user.ID,
+                User = user,
                 Quantity = dto.Quantity,
-                QuantityBefore = product.QuantityInStock,
+                QuantityBefore = inventoryStock.Quantity,
                 Movement = dto.Movement,
-                UserID = dto.UserID,
                 Reason = dto.Reason,
                 Created = DateTime.UtcNow,
             };
         }
 
 
-       
-        private async Task UpdateDatabaseAndReturnResponse(Product product, InventoryMovement movement)
+        /// <summary>
+        /// Updates the inventory stock quantity and records the inventory movement in the database.
+        /// </summary>
+        /// <param name="inventoryStock">The inventory stock to update.</param>
+        /// <param name="movement">The inventory movement to record.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        private async Task UpdateDatabaseAndReturnResponse(InventoryStock inventoryStock, InventoryMovement movement, CancellationToken cancellationToken = default)
         {
-            product.QuantityInStock = movement.QuantityAfter; // Update the product's stock quantity
+            inventoryStock.Quantity = movement.QuantityAfter; // Update the inventory stock quantity
 
-            await _movementRepository.AddMovementAsync(movement);// Add the inventory movement to the repository
-            await _productRepository.SaveChangesAsync(); // Save changes to the product repository
+            await _movementRepository.AddMovementAsync(movement, cancellationToken);// Add the inventory movement to the repository
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
 
@@ -782,7 +699,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         /// <param name="product"></param>
         /// <param name="user"></param>
         /// <returns></returns>
-        private ApiResponse<InventoryMovementResponseDTO> ReturnResponse(CreateInventoryMovementRequestDTO dto, InventoryMovement movement, Product product, User user)
+        private ApiResponse<InventoryMovementResponseDTO> ReturnResponse(InventoryMovement movement, InventoryStock inventoryStock)
         {
             return new ApiResponse<InventoryMovementResponseDTO>
             {
@@ -791,19 +708,94 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
                 Data = new InventoryMovementResponseDTO
                 {
                     ID = movement.ID,
-                    ProductId = movement.ProductId,
-                    ProductName = product.Name,
-                    ProductSku = product.Sku,
+                    ProductId = inventoryStock.Product.ID,
+                    ProductName = inventoryStock.Product.Name,
+                    WarehouseID = inventoryStock.WarehouseID,
+                    WarehouseName = inventoryStock.Warehouse.Name,
                     Quantity = movement.Quantity,
                     QuantityBefore = movement.QuantityBefore,
                     QuantityAfter = movement.QuantityAfter,
                     Movement = movement.Movement,
                     UserID = movement.UserID,
-                    UserName = user.UserName,
+                    UserName = movement.User.UserName,
                     Reason = movement.Reason,
                     Created = movement.Created
                 },
                 StatusCode = 201
+            };
+        }
+
+        /// <summary>
+        /// Builds and returns an ApiResponse containing a list of InventoryMovementResponseDTOs based on the provided movements.
+        /// </summary>
+        /// <param name="movements">The list of inventory movements to include in the response.</param>
+        /// <returns>An ApiResponse containing the list of InventoryMovementResponseDTOs.</returns>
+        private ApiResponse<IEnumerable<InventoryMovementResponseDTO>> BuildAndReturnBulkGetResponse(IEnumerable<InventoryMovement> movements)
+        {
+            // Validate if any movements were found
+            if (movements == null || !movements.Any())
+            {
+                return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
+                {
+                    Success = false,
+                    Message = "No movements found.",
+                    StatusCode = 404
+                };
+            }
+
+            // Map the movements to the response DTOs
+            var movementResponse = movements.Select(m => new InventoryMovementResponseDTO
+            {
+                ID = m.ID,
+                InventoryStockID = m.InventoryStockID,
+
+                ProductId = m.InventoryStock.ProductID,
+                ProductName = m.InventoryStock.Product.Name,
+
+                WarehouseID = m.InventoryStock.WarehouseID,
+                WarehouseName = m.InventoryStock.Warehouse.Name,
+
+                Quantity = m.Quantity,
+                QuantityBefore = m.QuantityBefore,
+                QuantityAfter = m.QuantityAfter,
+
+                Movement = m.Movement,
+
+                UserID = m.UserID,
+                UserName = m.User.UserName,
+
+                Reason = m.Reason,
+                Created = m.Created
+            });
+
+            // Return the response with the list of movements
+            return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
+            {
+                Success = true,
+                Message = "Movements retrieved successfully.",
+                Data = movementResponse,
+                StatusCode = 200
+            };
+        }
+
+        //CATCH ERROR RESPONSE BUILDERS!!!
+        private ApiResponse<InventoryMovementResponseDTO> ReturnErrorResponse(string message, int statusCode)
+        {
+            return new ApiResponse<InventoryMovementResponseDTO>
+            {
+                Success = false,
+                Message = message,
+                StatusCode = statusCode
+            };
+        }
+
+        private ApiResponse<IEnumerable<InventoryMovementResponseDTO>> ReturnBulkErrorResponse(string message, int statusCode)
+        {
+            return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
+            {
+                Success = false,
+                Message = message,
+                StatusCode = statusCode
             };
         }
     }

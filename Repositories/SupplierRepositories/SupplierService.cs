@@ -1,601 +1,269 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierDTO_s;
 using Microsoft.EntityFrameworkCore;
-using System.Net.Mail;
 
-namespace InventoryManagementAPI.Repositories.SupplierRepositories
+namespace InventoryManagementAPI.Repositories.SupplierRepositories;
+
+public class SupplierService : ISupplierService
 {
-    public class SupplierService : ISupplierService
+    private readonly ISupplierRepository _supplierRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public SupplierService(ISupplierRepository supplierRepository, IUnitOfWork unitOfWork)
     {
-        private readonly ISupplierRepository _supplierRepository;
+        _supplierRepository = supplierRepository;
+        _unitOfWork = unitOfWork;
+    }
 
-        public SupplierService(ISupplierRepository supplierRepository)
+    public async Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
         {
-            _supplierRepository = supplierRepository;
+            var suppliers = await _supplierRepository.GetAllSuppliersAsync(cancellationToken);
+            if (!suppliers.Any())
+                return Error<IEnumerable<SupplierResponseDTO>>("No suppliers found.", 404);
+            return Success<IEnumerable<SupplierResponseDTO>>(
+                suppliers.Select(MapToResponse).ToList(),
+                "Suppliers retrieved successfully."
+            );
         }
-
-        // === GET ===
-        public async Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync()
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            try
-            {
-                // Retrieve all suppliers from the repository
-                var supplierList = await _supplierRepository.GetAllSuppliersAsync();
-
-                // Return not found if no suppliers exist
-                if (supplierList == null || !supplierList.Any())
-                {
-                    return new ApiResponse<IEnumerable<SupplierResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No Suppliers Found",
-                        StatusCode = 404
-                    };
-                }
-                // Build the response DTO list from the supplier entities
-                List<SupplierResponseDTO> supplierDtoList = new List<SupplierResponseDTO>();
-
-                foreach (var supplier in supplierList)
-                {
-                    var supplierDto = new SupplierResponseDTO
-                    {
-                        ID = supplier.ID,
-                        Name = supplier.Name,
-                        ContactName = supplier.ContactName,
-                        PhoneContact = supplier.PhoneContact,
-                        EmailContact = supplier.EmailContact,
-                        IsActive = supplier.IsActive
-                    };
-                    supplierDtoList.Add(supplierDto);
-                }
-                // Return the supplier list in the ApiResponse
-                return new ApiResponse<IEnumerable<SupplierResponseDTO>>
-                {
-                    Success = true,
-                    Data = supplierDtoList,
-                    Message = "Suppliers successfully retrieved",
-                    StatusCode = 200
-                };
-            }
-            // Handle any exceptions that may occur while retrieving suppliers
-            catch
-            {
-                return new ApiResponse<IEnumerable<SupplierResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load suppliers.",
-                    StatusCode = 500
-                };
-            }
+            throw;
         }
-        public async Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(int supplierId)
+        catch
         {
-            try
-            {
-                // Retrieve the supplier by ID
-                var supplierExists = await FindSupplierById(supplierId);
-                if (supplierExists.Supplier == null) return supplierExists.Error!;
-
-                //Assign the existing supplier entity to a variable for building the response DTO
-                var supplier = supplierExists.Supplier;
-
-                // Build and return the response DTO from the supplier entity
-                return BuildSupplierResponseDTO(supplier, "Supplier retrieved successfully.", 200);
-            }
-            catch
-            {
-                return BuildCatchErrorResponse("Internal error occurred, failed to retrieve supplier.");
-            }
-        }
-
-
-        // === POST ===
-        public async Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(CreateSupplierRequestDTO supplier)
-        {
-            // Validate that the request body was supplied
-            var dtoValidationResult = ValidateDto(supplier);
-            if (dtoValidationResult != null) return dtoValidationResult;
-
-            // Validate the supplier DTO for required fields and correct formats
-            var validationResult = ValidateDtoFields(supplier.Name, supplier.ContactName, supplier.EmailContact, supplier.PhoneContact, supplier.Address);
-            if (validationResult != null) return validationResult;
-
-            try
-            {
-                // Validate that the supplier name and email do not already exist
-                var nameEmailCheckResult = await CheckNameEmailExistsAdd(supplier.Name, supplier.EmailContact);
-                if (nameEmailCheckResult != null) return nameEmailCheckResult;
-
-                // Create the supplier entity from the request DTO
-                var newSupplier = new Supplier
-                {
-                    Name = supplier.Name,
-                    ContactName = supplier.ContactName,
-                    PhoneContact = supplier.PhoneContact,
-                    EmailContact = supplier.EmailContact,
-                    Address = supplier.Address,
-                    IsActive = supplier.IsActive,
-                    Created = DateTime.UtcNow,
-                    LastUpdated = DateTime.UtcNow
-                };
-                // Save the supplier to the repository
-                var createdSupplier = await _supplierRepository.CreateSupplierAsync(newSupplier);
-                await _supplierRepository.SaveChangesAsync();
-
-                return BuildSupplierResponseDTO(createdSupplier, "Supplier successfully created", 201);
-            }
-            catch
-            {
-                return BuildCatchErrorResponse("Internal error occurred, failed to create supplier.");
-            }
-        }
-
-
-        // === PUT ===
-        public async Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(int supplierId, UpdateSupplierRequestDTO updateSupplierDTO)
-        {
-            //Validate that the request body was supplied
-            var dtoValidationResult = ValidateDto(updateSupplierDTO);
-            if (dtoValidationResult != null) return dtoValidationResult;
-
-            //Validate that the RowVersion is provided and is of the correct length for concurrency control
-            var validateRowVersion = ValidateRowVersion(updateSupplierDTO.RowVersion);
-            if (validateRowVersion != null) return validateRowVersion;
-
-            // Validate the supplier DTO for required fields and correct formats
-            var validationResult = ValidateDtoFields(updateSupplierDTO.Name, updateSupplierDTO.ContactName, updateSupplierDTO.EmailContact, updateSupplierDTO.PhoneContact, updateSupplierDTO.Address);
-            if (validationResult != null) return validationResult;
-            try
-            {
-                // Validate that the supplier ID exists and that the name and email do not already exist for another supplier
-                var validateAgainstExisting = await CheckIdNameEmailExistsUpdate(supplierId, updateSupplierDTO.Name, updateSupplierDTO.EmailContact);
-                if (validateAgainstExisting.Supplier == null) return validateAgainstExisting.Error!;
-
-                //Assign the existing supplier entity to a variable for updating
-                var supplier = validateAgainstExisting.Supplier;
-
-                // Validate that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control
-                var validateMatchingRowVersion = ValidateMatchingRowVersion(supplier, updateSupplierDTO.RowVersion);
-                if (validateMatchingRowVersion != null) return validateMatchingRowVersion;
-
-                // Apply the updateSupplierDTO values to the supplier entity
-                supplier.Name = updateSupplierDTO.Name;
-                supplier.ContactName = updateSupplierDTO.ContactName;
-                supplier.PhoneContact = updateSupplierDTO.PhoneContact;
-                supplier.EmailContact = updateSupplierDTO.EmailContact;
-                supplier.Address = updateSupplierDTO.Address;
-                supplier.IsActive = updateSupplierDTO.IsActive;
-                supplier.LastUpdated = DateTime.UtcNow;
-
-                // Save the updated supplier through the repository
-                await _supplierRepository.SaveChangesAsync();
-
-                // Return the updated supplier details in the response
-                return BuildSupplierResponseDTO(supplier, "Supplier details successfully updated", 200);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return BuildConcurrencyCatchErrorResponse();
-            }
-            catch
-            {
-                return BuildCatchErrorResponse("Internal error occurred, failed to update supplier.");
-            }
-        }
-
-        // === SET ACTIVE STATUS ===
-        public async Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto)
-        {
-            // Validate that the request body was supplied with a valid RowVersion for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
-            if (validateRowVersion != null) return validateRowVersion;
-            try
-            {
-                // Retrieve the supplier before attempting to activate it
-                var supplierExistsCheck = await FindSupplierById(supplierId);
-                if (supplierExistsCheck.Supplier == null) return supplierExistsCheck.Error!;
-
-                // Assign the existing supplier entity to a variable for updating
-                var supplier = supplierExistsCheck.Supplier;
-
-                // Validate that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control
-                var validateMatchingRowVersion = ValidateMatchingRowVersion(supplier, dto.RowVersion);
-                if (validateMatchingRowVersion != null) return validateMatchingRowVersion;
-
-                // Return a bad request response if the supplier is already active
-                if (supplier.IsActive || dto.IsActive)
-                {
-                    return new ApiResponse<SupplierResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Supplier is already active",
-                        StatusCode = 400
-                    };
-                }
-
-                // Set the supplier active and update the timestamp
-                supplier.IsActive = true;
-                supplier.LastUpdated = DateTime.UtcNow;
-                await _supplierRepository.SaveChangesAsync();
-
-                // Return the activated supplier details
-                return BuildSupplierResponseDTO(supplier, "Supplier successfully activated", 200);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return BuildConcurrencyCatchErrorResponse();
-            }
-            catch
-            {
-                return BuildCatchErrorResponse("Internal error occurred, failed to activate supplier.");
-            }
-        }
-
-        public async Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto)
-        {
-            // Validate that the request body was supplied with a valid RowVersion for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
-            if (validateRowVersion != null) return validateRowVersion;
-            try
-            {
-                // Retrieve the supplier before attempting to deactivate it
-                var supplierExistsCheck = await FindSupplierById(supplierId);
-                if (supplierExistsCheck.Supplier == null) return supplierExistsCheck.Error!;
-
-                // Assign the existing supplier entity to a variable for updating
-                var supplier = supplierExistsCheck.Supplier;
-
-                // Validate that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control
-                var validateMatchingRowVersion = ValidateMatchingRowVersion(supplier, dto.RowVersion);
-                if (validateMatchingRowVersion != null) return validateMatchingRowVersion;
-
-                // Return a bad request response if the supplier is already inactive
-                if (!supplier.IsActive || !dto.IsActive)
-                {
-                    return new ApiResponse<SupplierResponseDTO>
-                    {
-                        Success = false,
-                        Message = "Supplier is already inactive",
-                        StatusCode = 400
-                    };
-                }
-
-                // Set the supplier inactive and update the timestamp
-                supplier.IsActive = false;
-                supplier.LastUpdated = DateTime.UtcNow;
-                await _supplierRepository.SaveChangesAsync();
-
-                // Return the deactivated supplier details Api Response
-                return BuildSupplierResponseDTO(supplier, "Supplier successfully deactivated", 200);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return BuildConcurrencyCatchErrorResponse();
-            }
-            catch
-            {
-                return BuildCatchErrorResponse("Internal error occurred, failed to deactivate supplier.");
-            }
-        }
-
-
-        // === FIND SUPPLIER BY ID HELPER METHOD ===
-
-        /// <summary>
-        /// Finds a supplier by ID.
-        /// </summary>
-        /// <param name="supplierId"></param>
-        /// <returns>
-        /// Returns a tuple containing the Supplier entity if found, and an ApiResponse with an error message if not found.
-        /// </returns>
-        private async Task<(Supplier? Supplier, ApiResponse<SupplierResponseDTO>? Error)> FindSupplierById(int supplierId)
-        {
-            var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId);
-            if (supplier == null)
-            {
-                return (null, new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier not found",
-                    StatusCode = 404
-                });
-            }
-            return (supplier, null);
-        }
-
-
-        // === BUILD RESPONSE METHODS ===
-
-        /// <summary>
-        /// Builds an ApiResponse containing a SupplierResponseDTO from a Supplier entity, along with a message and status code.
-        /// </summary>
-        /// <param name="supplier"></param>
-        /// <param name="message"></param>
-        /// <param name="statusCode"></param>
-        /// <returns>
-        /// Returns an ApiResponse containing the SupplierResponseDTO, success status, message, and status code.
-        /// </returns>
-        private ApiResponse<SupplierResponseDTO> BuildSupplierResponseDTO(Supplier supplier, string message, int statusCode)
-        {
-            var supplierResponse = new SupplierResponseDTO
-            {
-                ID = supplier.ID,
-                Name = supplier.Name,
-                ContactName = supplier.ContactName,
-                PhoneContact = supplier.PhoneContact,
-                EmailContact = supplier.EmailContact,
-                IsActive = supplier.IsActive,
-                RowVersion = supplier.RowVersion
-            };
-            return new ApiResponse<SupplierResponseDTO>
-            {
-                Success = true,
-                Data = supplierResponse,
-                Message = message,
-                StatusCode = statusCode
-            };
-        }
-
-        /// <summary>
-        /// Builds an ApiResponse for error handling.
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns>
-        /// Returning a failure response with a message and status code 500.
-        /// </returns>
-        private ApiResponse<SupplierResponseDTO> BuildCatchErrorResponse(string message)
-        {
-            return new ApiResponse<SupplierResponseDTO>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = 500
-            };
-        }
-
-        /// <summary>
-        /// Builds an ApiResponse for handling concurrency conflicts during supplier updates.
-        /// </summary>
-        /// <returns></returns>
-        private ApiResponse<SupplierResponseDTO> BuildConcurrencyCatchErrorResponse()
-        {
-            return new ApiResponse<SupplierResponseDTO>
-            {
-                Success = false,
-                Message = "Concurrency conflict occurred while updating the supplier. Please try again.",
-                StatusCode = 409
-            };
-        }
-
-
-        // === VALIDATION HELPER METHODS=== \\
-
-        /// <summary>
-        /// Validates DTO for a null value.
-        /// </summary>
-        /// <param name="dto"></param>
-        /// <returns>
-        /// Returns an ApiResponse with a validation error if the DTO is null, or null if the DTO is valid.
-        /// </returns>
-        private static ApiResponse<SupplierResponseDTO>? ValidateDto(object? dto)
-        {
-            // Validate that the request body was supplied
-            if (dto == null)
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid supplier object model",
-                    StatusCode = 400
-                };
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Validates the supplier DTO for required fields and correct formats.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="contactName"></param>
-        /// <param name="emailContact"></param>
-        /// <param name="phoneContact"></param>
-        /// <param name="address"></param>
-        /// <returns>
-        /// Returns an ApiResponse with validation errors if any, or null if validation passes.
-        /// </returns>
-        private static ApiResponse<SupplierResponseDTO>? ValidateDtoFields(string name, string contactName, string emailContact, string phoneContact, string address)
-        {
-            // Validate required supplier name
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Provide a supplier Name",
-                    StatusCode = 400
-                };
-            }
-            // Validate required contact name
-            if (string.IsNullOrWhiteSpace(contactName))
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Provide a supplier  contact Name",
-                    StatusCode = 400
-                };
-            }
-            // Validate basic supplier email format
-            if (string.IsNullOrWhiteSpace(emailContact) || !IsValidEmail(emailContact))
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Provide a correct supplier email",
-                    StatusCode = 400
-                };
-            }
-            // Validate supplier phone length and required value
-            if (string.IsNullOrWhiteSpace(phoneContact) || phoneContact.Length < 4 || phoneContact.Length > 20)
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Provide a correct supplier phone",
-                    StatusCode = 400
-                };
-            }
-            // Validate required supplier address
-            if (string.IsNullOrWhiteSpace(address))
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Provide a supplier address",
-                    StatusCode = 400
-                };
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Checks if the supplier name or email already exists in the repository when adding a new supplier.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="email"></param>
-        /// <returns>
-        /// Returns an ApiResponse with validation errors if the name or email already exists, or null if both are unique.
-        /// </returns>
-        private async Task<ApiResponse<SupplierResponseDTO>?> CheckNameEmailExistsAdd(string name, string email)
-        {
-            // Validate that the supplier name does not already exist
-            if (await _supplierRepository.SupplierNameExistsAsync(name))
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier Name already exists",
-                    StatusCode = 400
-                };
-            }
-            // Validate that the supplier email does not already exist
-            if (await _supplierRepository.SupplierEmailExistsAsync(email))
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier Email already exists",
-                    StatusCode = 400
-                };
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Validates that the supplier ID exists and that the name and email do not already exist for another supplier when updating an existing supplier.
-        /// </summary>
-        /// <param name="supplierId"></param>
-        /// <param name="name"></param>
-        /// <param name="email"></param>
-        /// <returns>
-        /// Returns a tuple containing the existing supplier entity and an ApiResponse with validation errors if any, or null if validation passes.
-        /// </returns>
-        private async Task<(Supplier? Supplier, ApiResponse<SupplierResponseDTO>? Error)> CheckIdNameEmailExistsUpdate(int supplierId, string name, string email)
-        {
-            // Retrieve the supplier before applying updates
-            var supplierExistsCheck = await FindSupplierById(supplierId);
-            if (supplierExistsCheck.Supplier == null) return (null, supplierExistsCheck.Error);
-
-            // Validate that the supplier name does not already exist for another supplier
-            if (await _supplierRepository.SupplierNameExistsForOtherSupplierAsync(supplierId, name))
-            {
-                return (null, new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier Name already exists",
-                    StatusCode = 400
-                });
-            }
-            //Validate that the supplier email does not already exist for another supplier
-            if (await _supplierRepository.SupplierEmailExistsForOtherSupplierAsync(supplierId, email))
-            {
-                return (null, new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Supplier Email already exists",
-                    StatusCode = 400
-                });
-            }
-            return (supplierExistsCheck.Supplier, null);
-        }
-
-        /// <summary>
-        /// Validates the email format using the System.Net.Mail.MailAddress class. Returns true if the email is valid, false otherwise.
-        /// </summary>
-        /// <param name="email">The email address to validate.</param>
-        /// <returns>
-        /// Returns true if the email is valid, false otherwise.
-        /// </returns>
-        private static bool IsValidEmail(string email)
-        {
-            try
-            {
-                var mailAddress = new MailAddress(email);
-                return mailAddress.Address == email;
-            }
-            catch (FormatException)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Validates the RowVersion for concurrency control.
-        /// </summary>
-        /// <param name="rowVersion">The RowVersion to validate.</param>
-        /// <returns>Returns an ApiResponse with validation errors if the RowVersion is invalid, or null if validation passes.</returns>
-        private ApiResponse<SupplierResponseDTO>? ValidateRowVersion(byte[]? rowVersion)
-        {
-            if (rowVersion == null || rowVersion.Length == 0)
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion is required for concurrency control.",
-                    StatusCode = 400
-                };
-            }
-
-            if (rowVersion.Length != 8)
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion must be 8 bytes long.",
-                    StatusCode = 400
-                };
-            }
-
-            return null;
-        }
-        /// <summary>
-        /// Validates that the RowVersion of the supplier entity matches the provided RowVersion for concurrency control.
-        /// </summary>
-        /// <param name="supplier">The supplier entity to validate.</param>
-        /// <param name="rowVersion">The RowVersion to compare against the supplier's RowVersion.</param>
-        /// <returns>Returns an ApiResponse with validation errors if the RowVersion does not match, or null if validation passes.</returns>
-        private ApiResponse<SupplierResponseDTO>? ValidateMatchingRowVersion(Supplier supplier, byte[] rowVersion)
-        {
-            if (!supplier.RowVersion.SequenceEqual(rowVersion))
-            {
-                return new ApiResponse<SupplierResponseDTO>
-                {
-                    Success = false,
-                    Message = "Concurrency conflict: The supplier has been modified by another process. Please reload and try again.",
-                    StatusCode = 409
-                };
-            }
-            return null;
+            return Error<IEnumerable<SupplierResponseDTO>>(
+                "Internal error occurred, failed to load suppliers.",
+                500
+            );
         }
     }
+
+    public async Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(
+        int supplierId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            var supplier = await _supplierRepository.GetSupplierByIdAsync(
+                supplierId,
+                cancellationToken
+            );
+            return supplier == null
+                ? Error("Supplier not found.", 404)
+                : Success(MapToResponse(supplier), "Supplier retrieved successfully.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Error("Internal error occurred, failed to load supplier.", 500);
+        }
+    }
+
+    public async Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(
+        CreateSupplierRequestDTO dto,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (dto == null)
+            return Error("Request body is required.", 400);
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            return Error("Supplier name is required.", 400);
+        try
+        {
+            if (await _supplierRepository.SupplierNameExistsAsync(dto.Name, cancellationToken))
+                return Error("A supplier with the same name already exists.", 400);
+
+            var supplier = new Supplier
+            {
+                Name = dto.Name.Trim(),
+                TaxNumber = dto.TaxNumber,
+                Website = dto.Website,
+                IsActive = dto.IsActive,
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+            };
+            await _supplierRepository.CreateSupplierAsync(supplier, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return Success(MapToResponse(supplier), "Supplier created successfully.", 201);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Error("Internal error occurred, failed to create supplier.", 500);
+        }
+    }
+
+    public async Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(
+        int supplierId,
+        UpdateSupplierRequestDTO dto,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (dto == null)
+            return Error("Request body is required.", 400);
+        var rowError = ValidateRowVersion(dto.RowVersion);
+        if (rowError != null)
+            return rowError;
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            return Error("Supplier name is required.", 400);
+        try
+        {
+            var supplier = await _supplierRepository.GetSupplierByIdAsync(
+                supplierId,
+                cancellationToken
+            );
+            if (supplier == null)
+                return Error("Supplier not found.", 404);
+            var matchError = ValidateMatchingRowVersion(supplier.RowVersion, dto.RowVersion);
+            if (matchError != null)
+                return matchError;
+            if (
+                await _supplierRepository.SupplierNameExistsForOtherSupplierAsync(
+                    supplierId,
+                    dto.Name,
+                    cancellationToken
+                )
+            )
+                return Error("A supplier with the same name already exists.", 400);
+
+            supplier.Name = dto.Name.Trim();
+            supplier.TaxNumber = dto.TaxNumber;
+            supplier.Website = dto.Website;
+            supplier.Updated = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return Success(MapToResponse(supplier), "Supplier updated successfully.");
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Error("Concurrency error occurred, failed to update supplier.", 409);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Error("Internal error occurred, failed to update supplier.", 500);
+        }
+    }
+
+    public Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(
+        int supplierId,
+        UpdateSupplierStatusRequestDTO dto,
+        CancellationToken cancellationToken = default
+    ) => SetStatusAsync(supplierId, dto, true, cancellationToken);
+
+    public Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(
+        int supplierId,
+        UpdateSupplierStatusRequestDTO dto,
+        CancellationToken cancellationToken = default
+    ) => SetStatusAsync(supplierId, dto, false, cancellationToken);
+
+    private async Task<ApiResponse<SupplierResponseDTO>> SetStatusAsync(
+        int supplierId,
+        UpdateSupplierStatusRequestDTO dto,
+        bool isActive,
+        CancellationToken cancellationToken
+    )
+    {
+        if (dto == null)
+            return Error("Request body is required.", 400);
+        var rowError = ValidateRowVersion(dto.RowVersion);
+        if (rowError != null)
+            return rowError;
+        if (dto.IsActive != isActive)
+            return Error(
+                $"IsActive must be {isActive.ToString().ToLowerInvariant()} for this operation.",
+                400
+            );
+        try
+        {
+            var supplier = await _supplierRepository.GetSupplierByIdAsync(
+                supplierId,
+                cancellationToken
+            );
+            if (supplier == null)
+                return Error("Supplier not found.", 404);
+            var matchError = ValidateMatchingRowVersion(supplier.RowVersion, dto.RowVersion);
+            if (matchError != null)
+                return matchError;
+            if (supplier.IsActive == isActive)
+                return Error($"Supplier is already {(isActive ? "active" : "inactive")}.", 400);
+            supplier.IsActive = isActive;
+            supplier.Updated = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return Success(
+                MapToResponse(supplier),
+                $"Supplier {(isActive ? "activated" : "deactivated")} successfully."
+            );
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Error("Concurrency error occurred, failed to update supplier.", 409);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Error("Internal error occurred, failed to update supplier status.", 500);
+        }
+    }
+
+    private static SupplierResponseDTO MapToResponse(Supplier supplier) =>
+        new()
+        {
+            ID = supplier.ID,
+            Name = supplier.Name,
+            TaxNumber = supplier.TaxNumber,
+            Website = supplier.Website,
+            IsActive = supplier.IsActive,
+            RowVersion = supplier.RowVersion,
+        };
+
+    private static ApiResponse<T> Success<T>(T data, string message, int statusCode = 200) =>
+        new()
+        {
+            Success = true,
+            Data = data,
+            Message = message,
+            StatusCode = statusCode,
+        };
+
+    private static ApiResponse<T> Error<T>(string message, int statusCode) =>
+        new()
+        {
+            Success = false,
+            Message = message,
+            StatusCode = statusCode,
+        };
+
+    private static ApiResponse<SupplierResponseDTO> Error(string message, int statusCode) =>
+        Error<SupplierResponseDTO>(message, statusCode);
+
+    private static ApiResponse<SupplierResponseDTO>? ValidateRowVersion(byte[] rowVersion) =>
+        rowVersion == null || rowVersion.Length == 0
+            ? Error("RowVersion is required for concurrency control.", 400)
+        : rowVersion.Length != 8 ? Error("Invalid RowVersion length. Expected 8 bytes.", 400)
+        : null;
+
+    private static ApiResponse<SupplierResponseDTO>? ValidateMatchingRowVersion(
+        byte[] current,
+        byte[] supplied
+    ) =>
+        current.SequenceEqual(supplied)
+            ? null
+            : Error("RowVersion mismatch. The supplier has been modified by another process.", 409);
 }

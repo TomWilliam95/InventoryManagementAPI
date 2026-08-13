@@ -1,27 +1,27 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
-using InventoryManagementAPI.Models.Enums;
+using InventoryManagementAPI.Models.CoreModels.RolePermissions;
 
 namespace InventoryManagementAPI.Repositories.UserRepositories
 {
     public interface IUserRepository
     {
         // === GET ===
-        Task<User?> GetUserByIdAsync(int userId);
-        Task<User?> GetUserByEmailAsync(string email);
-        Task<IEnumerable<User>> GetUsersByRoleAsync(UserRoles role);
-        Task<IEnumerable<User>> GetAllUsersAsync();
+        Task<User?> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default);
+        Task<User?> GetUserByEmailAsync(string email, CancellationToken cancellationToken = default);
+        Task<IEnumerable<User>> GetUsersByRoleAsync(string role, CancellationToken cancellationToken = default);
+        Task<IEnumerable<User>> GetAllUsersAsync(CancellationToken cancellationToken = default);
+
+        Task<User?> GetUserWithRolesForAuthentication(string email, CancellationToken cancellationToken = default);
 
         // === POST ===
-        Task<User> CreateUserAsync(User user);
+        Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default);
 
         // === CHECK EXISTENCE ===
-        Task<bool> UserExistsAsync(int userId);
-        Task<bool> EmailExistsAsync(string email);
+        Task<bool> UserExistsAsync(int userId, CancellationToken cancellationToken = default);
+        Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default);
 
         // === CHECK ACTIVE STATUS ===
-        Task<bool> IsUserActiveAsync(int userId);
+        Task<bool> IsUserActiveAsync(int userId, CancellationToken cancellationToken = default);
 
         // === SAVE CHANGES ===
-        Task SaveChangesAsync();
     }
 }

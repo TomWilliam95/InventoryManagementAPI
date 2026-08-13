@@ -1,22 +1,14 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierDTO_s;
 
-namespace InventoryManagementAPI.Repositories.SupplierRepositories
+namespace InventoryManagementAPI.Repositories.SupplierRepositories;
+
+public interface ISupplierService
 {
-    public interface ISupplierService
-    {
-        // === GET ===
-        Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync();
-        Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(int supplierId);
-
-        // === POST ===
-        Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(CreateSupplierRequestDTO supplier);
-
-        // === PUT ===
-        Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(int supplierId, UpdateSupplierRequestDTO updatedSupplier);
-
-        // === SET ACTIVE STATUS ===
-        Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto);
-        Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto);
-    }
+    Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default);
+    Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(CreateSupplierRequestDTO dto, CancellationToken cancellationToken = default);
+    Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(int supplierId, UpdateSupplierRequestDTO dto, CancellationToken cancellationToken = default);
+    Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto, CancellationToken cancellationToken = default);
+    Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto, CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,6 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels.MovementModels;
+using InventoryManagementAPI.Models.CoreModels.UserModels;
 using InventoryManagementAPI.Models.Enums;
 using InventoryManagementAPI.Repositories.InvMovementRepositories;
 using InventoryManagementAPI.Services;
@@ -24,15 +26,15 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
 
-            var testMovement = CreateMovement(MovementType.Sale, 10, "Test movement", testProduct.ID, testUser.ID);
-            await context.InventoryMovements.AddAsync(testMovement);
-            await context.SaveChangesAsync();
+            var testMovement = CreateMovement(MovementType.Sale, 10, "Test movement", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            await context.InventoryMovements.AddAsync(testMovement, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear(); // Clear the change tracker to ensure we fetch from the database
 
             var movementRepository = new InventoryMovementRepository(context);
 
             // Act
-            var movement = await movementRepository.GetMovementByIdAsync(testMovement.ID);
+            var movement = await movementRepository.GetMovementByIdAsync(testMovement.ID, CancellationToken.None);
 
             // Assert
             Assert.NotNull(movement);
@@ -47,7 +49,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var movement = await movementRepository.GetMovementByIdAsync(int.MaxValue);
+            var movement = await movementRepository.GetMovementByIdAsync(int.MaxValue, CancellationToken.None);
 
             //Assert
             Assert.Null(movement);
@@ -64,17 +66,17 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
 
-            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.ID, testUser.ID);
-            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.ID, testUser.ID);
-            var testMovement3 = CreateMovement(MovementType.StockIn, 30, "Test movement 3", testProduct.ID, testUser.ID);
-            await context.InventoryMovements.AddRangeAsync(testMovement1, testMovement2, testMovement3);
-            await context.SaveChangesAsync();
+            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement3 = CreateMovement(MovementType.StockIn, 30, "Test movement 3", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            await context.InventoryMovements.AddRangeAsync([testMovement1, testMovement2, testMovement3], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var movements = await movementRepository.GetAllMovementsAsync();
+            var movements = await movementRepository.GetAllMovementsAsync(CancellationToken.None);
 
             //Assert
             Assert.NotNull(movements);
@@ -94,17 +96,17 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
 
-            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.ID, testUser.ID);
-            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.ID, testUser.ID);
-            var testMovement3 = CreateMovement(MovementType.StockIn, 30, "Test movement 3", testProduct.ID, testUser.ID);
-            await context.InventoryMovements.AddRangeAsync(testMovement1, testMovement2, testMovement3);
-            await context.SaveChangesAsync();
+            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement3 = CreateMovement(MovementType.StockIn, 30, "Test movement 3", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            await context.InventoryMovements.AddRangeAsync([testMovement1, testMovement2, testMovement3], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var movements = await movementRepository.GetMovementsByProductIdAsync(testProduct.ID);
+            var movements = await movementRepository.GetMovementsByProductIdAsync(testProduct.ID, CancellationToken.None);
 
             //Assert
             Assert.NotNull(movements);
@@ -125,16 +127,16 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 MovementType.StockIn,
                 5,
                 "Movement for another product",
-                existingProduct.ID,
+                existingProduct.InventoryStocks.Single().ID,
                 testUser.ID);
-            await context.InventoryMovements.AddAsync(existingMovement);
-            await context.SaveChangesAsync();
+            await context.InventoryMovements.AddAsync(existingMovement, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var movements = await movementRepository.GetMovementsByProductIdAsync(int.MaxValue);
+            var movements = await movementRepository.GetMovementsByProductIdAsync(int.MaxValue, CancellationToken.None);
 
             //Assert
             Assert.NotNull(movements);
@@ -153,10 +155,10 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var result = await movementRepository.GetMovementsByProductIdAsync(testProduct.ID);
+            var result = await movementRepository.GetMovementsByProductIdAsync(testProduct.ID, CancellationToken.None);
 
             //Assert
-            Assert.NotNull(await context.Products.FindAsync(testProduct.ID));
+            Assert.NotNull(await context.Products.FindAsync([testProduct.ID], CancellationToken.None));
             Assert.Empty(result);
         }
 
@@ -171,21 +173,21 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
 
-            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.ID, testUser.ID);
-            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.ID, testUser.ID);
-            var testMovement3 = CreateMovement(MovementType.StockIn, 30, "Test movement 3", testProduct.ID, testUser.ID);
+            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement3 = CreateMovement(MovementType.StockIn, 30, "Test movement 3", testProduct.InventoryStocks.Single().ID, testUser.ID);
 
-            await context.InventoryMovements.AddRangeAsync(testMovement1, testMovement2, testMovement3);
-            await context.SaveChangesAsync();
+            await context.InventoryMovements.AddRangeAsync([testMovement1, testMovement2, testMovement3], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var movements = await movementRepository.GetMovementsByUserIdAsync(testUser.ID);
+            var movements = await movementRepository.GetMovementsByUserIdAsync(testUser.ID, CancellationToken.None);
 
             //Assert
-            Assert.NotNull(await context.Users.FindAsync(testUser.ID));
+            Assert.NotNull(await context.Users.FindAsync([testUser.ID], CancellationToken.None));
             Assert.NotEmpty(movements);
             Assert.Contains(movements, m => m.Reason == "Test movement 1");
             Assert.Contains(movements, m => m.Reason == "Test movement 2");
@@ -204,19 +206,19 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 MovementType.StockIn,
                 5,
                 "Movement for another user",
-                testProduct.ID,
+                testProduct.InventoryStocks.Single().ID,
                 existingUser.ID);
-            await context.InventoryMovements.AddAsync(existingMovement);
-            await context.SaveChangesAsync();
+            await context.InventoryMovements.AddAsync(existingMovement, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var result = await movementRepository.GetMovementsByUserIdAsync(int.MaxValue);
+            var result = await movementRepository.GetMovementsByUserIdAsync(int.MaxValue, CancellationToken.None);
 
             //Assert
-            Assert.Null(await context.Users.FindAsync(int.MaxValue));
+            Assert.Null(await context.Users.FindAsync([int.MaxValue], CancellationToken.None));
             Assert.Empty(result);
         }
         [Fact]
@@ -230,10 +232,10 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var result = await movementRepository.GetMovementsByUserIdAsync(testUser.ID);
+            var result = await movementRepository.GetMovementsByUserIdAsync(testUser.ID, CancellationToken.None);
 
             //Assert
-            Assert.NotNull(await context.Users.FindAsync(testUser.ID));
+            Assert.NotNull(await context.Users.FindAsync([testUser.ID], CancellationToken.None));
             Assert.Empty(result);
         }
 
@@ -248,16 +250,16 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
 
-            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.ID, testUser.ID);
-            var testMovement2 = CreateMovement(MovementType.Sale, 20, "Test movement 2", testProduct.ID, testUser.ID);
-            await context.InventoryMovements.AddRangeAsync(testMovement1, testMovement2);
-            await context.SaveChangesAsync();
+            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement2 = CreateMovement(MovementType.Sale, 20, "Test movement 2", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            await context.InventoryMovements.AddRangeAsync([testMovement1, testMovement2], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
             
             //Act
-            var movements = await movementRepository.GetMovementsByTypeAsync(MovementType.Sale);
+            var movements = await movementRepository.GetMovementsByTypeAsync(MovementType.Sale, CancellationToken.None);
 
             //Assert
             Assert.NotNull(movements);
@@ -277,16 +279,16 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 MovementType.Sale,
                 5,
                 "Non-matching sale movement",
-                testProduct.ID,
+                testProduct.InventoryStocks.Single().ID,
                 testUser.ID);
-            await context.InventoryMovements.AddAsync(saleMovement);
-            await context.SaveChangesAsync();
+            await context.InventoryMovements.AddAsync(saleMovement, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var result = await movementRepository.GetMovementsByTypeAsync(MovementType.AdjustmentIncrease);
+            var result = await movementRepository.GetMovementsByTypeAsync(MovementType.AdjustmentIncrease, CancellationToken.None);
 
             //Assert
             Assert.Empty(result);
@@ -303,10 +305,10 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
 
-            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.ID, testUser.ID);
-            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.ID, testUser.ID);
-            await context.InventoryMovements.AddRangeAsync(testMovement1, testMovement2);
-            await context.SaveChangesAsync();
+            var testMovement1 = CreateMovement(MovementType.Sale, 10, "Test movement 1", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            var testMovement2 = CreateMovement(MovementType.Purchase, 20, "Test movement 2", testProduct.InventoryStocks.Single().ID, testUser.ID);
+            await context.InventoryMovements.AddRangeAsync([testMovement1, testMovement2], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
@@ -315,7 +317,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var startDate = DateTime.UtcNow.AddMinutes(-1);
             var endDate = DateTime.UtcNow.AddMinutes(1);
 
-            var movements = await movementRepository.GetMovementsByDateRangeAsync(startDate, endDate);
+            var movements = await movementRepository.GetMovementsByDateRangeAsync(startDate, endDate, CancellationToken.None);
 
             //Assert
             Assert.NotNull(movements);
@@ -335,11 +337,11 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 MovementType.StockIn,
                 5,
                 "Movement outside requested range",
-                testProduct.ID,
+                testProduct.InventoryStocks.Single().ID,
                 testUser.ID);
             currentMovement.Created = DateTime.UtcNow;
-            await context.InventoryMovements.AddAsync(currentMovement);
-            await context.SaveChangesAsync();
+            await context.InventoryMovements.AddAsync(currentMovement, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var movementRepository = new InventoryMovementRepository(context);
@@ -347,7 +349,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             //Act
             var startDate = DateTime.UtcNow.AddDays(-3);
             var endDate = DateTime.UtcNow.AddDays(-2);
-            var result = await movementRepository.GetMovementsByDateRangeAsync(startDate, endDate);
+            var result = await movementRepository.GetMovementsByDateRangeAsync(startDate, endDate, CancellationToken.None);
 
             //Assert
             Assert.Empty(result);
@@ -363,28 +365,28 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
-            var testMovement = CreateMovement(MovementType.Sale, 10, "Test movement", testProduct.ID, testUser.ID);
+            var testMovement = CreateMovement(MovementType.Sale, 10, "Test movement", testProduct.InventoryStocks.Single().ID, testUser.ID);
 
             var movementRepository = new InventoryMovementRepository(context);
 
             //Act
-            var result = await movementRepository.AddMovementAsync(testMovement);
-            await context.SaveChangesAsync();
+            var result = await movementRepository.AddMovementAsync(testMovement, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             var movementId = result.ID;
             context.ChangeTracker.Clear();
 
             //Assert
-            var persistedMovement = await context.InventoryMovements.FindAsync(movementId);
+            var persistedMovement = await context.InventoryMovements.FindAsync([movementId], CancellationToken.None);
             Assert.NotNull(persistedMovement);
             Assert.Equal("Test movement", persistedMovement.Reason);
         }
 
         // Helper methods
-        private static InventoryMovement CreateMovement(MovementType movement, int quantity, string reason, int productId, int userId)
+        private static InventoryMovement CreateMovement(MovementType movement, int quantity, string reason, int inventoryStockId, int userId)
         {
             return new InventoryMovement
             {
-                ProductId = productId,
+                InventoryStockID = inventoryStockId,
                 Quantity = quantity,
                 QuantityBefore = 100,
                 Movement = movement,
@@ -401,18 +403,22 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 Name = "Test Category",
                 Description = "Test Description"
             };
-            await context.Categories.AddAsync(testCategory);
+            await context.Categories.AddAsync(testCategory, CancellationToken.None);
 
-            var testSupplier = new Supplier
+            var warehouse = new Warehouse
             {
-                Name = "Test Supplier",
-                ContactName = "Test Contact",
+                Name = $"Test Warehouse {Guid.NewGuid():N}",
                 Address = "123 Test St",
-                PhoneContact = "12345678",
-                EmailContact = "test@example.com"
+                City = "Brisbane",
+                State = "QLD",
+                ZipCode = "4000",
+                Country = "Australia",
+                IsActive = true,
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow
             };
-            await context.Suppliers.AddAsync(testSupplier);
-            await context.SaveChangesAsync();
+            await context.Warehouses.AddAsync(warehouse, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
 
             var testProduct = new Product
             {
@@ -420,14 +426,26 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 Name = "Test Product",
                 Description = "Test Description",
                 CategoryID = testCategory.ID,
-                SupplierID = testSupplier.ID,
-                QuantityInStock = 100,
+                Price = 10m,
+                IsActive = true,
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                InventoryStocks =
+                [
+                    new InventoryStock
+                    {
+                        WarehouseID = warehouse.ID,
+                        Quantity = 100,
+                        ReorderLevel = 10,
+                        IsActive = true,
+                        Created = DateTime.UtcNow,
+                        Updated = DateTime.UtcNow
+                    }
+                ]
             };
-            await context.Products.AddAsync(testProduct);
+            await context.Products.AddAsync(testProduct, CancellationToken.None);
 
-            await context.SaveChangesAsync();
-            context.ChangeTracker.Clear();
-
+            await context.SaveChangesAsync(CancellationToken.None);
             return testProduct;
         }
 
@@ -439,8 +457,8 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 Email = "test@example.com",
                 Password_Hash = "hashedpassword",
             };
-            await context.Users.AddAsync(testUser);
-            await context.SaveChangesAsync();
+            await context.Users.AddAsync(testUser, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             return testUser;

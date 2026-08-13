@@ -1,0 +1,7 @@
+global using InventoryManagementAPI.Models.CoreModels.MovementModels;
+global using InventoryManagementAPI.Models.CoreModels.SupplierModels;
+global using InventoryManagementAPI.Models.CoreModels.UserModels;
+global using InventoryManagementAPI.Models.CoreModels.RolePermissions;
+global using InventoryManagementAPI.Repositories.UnitOfWorkRepositories;
+global using InventoryManagementAPI.Repositories.UserRoleRepositories;
+global using InventoryManagementAPI.Repositories.UserRoles;

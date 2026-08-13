@@ -38,10 +38,10 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             // The CreateContext method is called to create a new instance of InvManDBContext, which is used to interact with the database.
             await using var context = CreateContext();
 
-            // The EnsureCreatedAsync method is called on the context's Database property to create the database schema if it does not already exist.
-            //await context.Database.EnsureCreatedAsync(); 
-            // Replace method with .MigrateAsync() after adding migrations just to ensure the database is created for testing purposes.
-            await context.Database.MigrateAsync();
+            // The reshaped model does not have a replacement migration yet, so create
+            // the test schema directly from the current EF model. Switch this back to
+            // MigrateAsync once a new baseline migration has been generated.
+            await context.Database.EnsureCreatedAsync();
 
             // Migrations also insert the application's demonstration seed data. Repository tests
             // arrange their own records, so remove that data to keep every assertion independent

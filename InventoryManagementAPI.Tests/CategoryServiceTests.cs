@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.CategoryDTO_s;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +16,8 @@ namespace InventoryManagementAPI.Tests
     // cases without requiring a database.
     public class CategoryServiceTests
     {
+        private readonly Mock<IUnitOfWork> _unitOfWork = new();
+
         // === GetSingleCategory Tests === \\
         [Fact]
         public async Task GetSingleCategory_WhenCategoryExists_Returns200()
@@ -27,14 +29,14 @@ namespace InventoryManagementAPI.Tests
 
             //Setup the mock to return a specific category when GetCategoryByIdAsync is called with a valid category ID
             repository
-                .Setup(repo => repo.GetCategoryByIdAsync(1))
+                .Setup(repo => repo.GetCategoryByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = 1, Name = "Electronics" });
 
 
             //=== Act === \\
 
             //Pass the mocked repository to the CategoryService
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
 
             //Call the GetSingleCategory method with a valid category ID
             var result = await service.GetSingleCategory(1);
@@ -46,7 +48,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category retrieved successfully.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.GetCategoryByIdAsync(1), Times.Once);
+            repository.Verify(repo => repo.GetCategoryByIdAsync(1, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -61,13 +63,13 @@ namespace InventoryManagementAPI.Tests
             // Sets up the mock to return null when GetCategoryByIdAsync is called with a non-existent category ID
             // This simulates the scenario where the category does not exist in the database
             repository
-                .Setup(repo => repo.GetCategoryByIdAsync(999))
+                .Setup(repo => repo.GetCategoryByIdAsync(999, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Category?)null);
 
             // === Act === \\
 
             // Creates an instance of the CategoryService, passing in the mocked repository
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
 
             // Calls the GetSingleCategory method with a non-existent category ID
             var result = await service.GetSingleCategory(999);
@@ -81,7 +83,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category not found.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.GetCategoryByIdAsync(999), Times.Once);
+            repository.Verify(repo => repo.GetCategoryByIdAsync(999, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -90,11 +92,11 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             repository
-                .Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+                .Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.GetSingleCategory(1);
 
             // === Assert === \\
@@ -104,7 +106,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Internal error occurred, failed to load category.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()), Times.Once);
+            repository.Verify(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
 
@@ -115,14 +117,14 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             repository
-                .Setup(repo => repo.GetAllCategoriesAsync())
+                .Setup(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<Category>
                 {
                     new Category { ID = 1, Name = "Electronics" },
                     new Category { ID = 2, Name = "Books" }
                 });
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.GetAllCategories();
 
             // === Assert === \\
@@ -132,7 +134,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Categories retrieved successfully.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.GetAllCategoriesAsync(), Times.Once);
+            repository.Verify(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -141,11 +143,11 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             repository
-                .Setup(repo => repo.GetAllCategoriesAsync())
+                .Setup(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<Category>());
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.GetAllCategories();
 
             // === Assert === \\
@@ -155,7 +157,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("No categories found.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.GetAllCategoriesAsync(), Times.Once);
+            repository.Verify(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -164,10 +166,10 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             repository
-                .Setup(repo => repo.GetAllCategoriesAsync())
+                .Setup(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.GetAllCategories();
             // === Assert === \\
             Assert.NotNull(result);
@@ -176,7 +178,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Internal error occurred, failed to load categories.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.GetAllCategoriesAsync(), Times.Once);
+            repository.Verify(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
 
@@ -196,11 +198,11 @@ namespace InventoryManagementAPI.Tests
 
             // Setup the mock to return a new category when CreateCategoryAsync is called with a valid category
             repository
-                .Setup(repo => repo.CreateCategoryAsync(It.Is<Category>(c => c.Name == "Toys" && c.Description == "Fun Stuff")))
+                .Setup(repo => repo.CreateCategoryAsync(It.Is<Category>(c => c.Name == "Toys" && c.Description == "Fun Stuff"), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = 3, Name = "Toys", Description = "Fun Stuff" });
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.AddCategory(newCategoryDto);
 
             // === Assert === \\
@@ -214,7 +216,7 @@ namespace InventoryManagementAPI.Tests
                 repo => repo.CreateCategoryAsync(
                     It.Is<Category>(c =>
                     c.Name == "Toys" &&
-                    c.Description == "Fun Stuff")),
+                    c.Description == "Fun Stuff"), It.IsAny<CancellationToken>()),
                 Times.Once);
         }
 
@@ -223,7 +225,7 @@ namespace InventoryManagementAPI.Tests
         {
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
 
             // === Act === \\
             var result = await service.AddCategory(null!);
@@ -235,7 +237,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Request body is required.", result.Message);
 
             // Verify that the repository's CreateCategoryAsync method was never called since the request body was null
-            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -248,7 +250,7 @@ namespace InventoryManagementAPI.Tests
                 Description = "Fun Stuff"
             };
 
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.AddCategory(newCategoryDto);
 
             Assert.NotNull(result);
@@ -256,7 +258,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal(400, result.StatusCode);
             Assert.Equal("Category name is required.", result.Message);
 
-            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -272,12 +274,12 @@ namespace InventoryManagementAPI.Tests
 
             // Setup the mock to return true when CategoryNameExistsASync is called with the existing category name
             repository
-                .Setup(repo => repo.CategoryNameExistsASync("Toys"))
+                .Setup(repo => repo.CategoryNameExistsASync("Toys", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.AddCategory(newCategoryDto);
 
             // === Assert === \\
@@ -287,10 +289,10 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category with the same name already exists.", result.Message);
 
             // Verify that the repository's CategoryNameExistsASync method was called exactly once with the expected category name
-            repository.Verify(repo => repo.CategoryNameExistsASync("Toys"), Times.Once);
+            repository.Verify(repo => repo.CategoryNameExistsASync("Toys", It.IsAny<CancellationToken>()), Times.Once);
 
             // Verify that the repository's CreateCategoryAsync method was never called since the category name already exists
-            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -305,11 +307,11 @@ namespace InventoryManagementAPI.Tests
             };
             // Setup the mock to throw an exception when CreateCategoryAsync is called
             repository
-                .Setup(repo => repo.CreateCategoryAsync(It.IsAny<Category>()))
+                .Setup(repo => repo.CreateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.AddCategory(newCategoryDto);
 
             // === Assert === \\
@@ -319,7 +321,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Internal error occurred, failed to add category.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>()), Times.Once);
+            repository.Verify(repo => repo.CreateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
 
@@ -337,14 +339,14 @@ namespace InventoryManagementAPI.Tests
             };
 
             // Setup the mock to return false when OtherCategoryNameExistsAsync is called with the same category name, indicating no other category has the same name
-            repository.Setup(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), updateCategoryDto.Name))
+            repository.Setup(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), updateCategoryDto.Name, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
 
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = It.IsAny<int>(), Name = It.IsAny<string>(), IsActive = true, RowVersion = CreateRowVersion() });
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.UpdateCategoryDetails(999, updateCategoryDto);
 
             // === Assert === \\
@@ -354,10 +356,10 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category updated successfully.", result.Message);
 
             // Verify that the repository's OtherCategoryNameExistsAsync method was called exactly once with the expected category ID and name
-            repository.Verify(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), "Updated Category"), Times.Once);
+            repository.Verify(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), "Updated Category", It.IsAny<CancellationToken>()), Times.Once);
 
             // Verify that the repository's UpdateCategoryAsync method was called exactly once with the expected category
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.Is<Category>(c => c.Name == "Updated Category" && c.Description == "Updated Description")), Times.Once);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.Is<Category>(c => c.Name == "Updated Category" && c.Description == "Updated Description"), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -373,11 +375,11 @@ namespace InventoryManagementAPI.Tests
             };
 
             // Setup the mock to return false when CategoryExistsAsync is called with a non-existing category ID
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Category?)null);
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.UpdateCategoryDetails(It.IsAny<int>(), updateCategoryDto);
 
             // === Assert === \\
@@ -387,7 +389,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category not found.", result.Message);
 
             // Verify that the repository's UpdateCategoryAsync method was never called since the category does not exist
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -395,7 +397,7 @@ namespace InventoryManagementAPI.Tests
         {
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
 
             // === Act === \\
             var result = await service.UpdateCategoryDetails(It.IsAny<int>(), null!);
@@ -406,7 +408,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal(400, result.StatusCode);
             Assert.Equal("Request body is required.", result.Message);
 
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -421,7 +423,7 @@ namespace InventoryManagementAPI.Tests
                 RowVersion = CreateRowVersion()
             };
 
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
 
             var result = await service.UpdateCategoryDetails(It.IsAny<int>(), updateCategoryDto);
 
@@ -430,7 +432,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal(400, result.StatusCode);
             Assert.Equal("Category name is required.", result.Message);
 
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -445,10 +447,10 @@ namespace InventoryManagementAPI.Tests
             };
 
             // Setup the mock to return true when OtherCategoryNameExistsAsync is called with the existing category name
-            repository.Setup(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), "Existing Category"))
+            repository.Setup(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), "Existing Category", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.UpdateCategoryDetails(It.IsAny<int>(), updateCategoryDto);
 
             Assert.NotNull(result);
@@ -456,8 +458,8 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal(400, result.StatusCode);
             Assert.Equal("Category with the same name already exists.", result.Message);
 
-            repository.Verify(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), "Existing Category"), Times.Once);
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.OtherCategoryNameExistsAsync(It.IsAny<int>(), "Existing Category", It.IsAny<CancellationToken>()), Times.Once);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -471,14 +473,14 @@ namespace InventoryManagementAPI.Tests
                 RowVersion = CreateRowVersion()
             };
 
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = It.IsAny<int>(), Name = It.IsAny<string>(), IsActive = true, RowVersion = CreateRowVersion() });
 
             // Setup the mock to throw an exception when UpdateCategoryAsync is called
-            repository.Setup(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()))
+            repository.Setup(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
 
             var result = await service.UpdateCategoryDetails(It.IsAny<int>(), updateCategoryDto);
 
@@ -488,7 +490,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Internal error occurred, failed to update category.", result.Message);
 
             // Verify
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Once);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
 
@@ -499,11 +501,11 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             // Setup the mock to return true when CategoryExistsAsync is called with the existing category ID
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = It.IsAny<int>(), Name = It.IsAny<string>(), IsActive = false, RowVersion = CreateRowVersion() });
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.ActivateCategory(1, new UpdateCategoryStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -514,7 +516,7 @@ namespace InventoryManagementAPI.Tests
 
 
             // Verify that the repository's SaveChangesAsync method was called exactly once
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -523,11 +525,11 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             //Setup the mock to return false when CategoryExistsAsync is called with a non-existing category ID
-            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.ActivateCategory(999, new UpdateCategoryStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -537,7 +539,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category not found.", result.Message);
 
             //Verify that SaveChangesAsync was never called since the category does not exist
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -546,14 +548,14 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             // Setup the mock to return true when CategoryExistsAsync is called with the existing category ID
-            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = 1, Name = "Electronics", IsActive = true, RowVersion = CreateRowVersion() }); // Simulate that the category is already active
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.ActivateCategory(1, new UpdateCategoryStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -563,7 +565,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category is already active.", result.Message);
 
             // Verify that SaveChangesAsync was never called since the category is already active
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -572,15 +574,15 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
 
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = It.IsAny<int>(), Name = It.IsAny<string>(), IsActive = false, RowVersion = CreateRowVersion() });
 
             // Setup the mock to throw an exception when SaveChangesAsync is called
-            repository.Setup(repo => repo.SaveChangesAsync())
+            _unitOfWork.Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.ActivateCategory(1, new UpdateCategoryStatusRequestDTO { IsActive = false, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -590,7 +592,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Internal error occurred, failed to activate category.", result.Message);
 
             // Verify that SaveChangesAsync was never called since an exception occurred
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         // === DeactivateCategory Tests === \\
@@ -601,11 +603,11 @@ namespace InventoryManagementAPI.Tests
             var repository = new Mock<ICategoryRepository>();
 
             // Setup the mock to return true when CategoryExistsAsync is called with the existing category ID
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = It.IsAny<int>(), Name = It.IsAny<string>(), IsActive = true, RowVersion = CreateRowVersion() });
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.DeactivateCategory(1, new UpdateCategoryStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -615,7 +617,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category deactivated successfully.", result.Message);
 
             // Verify that the repository's SaveChangesAsync method was called exactly once
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -624,11 +626,11 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             // Setup the mock to return false when CategoryExistsAsync is called with a non-existing category ID
-            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.DeactivateCategory(999, new UpdateCategoryStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -638,7 +640,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category not found.", result.Message);
 
             // Verify that the repository's SaveChangesAsync method was never called since the category does not exist
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -647,14 +649,14 @@ namespace InventoryManagementAPI.Tests
             // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
             // Setup the mock to return true when CategoryExistsAsync is called with the existing category ID
-            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.CategoryExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             // Setup the mock to return a category that is already inactive
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = 1, Name = "Electronics", IsActive = false, RowVersion = CreateRowVersion() });
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.DeactivateCategory(1, new UpdateCategoryStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -664,7 +666,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category is already inactive.", result.Message);
 
             // Verify that the repository's SaveChangesAsync method was never called since the category is already inactive
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -674,15 +676,15 @@ namespace InventoryManagementAPI.Tests
             var repository = new Mock<ICategoryRepository>();
 
             // Setup the mock to return true when CategoryExistsAsync is called with the existing category ID
-            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()))
+            repository.Setup(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Category { ID = It.IsAny<int>(), Name = It.IsAny<string>(), IsActive = true, RowVersion = CreateRowVersion() });
 
             // Setup the mock to throw an exception when SaveChangesAsync is called
-            repository.Setup(repo => repo.SaveChangesAsync())
+            _unitOfWork.Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
             // === Act === \\
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var result = await service.DeactivateCategory(1, new UpdateCategoryStatusRequestDTO { IsActive = true, RowVersion = CreateRowVersion() });
 
             // === Assert === \\
@@ -692,13 +694,13 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Internal error occurred, failed to deactivate category.", result.Message);
 
             // Verify that the repository's SaveChangesAsync method was never called since an exception occurred
-            repository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+            _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
         [Fact]
         public async Task UpdateCategory_InvalidRowVersion_Returns400()
         {
             var repository = new Mock<ICategoryRepository>();
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var request = new UpdateCategoryDetailsRequestDTO
             {
                 Name = "Updated Category",
@@ -710,8 +712,8 @@ namespace InventoryManagementAPI.Tests
 
             Assert.False(result.Success);
             Assert.Equal(400, result.StatusCode);
-            repository.Verify(repo => repo.GetCategoryByIdAsync(It.IsAny<int>()), Times.Never);
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.GetCategoryByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -719,8 +721,8 @@ namespace InventoryManagementAPI.Tests
         {
             var repository = new Mock<ICategoryRepository>();
             var category = new Category { ID = 1, Name = "Category", RowVersion = CreateRowVersion() };
-            repository.Setup(repo => repo.GetCategoryByIdAsync(1)).ReturnsAsync(category);
-            var service = new CategoryService(repository.Object);
+            repository.Setup(repo => repo.GetCategoryByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(category);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var request = new UpdateCategoryDetailsRequestDTO
             {
                 Name = "Updated Category",
@@ -732,7 +734,7 @@ namespace InventoryManagementAPI.Tests
 
             Assert.False(result.Success);
             Assert.Equal(409, result.StatusCode);
-            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>()), Times.Never);
+            repository.Verify(repo => repo.UpdateCategoryAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -740,9 +742,9 @@ namespace InventoryManagementAPI.Tests
         {
             var repository = new Mock<ICategoryRepository>();
             var category = new Category { ID = 1, Name = "Category", RowVersion = CreateRowVersion() };
-            repository.Setup(repo => repo.GetCategoryByIdAsync(1)).ReturnsAsync(category);
-            repository.Setup(repo => repo.UpdateCategoryAsync(category)).ThrowsAsync(new DbUpdateConcurrencyException());
-            var service = new CategoryService(repository.Object);
+            repository.Setup(repo => repo.GetCategoryByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(category);
+            repository.Setup(repo => repo.UpdateCategoryAsync(category, It.IsAny<CancellationToken>())).ThrowsAsync(new DbUpdateConcurrencyException());
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var request = new UpdateCategoryDetailsRequestDTO
             {
                 Name = "Updated Category",
@@ -754,7 +756,7 @@ namespace InventoryManagementAPI.Tests
 
             Assert.False(result.Success);
             Assert.Equal(409, result.StatusCode);
-            repository.Verify(repo => repo.UpdateCategoryAsync(category), Times.Once);
+            repository.Verify(repo => repo.UpdateCategoryAsync(category, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -763,11 +765,11 @@ namespace InventoryManagementAPI.Tests
             var repository = new Mock<ICategoryRepository>();
             var category = new Category { ID = 1, Name = "Category", RowVersion = CreateRowVersion() };
             byte[] updatedRowVersion = [9, 10, 11, 12, 13, 14, 15, 16];
-            repository.Setup(repo => repo.GetCategoryByIdAsync(1)).ReturnsAsync(category);
-            repository.Setup(repo => repo.UpdateCategoryAsync(category))
-                .Callback(() => category.RowVersion = updatedRowVersion)
+            repository.Setup(repo => repo.GetCategoryByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(category);
+            repository.Setup(repo => repo.UpdateCategoryAsync(category, It.IsAny<CancellationToken>()))
+                .Callback((Category _, CancellationToken _) => category.RowVersion = updatedRowVersion)
                 .Returns(Task.CompletedTask);
-            var service = new CategoryService(repository.Object);
+            var service = new CategoryService(repository.Object, _unitOfWork.Object);
             var request = new UpdateCategoryDetailsRequestDTO
             {
                 Name = "Updated Category",
@@ -780,7 +782,7 @@ namespace InventoryManagementAPI.Tests
             Assert.True(result.Success);
             Assert.Equal(200, result.StatusCode);
             Assert.Equal(updatedRowVersion, result.Data!.RowVersion);
-            repository.Verify(repo => repo.UpdateCategoryAsync(category), Times.Once);
+            repository.Verify(repo => repo.UpdateCategoryAsync(category, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         private static byte[] CreateRowVersion() => [1, 2, 3, 4, 5, 6, 7, 8];

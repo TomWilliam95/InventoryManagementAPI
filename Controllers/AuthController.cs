@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Repositories.AuthenticationRepositories;
 using Microsoft.AspNetCore.Authorization;
@@ -19,9 +19,9 @@ namespace InventoryManagementAPI.Controllers
         }
         
         [HttpPost("login")]
-        public async Task<ActionResult<ApiResponse<LoginResponseDTO>>> LoginAsync(LoginRequestDTO loginRequestDTO)
+        public async Task<ActionResult<ApiResponse<LoginResponseDTO>>> LoginAsync(LoginRequestDTO loginRequestDTO, CancellationToken cancellationToken = default)
         {
-            var result = await _authService.LoginAsync(loginRequestDTO);
+            var result = await _authService.LoginAsync(loginRequestDTO, cancellationToken);
             return StatusCode(result.StatusCode, result);
         }
     }

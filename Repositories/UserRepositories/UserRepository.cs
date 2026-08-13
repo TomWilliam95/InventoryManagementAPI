@@ -1,6 +1,4 @@
-﻿using BCrypt.Net;
-using InventoryManagementAPI.Models.CoreModels;
-using InventoryManagementAPI.Models.Enums;
+using InventoryManagementAPI.Models.CoreModels.RolePermissions;
 using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,57 +13,65 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         }
 
         // === GET ===
-        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        public async Task<IEnumerable<User>> GetAllUsersAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Users.ToListAsync();
+            return await _context.Users
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<User?> GetUserByEmailAsync(string email)
+        public async Task<User?> GetUserByEmailAsync(string email, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
         }
-        
-        public async Task<User?> GetUserByIdAsync(int userId)
+        public async Task<User?> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.FindAsync(userId);
-        }
-
-        public async Task<IEnumerable<User>> GetUsersByRoleAsync(UserRoles role)
-        {
-            return await _context.Users.Where(u => u.Role == role).ToListAsync();
+            return await _context.Users.FindAsync(userId, cancellationToken);
         }
 
-        // === POST ===
-        public async Task<User> CreateUserAsync(User user)
+        public async Task<IEnumerable<User>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default)
         {
-            await _context.Users.AddAsync(user);
+            return await _context.Users
+                .AsNoTracking()
+                .Where(userRole => userRole.UserRoles.Any(
+                    userRole => userRole.Role.Name == roleName))
+                .ToListAsync(cancellationToken);
+        }
+
+
+        public async Task<User?> GetUserWithRolesForAuthentication(string email, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .SingleOrDefaultAsync(u => u.Email == email, cancellationToken);
+        }
+
+
+        // === POST ===\\
+        public async Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default)
+        {
+            await _context.Users.AddAsync(user, cancellationToken);
             return user;
         }
 
         // === CHECK EXISTENCE ===
-        public async Task<bool> EmailExistsAsync(string email)
+        public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.AnyAsync(u => u.Email == email);
+            return await _context.Users.AsNoTracking().AnyAsync(u => u.Email == email, cancellationToken);
         }
 
-        public async Task<bool> UserExistsAsync(int userId)
+        public async Task<bool> UserExistsAsync(int userId, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.AnyAsync(u => u.ID == userId);
+            return await _context.Users.AsNoTracking().AnyAsync(u => u.ID == userId, cancellationToken);
         }
 
         // === CHECK ACTIVE STATUS ===
-        public async Task<bool> IsUserActiveAsync(int userId)
+        public async Task<bool> IsUserActiveAsync(int userId, CancellationToken cancellationToken = default)
         {
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _context.Users.FindAsync(userId, cancellationToken);
             return user?.IsActive == true;
         }
-
-        // === SAVE CHANGES ===
-        public async Task SaveChangesAsync()
-        {
-            await _context.SaveChangesAsync();
-        }
-
-        
     }
 }

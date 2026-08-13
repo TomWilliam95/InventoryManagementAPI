@@ -1,7 +1,9 @@
-﻿
+
 using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels.RolePermissions;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
-using InventoryManagementAPI.Models.Enums;
+using InventoryManagementAPI.Repositories.UserRoleRepositories;
+using InventoryManagementAPI.Repositories.UserRoles;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
 
@@ -10,21 +12,31 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
-        public UserService(IUserRepository userRepository)
+        private readonly IRoleRepository _roleRepository;
+        private readonly IUserRoleRepository _userRoleRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        public UserService(IUserRepository userRepository, IRoleRepository roleRepository, IUserRoleRepository userRoleRepository, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
+            _roleRepository = roleRepository;
+            _userRoleRepository = userRoleRepository;
+            _unitOfWork = unitOfWork;
         }
 
         // === GET ===
-        public async Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetAllUsersAsync()
+        public async Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetAllUsersAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieves all users from the repository and validates the response to ensure that users were found.
-                var users = await _userRepository.GetAllUsersAsync();
+                var users = await _userRepository.GetAllUsersAsync(cancellationToken);
 
                 // Validates the retrieved users and builds a response based on whether users were found or not.
                 return ValidateGetUserGroupBuildResponse(users);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -32,12 +44,12 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> GetUserByEmailAsync(string email)
+        public async Task<ApiResponse<UserResponseDTO>> GetUserByEmailAsync(string email, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieves the user by email from the repository and checks if the user exists. If the user is not found, it returns a 404 Not Found response.
-                var user = await _userRepository.GetUserByEmailAsync(email);
+                var user = await _userRepository.GetUserByEmailAsync(email, cancellationToken);
 
                 // Validates the retrieved user and builds a response based on whether the user was found or not.
                 if (user == null)
@@ -51,20 +63,28 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 }
                 return BuildUserResponse(user, "Successfully retrieved user!", 200);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to load user by email.");
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> GetUserByIdAsync(int userId)
+        public async Task<ApiResponse<UserResponseDTO>> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
-                var userResult = await ValidateUserIdAsync(userId);
+                var userResult = await ValidateUserIdAsync(userId, cancellationToken);
                 if (userResult.User == null) return userResult.Error!;
                 return BuildUserResponse(userResult.User, "Successfully retrieved user!", 200);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -72,10 +92,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetUsersByRoleAsync(UserRoles role)
+        public async Task<ApiResponse<IEnumerable<UserResponseDTO>>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default)
         {
-            // Validates the provided role to ensure it is a valid UserRoles enum value. If the role is invalid, it returns a 400 Bad Request response.
-            if (!Enum.IsDefined(typeof(UserRoles), role))
+
+            if (! await _roleRepository.CheckRoleExistAsync(roleName, cancellationToken))
             {
                 return new ApiResponse<IEnumerable<UserResponseDTO>>
                 {
@@ -87,9 +107,13 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             try
             {
                 // Retrieves users by role from the repository and validates the response to ensure that users were found.
-                var users = await _userRepository.GetUsersByRoleAsync(role);
+                var users = await _userRepository.GetUsersByRoleAsync(roleName, cancellationToken);
                 // Validates the retrieved users and builds a response based on whether users were found or not.
                 return ValidateGetUserGroupBuildResponse(users);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -98,14 +122,14 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         }
 
         // === POST ===
-        public async Task<ApiResponse<UserResponseDTO>> CreateUserAsync(CreateNewUserRequestDTO user)
+        public async Task<ApiResponse<UserResponseDTO>> CreateUserAsync(CreateNewUserRequestDTO user, CancellationToken cancellationToken = default)
         {
             //Validates the existence of the user DTO and checks for missing data. If the DTO is null, it returns a 404 Not Found response with an appropriate error message.
             var validateDtoExists = ValidateDtoExists(user, "User creation request data is missing.");
             if (validateDtoExists != null) return validateDtoExists;
             // Validates the fields of the CreateNewUserRequestDTO to ensure that all required fields are present and correctly formatted.
             // If any validation fails, it returns a 400 Bad Request response with an appropriate error message.
-            var validateFields = await ValidateCreateNewUserDtoFields(user);
+            var validateFields = await ValidateCreateNewUserDtoFields(user, cancellationToken);
             if (validateFields != null) return validateFields;
 
             // Create new user object and hash the password
@@ -115,29 +139,38 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 UserName = user.UserName,
                 Email = user.Email,
                 Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword(user.Password),
-                Role = UserRoles.Staff,
                 Created = DateTime.UtcNow,
                 LastLogin = DateTime.UtcNow,
-                LastUpdated = DateTime.UtcNow,
-                IsActive = true,
+                Updated = DateTime.UtcNow,
+                IsActive = true, 
             };
 
             try
             {
-                // Attempts to create the new user in the repository and checks if the creation was successful.
-                var createdUser = await _userRepository.CreateUserAsync(newUser);
-
-                if (createdUser == null)
+                //Save New User as Staff Role by default
+                var staffRole = await _roleRepository.GetRoleByNameAsync("Staff", cancellationToken);
+                if (staffRole == null || !staffRole.IsActive)
                 {
-                    // If the creation fails (e.g., due to a database error), it returns a 500 Internal Server Error response.
-                    return BuildSingleCatchErrorResponse("Internal error occurred, failed to create user.");
+                    return BuildSingleCatchErrorResponse("Internal error occurred, failed to assign staff role.");
                 }
 
+                newUser.UserRoles.Add(new UserRole
+                {
+                    RoleID = staffRole.ID,
+                });
+
+                // Attempts to create the new user in the repository and checks if the creation was successful.
+                var createdUser = await _userRepository.CreateUserAsync(newUser, cancellationToken);
+
                 //Saves the changes to the repository to persist the new user in the database.
-                await _userRepository.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Builds a response for the newly created user using the BuildUserResponse method and returns it with a 201 Created status code.
                 return BuildUserResponse(createdUser, "User created successfully", 201);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -147,7 +180,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
         // === PATCH ===
 
-        public async Task<ApiResponse<UserResponseDTO>> UpdateUserEmailAsync(int userId, UpdateUserEmailRequestDTO emailRequest, int currentUserId, string currentUserRole)
+        public async Task<ApiResponse<UserResponseDTO>> UpdateUserEmailAsync(int userId, UpdateUserEmailRequestDTO emailRequest, int currentUserId, string currentUserRole, CancellationToken cancellationToken = default)
         {
             //Validates the existence of the email update request DTO and checks for missing data.
             //If the DTO is null, it returns a 404 Not Found response with an appropriate error message.
@@ -176,7 +209,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             try
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
-                var result = await ValidateUserIdAsync(userId);
+                var result = await ValidateUserIdAsync(userId, cancellationToken);
                 if (result.User == null) return result.Error!;
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User;
@@ -185,7 +218,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 if (!string.Equals(user.Email, emailRequest.Email, StringComparison.OrdinalIgnoreCase)
-                    && await _userRepository.EmailExistsAsync(emailRequest.Email))
+                    && await _userRepository.EmailExistsAsync(emailRequest.Email, cancellationToken))
                 {
                     return new ApiResponse<UserResponseDTO>
                     {
@@ -197,8 +230,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 // Saves the updated email to the user object and persists the changes to the repository.
                 user.Email = emailRequest.Email;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userRepository.SaveChangesAsync();
+                user.Updated = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Builds a response for the updated user using the BuildUserResponse method and returns it with a 200 OK status code.
                 return BuildUserResponse(user, "Email updated successfully", 200);
@@ -207,13 +240,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user email.");
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> UpdateUserNameAsync(int userId, UpdateUserNameRequestDTO nameRequest, int currentUserId, string currentUserRole)
+        public async Task<ApiResponse<UserResponseDTO>> UpdateUserNameAsync(int userId, UpdateUserNameRequestDTO nameRequest, int currentUserId, string currentUserRole, CancellationToken cancellationToken = default)
         {
             //Validates the existence of the username update request DTO and checks for missing data.
             var dtoValidation = ValidateDtoExists(nameRequest, "UserName update request data is missing.");
@@ -241,7 +278,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             try
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
-                var result = await ValidateUserIdAsync(userId);
+                var result = await ValidateUserIdAsync(userId, cancellationToken);
                 if (result.Error != null) return result.Error;
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User!;
@@ -251,8 +288,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 // Saves the updated username to the user object and persists the changes to the repository.
                 user.UserName = nameRequest.UserName;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userRepository.SaveChangesAsync();
+                user.Updated = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return BuildUserResponse(user, "UserName updated successfully", 200);
             }
@@ -260,13 +297,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user name.");
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> UpdateUserPasswordAsync(int userId, UpdateUserPasswordRequestDTO passwordRequest, int currentUserId, string currentUserRole)
+        public async Task<ApiResponse<UserResponseDTO>> UpdateUserPasswordAsync(int userId, UpdateUserPasswordRequestDTO passwordRequest, int currentUserId, string currentUserRole, CancellationToken cancellationToken = default)
         {
             //Validates the existence of the password update request DTO and checks for missing data.
             var dtoValidation = ValidateDtoExists(passwordRequest, "Password update request data is missing.");
@@ -306,7 +347,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             try
             {
                 // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
-                var result = await ValidateUserIdAsync(userId);
+                var result = await ValidateUserIdAsync(userId, cancellationToken);
                 if (result.Error != null) return result.Error;
 
                 // Assigns the user from the result tuple to a variable for easier access
@@ -327,8 +368,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 }
 
                 user.Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword(passwordRequest.NewPassword);
-                user.LastUpdated = DateTime.UtcNow;
-                await _userRepository.SaveChangesAsync();
+                user.Updated = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return BuildUserResponse(user, "Password updated successfully", 200);
             }
@@ -336,63 +377,94 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user password.");
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> UpdateUserRoleAsync(int userId, UpdateUserRoleRequestDTO roleRequest)
+        public async Task<ApiResponse<UserResponseDTO>> AssignUserRoleAsync(
+            int userId,
+            int roleId,
+            CancellationToken cancellationToken = default)
         {
-            //Validates the existence of the role update request DTO and checks for missing data.
-            var validateDto = ValidateDtoExists(roleRequest, "Role update request data is missing.");
-            if (validateDto != null) return validateDto;
-
-            var rowVersionValidation = ValidateRowVersion(roleRequest.RowVersion);
-            if (rowVersionValidation != null) return rowVersionValidation;
-
-            // Validates the new role provided in the request to ensure it is a valid UserRoles enum value. If the role is invalid, it returns a 400 Bad Request response.
-            if (!Enum.IsDefined(typeof(UserRoles), roleRequest.NewRole))
-            {
-                return new ApiResponse<UserResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid User Role",
-                    StatusCode = 400
-                };
-            }
             try
             {
-                // Retrieves the user by ID and checks for errors in the response. If an error occurs (e.g., user not found), it returns the error response.
-                var userResult = await ValidateUserIdAsync(userId);
-                if (userResult.Error != null) return userResult.Error;
-
-                // Assigns the user from the result tuple to a variable for easier access
+                var userResult = await ValidateUserIdAsync(userId, cancellationToken);
+                if (userResult.Error is not null) return userResult.Error;
                 var user = userResult.User!;
 
-                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, roleRequest.RowVersion);
-                if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
+                var role = await _roleRepository.GetRoleAsync(roleId, cancellationToken);
+                if (role is null)
+                    return BuildRoleMembershipError("Role not found.", 404);
 
-                // Updates the user's role to the new role provided in the request and saves the changes to the repository.
-                user.Role = roleRequest.NewRole;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userRepository.SaveChangesAsync();
+                if (!role.IsActive)
+                    return BuildRoleMembershipError("Inactive roles cannot be assigned.", 409);
 
-                // Builds a response for the updated user using the BuildUserResponse method and returns it with a 200 OK status code.
-                return BuildUserResponse(user, "User role updated successfully", 200);
+                if (await _userRoleRepository.UserRoleExistsAsync(userId, roleId, cancellationToken))
+                    return BuildUserResponse(user, "User already has this role.", 200);
+
+                await _userRoleRepository.AssignUserRoleAsync(userId, roleId, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return BuildUserResponse(user, "User role assigned successfully.", 200);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return BuildRoleMembershipError("The role assignment could not be completed because the membership changed concurrently.", 409);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user role.");
+                return BuildSingleCatchErrorResponse("Internal error occurred, failed to assign user role.");
+            }
+        }
+
+        public async Task<ApiResponse<UserResponseDTO>> RemoveUserRoleAsync(
+            int userId,
+            int roleId,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var userResult = await ValidateUserIdAsync(userId, cancellationToken);
+                if (userResult.Error is not null) return userResult.Error;
+                var user = userResult.User!;
+
+                var role = await _roleRepository.GetRoleAsync(roleId, cancellationToken);
+                if (role is null)
+                    return BuildRoleMembershipError("Role not found.", 404);
+
+                var removed = await _userRoleRepository.RemoveUserRoleAsync(userId, roleId, cancellationToken);
+                if (!removed)
+                    return BuildUserResponse(user, "User does not have this role.", 200);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return BuildUserResponse(user, "User role removed successfully.", 200);
+            }
+            catch (DbUpdateException)
+            {
+                return BuildRoleMembershipError("The role removal could not be completed because the membership changed concurrently.", 409);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                return BuildSingleCatchErrorResponse("Internal error occurred, failed to remove user role.");
             }
         }
 
         // === SET ACTIVE / INACTIVE ===
-        public async Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest)
+        public async Task<ApiResponse<UserResponseDTO>> ActivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest, CancellationToken cancellationToken = default)
         {
             var dtoValidation = ValidateDtoExists(statusRequest, "User status update request data is missing.");
             if (dtoValidation != null) return dtoValidation;
@@ -403,7 +475,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             try
             {
                 // Retrieve the user before attempting to activate them
-                var userExists = await ValidateUserIdAsync(userId);
+                var userExists = await ValidateUserIdAsync(userId, cancellationToken);
                 if (userExists.User == null) return userExists.Error!;
 
                 var user = userExists.User;
@@ -424,8 +496,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 // Set the user active and update the timestamp
                 user.IsActive = true;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userRepository.SaveChangesAsync();
+                user.Updated = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Return the activated user details
                 return BuildUserResponse(user, "User activated successfully", 200);
@@ -434,13 +506,17 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildSingleCatchErrorResponse("Internal error occurred, failed to activate user.");
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest)
+        public async Task<ApiResponse<UserResponseDTO>> DeactivateUserAsync(int userId, UpdateUserStatusRequestDTO statusRequest, CancellationToken cancellationToken = default)
         {
             var dtoValidation = ValidateDtoExists(statusRequest, "User status update request data is missing.");
             if (dtoValidation != null) return dtoValidation;
@@ -451,7 +527,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             try
             {
                 // Retrieve the user before attempting to deactivate them
-                var userExists = await ValidateUserIdAsync(userId);
+                var userExists = await ValidateUserIdAsync(userId, cancellationToken);
                 if (userExists.User == null) return userExists.Error!;
                 var user = userExists.User;
 
@@ -471,8 +547,8 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 // Set the user inactive and update the timestamp
                 user.IsActive = false;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userRepository.SaveChangesAsync();
+                user.Updated = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Return the deactivated user details
                 return BuildUserResponse(user, "User deactivated successfully", 200);
@@ -480,6 +556,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             catch (DbUpdateConcurrencyException)
             {
                 return BuildConcurrencyCatchErrorResponse();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -492,10 +572,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         // === HELPER METHODS ===
 
         // === Validation Methods ===
-        private async Task<(User? User, ApiResponse<UserResponseDTO>? Error)> ValidateUserIdAsync(int userId)
+        private async Task<(User? User, ApiResponse<UserResponseDTO>? Error)> ValidateUserIdAsync(int userId, CancellationToken cancellationToken = default)
         {
             // Retrieve the user and return a reusable not found response when missing
-            var user = await _userRepository.GetUserByIdAsync(userId);
+            var user = await _userRepository.GetUserByIdAsync(userId, cancellationToken);
             if (user == null)
             {
                 return (null, new ApiResponse<UserResponseDTO>
@@ -541,7 +621,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             return null;
         }
-        private async Task<ApiResponse<UserResponseDTO>?> ValidateCreateNewUserDtoFields(CreateNewUserRequestDTO user)
+        private async Task<ApiResponse<UserResponseDTO>?> ValidateCreateNewUserDtoFields(CreateNewUserRequestDTO user, CancellationToken cancellationToken = default)
         {
             // Basic validation for user input
             // This validation checks if the UserName, Email, and Password fields are not empty, and if the email is in a valid format
@@ -558,7 +638,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
             // Check if email is already in use
             // This check ensures that the email provided for the new user is not already associated with an existing user in the system.
-            if (await _userRepository.EmailExistsAsync(user.Email))
+            if (await _userRepository.EmailExistsAsync(user.Email, cancellationToken))
             {
                 return new ApiResponse<UserResponseDTO>
                 {
@@ -669,10 +749,9 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 ID = user.ID,
                 UserName = user.UserName,
                 Email = user.Email,
-                Role = user.Role,
                 Created = user.Created,
                 LastLogin = user.LastLogin,
-                LastUpdated = user.LastUpdated,
+                Updated = user.Updated,
                 IsActive = user.IsActive,
                 RowVersion = user.RowVersion
             };
@@ -703,6 +782,15 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 Success = false,
                 Message = message,
                 StatusCode = 500,
+            };
+        }
+        private static ApiResponse<UserResponseDTO> BuildRoleMembershipError(string message, int statusCode)
+        {
+            return new ApiResponse<UserResponseDTO>
+            {
+                Success = false,
+                Message = message,
+                StatusCode = statusCode
             };
         }
         private ApiResponse<UserResponseDTO> BuildConcurrencyCatchErrorResponse()

@@ -13,6 +13,16 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using InventoryManagementAPI.Repositories.UnitOfWorkRepositories;
+using InventoryManagementAPI.Repositories.UserRoles;
+using InventoryManagementAPI.Repositories.UserRoleRepositories;
+using InventoryManagementAPI.Repositories.PermissionRepositories;
+using InventoryManagementAPI.Repositories.RolePermissionRepositories;
+using InventoryManagementAPI.Repositories.InventoryStockRepositories;
+using InventoryManagementAPI.Repositories.WarehouseRepositories;
+using InventoryManagementAPI.Repositories.SupplierContactRepositories;
+using InventoryManagementAPI.Repositories.SupplierAddressRepositories;
+using InventoryManagementAPI.Repositories.SupplierProductRepositories;
 
 namespace InventoryManagementAPI
 {
@@ -121,6 +131,8 @@ namespace InventoryManagementAPI
                 policy.RequireRole("Admin", "Manager"));
             });
 
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
@@ -129,6 +141,12 @@ namespace InventoryManagementAPI
 
             builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
             builder.Services.AddScoped<ISupplierService, SupplierService>();
+            builder.Services.AddScoped<ISupplierContactRepository, SupplierContactRepository>();
+            builder.Services.AddScoped<ISupplierAddressRepository, SupplierAddressRepository>();
+            builder.Services.AddScoped<ISupplierProductRepository, SupplierProductRepository>();
+            builder.Services.AddScoped<ISupplierContactService, SupplierContactService>();
+            builder.Services.AddScoped<ISupplierAddressService, SupplierAddressService>();
+            builder.Services.AddScoped<ISupplierProductService, SupplierProductService>();
 
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -139,6 +157,14 @@ namespace InventoryManagementAPI
             builder.Services.AddScoped<IInventoryMovementRepository, InventoryMovementRepository>();
             builder.Services.AddScoped<IInventoryMovementService, InventoryMovementService>();
 
+            builder.Services.AddScoped<IInventoryStockRepository, InventoryStockRepository>();
+            builder.Services.AddScoped<IInventoryStockService, InventoryStockService>();
+            builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+
+            builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+            builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
+            builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+            builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 
 
             builder.Services.AddControllers();
@@ -169,8 +195,7 @@ namespace InventoryManagementAPI
                         {
                             UserName = "TestAdmin",
                             Email = "TestAdmin@email.com",
-                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestAdmin"),
-                            Role = Models.Enums.UserRoles.Admin,
+                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestAdmin")
                         };
                         context.Users.Add(newUser);
                         context.SaveChanges();
@@ -181,8 +206,7 @@ namespace InventoryManagementAPI
                         {
                             UserName = "TestManager",
                             Email = "TestManager@email.com",
-                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestManager"),
-                            Role = Models.Enums.UserRoles.Manager,
+                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestManager")
                         };
                         context.Users.Add(newUser);
                         context.SaveChanges();
@@ -193,8 +217,7 @@ namespace InventoryManagementAPI
                         {
                             UserName = "TestStaff",
                             Email = "TestStaff@email.com",
-                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestStaff"),
-                            Role = Models.Enums.UserRoles.Staff,
+                            Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("TestStaff")
                         };
                         context.Users.Add(newUser);
                         context.SaveChanges();

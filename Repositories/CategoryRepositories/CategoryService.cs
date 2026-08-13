@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.CategoryDTO_s;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,18 +7,20 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
     public class CategoryService : ICategoryService
     {
         private readonly ICategoryRepository _categoryRepository;
-        public CategoryService(ICategoryRepository categoryRepository)
+        private readonly IUnitOfWork _unitOfWork;
+        public CategoryService(ICategoryRepository categoryRepository, IUnitOfWork unitOfWork)
         {
             _categoryRepository = categoryRepository;
+            _unitOfWork = unitOfWork;
         }
 
         // === GET ===
-        public async Task<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>> GetAllCategories()
+        public async Task<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>> GetAllCategories(CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieve all categories from the repository
-                var categories = await _categoryRepository.GetAllCategoriesAsync();
+                var categories = await _categoryRepository.GetAllCategoriesAsync(cancellationToken);
 
                 //validate if categories is null or empty
                 if (categories == null || !categories.Any())
@@ -49,6 +51,10 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 };
             }
             // Handle any exceptions that may occur while retrieving categories
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return new ApiResponse<IEnumerable<BulkCategoryResponseDTO>>
@@ -60,16 +66,20 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
         }
 
-        public async Task<ApiResponse<SingleCategoryResponseDTO>> GetSingleCategory(int categoryId)
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> GetSingleCategory(int categoryId, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Use the helper method to find the category by ID and handle any errors
-                var findCategoryResult = await FindCategoryById(categoryId);
+                var findCategoryResult = await FindCategoryById(categoryId, cancellationToken);
                 if (findCategoryResult.Category == null) return findCategoryResult.Error!;
 
                 // Return the category details in the response DTO
                 return BuildDtoResponse(findCategoryResult.Category, "Category retrieved successfully.", 200);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -78,7 +88,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === POST ===
-        public async Task<ApiResponse<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto)
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate the input DTO
             var validationResponse = ValidateDtoExists(dto);
@@ -86,7 +96,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             try
             {
                 // Validate the category name is not null, empty, or whitespace and check for duplicates
-                var nameValidationResponse = await ValidateNewCategoryName(dto.Name);
+                var nameValidationResponse = await ValidateNewCategoryName(dto.Name, cancellationToken);
                 if (nameValidationResponse != null) return nameValidationResponse;
 
                 // Create a new Category entity from the DTO
@@ -100,10 +110,15 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 };
 
                 // Save the new category to the repository
-                var createdCategory = await _categoryRepository.CreateCategoryAsync(category);
+                var createdCategory = await _categoryRepository.CreateCategoryAsync(category, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Return the created category details in the response DTO
                 return BuildDtoResponse(createdCategory, "Category added successfully.", 201);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -112,7 +127,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === PUT ===
-        public async Task<ApiResponse<SingleCategoryResponseDTO>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto)
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> UpdateCategoryDetails(int id, UpdateCategoryDetailsRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate the input DTO
             var dtoValidationResponse = ValidateDtoExists(dto);
@@ -125,11 +140,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             try
             {
                 // Validate the updated category name is not null, empty, or whitespace and check for duplicates
-                var nameValidationResponse = await ValidateUpdatedCategoryName(id, dto.Name);
+                var nameValidationResponse = await ValidateUpdatedCategoryName(id, dto.Name, cancellationToken);
                 if (nameValidationResponse != null) return nameValidationResponse;
 
                 //Grab the category to update from the repository, and validate if it exists
-                var fetchCategoryResult = await FindCategoryById(id);
+                var fetchCategoryResult = await FindCategoryById(id, cancellationToken);
                 if (fetchCategoryResult.Category == null) return fetchCategoryResult.Error!;
                 //Assign the found category to a variable for easier access
                 var category = fetchCategoryResult.Category;
@@ -144,7 +159,8 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 category.Updated = DateTime.UtcNow;
 
                 // Save the updated category to the repository
-                await _categoryRepository.UpdateCategoryAsync(category);
+                await _categoryRepository.UpdateCategoryAsync(category, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Return the updated category details in the response DTO
                 return BuildDtoResponse(category, "Category updated successfully.", 200);
@@ -153,6 +169,10 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildCatchErrorResponse("Internal error occurred, failed to update category.");
@@ -160,7 +180,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === SET ACTIVE STATUS ===
-        public async Task<ApiResponse<SingleCategoryResponseDTO>> ActivateCategory(int id, UpdateCategoryStatusRequestDTO dto)
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> ActivateCategory(int id, UpdateCategoryStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate the input DTO RowVersion for concurrency control
             var validateRowVersion = ValidateRowVersion(dto.RowVersion);
@@ -169,7 +189,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             try
             {
                 //Validate if the category exists by using the helper method
-                var validateCategoryResult = await FindCategoryById(id);
+                var validateCategoryResult = await FindCategoryById(id, cancellationToken);
                 if (validateCategoryResult.Category == null) return validateCategoryResult.Error!;
 
                 var category = validateCategoryResult.Category;
@@ -192,7 +212,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 //Set the category's IsActive property to true, update the Updated timestamp and save to database
                 category.IsActive = true;
                 category.Updated = DateTime.UtcNow;
-                await _categoryRepository.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Return the activated category details in the response DTO
                 return BuildDtoResponse(category, "Category activated successfully.", 200);
@@ -201,13 +221,17 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             {
                 return BuildConcurrencyCatchErrorResponse();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch
             {
                 return BuildCatchErrorResponse("Internal error occurred, failed to activate category.");
             }
         }
 
-        public async Task<ApiResponse<SingleCategoryResponseDTO>> DeactivateCategory(int id, UpdateCategoryStatusRequestDTO dto)
+        public async Task<ApiResponse<SingleCategoryResponseDTO>> DeactivateCategory(int id, UpdateCategoryStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate the input DTO RowVersion for concurrency control
             var validateRowVersion = ValidateRowVersion(dto.RowVersion);
@@ -216,7 +240,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             try
             {
                 //Validate if the category exists by using the helper method
-                var validateCategoryResult = await FindCategoryById(id);
+                var validateCategoryResult = await FindCategoryById(id, cancellationToken);
                 if (validateCategoryResult.Category == null) return validateCategoryResult.Error!;
 
                 var category = validateCategoryResult.Category;
@@ -239,7 +263,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 //Set the category's IsActive property to false and update the Updated timestamp
                 category.IsActive = false;
                 category.Updated = DateTime.UtcNow;
-                await _categoryRepository.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Return the deactivated category details in the response DTO
                 return BuildDtoResponse(category, "Category deactivated successfully.", 200);
@@ -247,6 +271,10 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             catch (DbUpdateConcurrencyException)
             {
                 return BuildConcurrencyCatchErrorResponse();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -265,10 +293,10 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         /// <returns>
         /// Returns a tuple containing the found category (or null if not found) and an ApiResponse with error details (or null if no error).
         /// </returns>
-        private async Task<(Category? Category, ApiResponse<SingleCategoryResponseDTO>? Error)> FindCategoryById(int categoryId)
+        private async Task<(Category? Category, ApiResponse<SingleCategoryResponseDTO>? Error)> FindCategoryById(int categoryId, CancellationToken cancellationToken = default)
         {
             // Retrieve the category by ID from the repository
-            var category = await _categoryRepository.GetCategoryByIdAsync(categoryId);
+            var category = await _categoryRepository.GetCategoryByIdAsync(categoryId, cancellationToken);
 
             // Validate the categoryId
             if (category == null)
@@ -368,7 +396,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         /// </summary>
         /// <param name="categoryName">The name of the category to validate.</param>
         /// <returns>An ApiResponse indicating a failure if the category name is invalid or already exists, otherwise null.</returns>
-        private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateNewCategoryName(string categoryName)
+        private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateNewCategoryName(string categoryName, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(categoryName))
             {
@@ -380,7 +408,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 };
             }
             // Validate if a category with the same name already exists
-            if (await _categoryRepository.CategoryNameExistsASync(categoryName))
+            if (await _categoryRepository.CategoryNameExistsASync(categoryName, cancellationToken))
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {
@@ -399,7 +427,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         /// <param name="id">The ID of the category being updated.</param>
         /// <param name="categoryName">The new name of the category to validate.</param>
         /// <returns>An ApiResponse indicating a failure if the new category name is invalid or already exists, otherwise null.</returns>
-        private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateUpdatedCategoryName(int id, string categoryName)
+        private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateUpdatedCategoryName(int id, string categoryName, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(categoryName))
             {
@@ -411,7 +439,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 };
             }
             // Validate if a category with the same name already exists
-            if (await _categoryRepository.OtherCategoryNameExistsAsync(id, categoryName))
+            if (await _categoryRepository.OtherCategoryNameExistsAsync(id, categoryName, cancellationToken))
             {
                 return new ApiResponse<SingleCategoryResponseDTO>
                 {

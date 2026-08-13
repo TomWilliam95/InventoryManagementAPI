@@ -1,4 +1,4 @@
-using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels.UserModels;
 using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Models.Enums;
 using InventoryManagementAPI.Repositories.AuthenticationRepositories;
@@ -18,6 +18,8 @@ namespace InventoryManagementAPI.Tests;
 // Verify  = confirm the service used (or did not use) its dependencies correctly.
 public class AuthServiceTests
 {
+    private readonly Mock<IUnitOfWork> _unitOfWork = new();
+
     [Fact]
     public async Task Login_ValidCredentials_ReturnsToken()
     {
@@ -27,14 +29,14 @@ public class AuthServiceTests
         var user = CreateUser();
 
         // Simulate a successful database lookup for the submitted email.
-        userRepository.Setup(repo => repo.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+        userRepository.Setup(repo => repo.GetUserWithRolesForAuthentication(user.Email, It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
         // A predictable fake token lets the test check the response without
         // generating or signing a real JWT.
         tokenService.Setup(service => service.GenerateToken(user)).Returns("test-token");
 
         // .Object exposes implementations of the interfaces expected by AuthService.
-        var service = new AuthService(userRepository.Object, tokenService.Object);
+        var service = new AuthService(userRepository.Object, tokenService.Object, _unitOfWork.Object);
 
         // Act
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -47,7 +49,7 @@ public class AuthServiceTests
         Assert.Equal("test-token", result.Data!.Token);
 
         // Successful authentication must save LastLogin and issue exactly one token.
-        userRepository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
+        _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         tokenService.Verify(jwt => jwt.GenerateToken(user), Times.Once);
     }
 
@@ -57,7 +59,7 @@ public class AuthServiceTests
         // Arrange
         var userRepository = new Mock<IUserRepository>();
         var tokenService = new Mock<IJwtTokenService>();
-        var service = new AuthService(userRepository.Object, tokenService.Object);
+        var service = new AuthService(userRepository.Object, tokenService.Object, _unitOfWork.Object);
 
         // Act
         var result = await service.LoginAsync(null!);
@@ -80,9 +82,9 @@ public class AuthServiceTests
         var tokenService = new Mock<IJwtTokenService>();
 
         // Returning a typed null simulates an email lookup with no matching user.
-        userRepository.Setup(repo => repo.GetUserByEmailAsync("test@example.com"))
+        userRepository.Setup(repo => repo.GetUserWithRolesForAuthentication("test@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
-        var service = new AuthService(userRepository.Object, tokenService.Object);
+        var service = new AuthService(userRepository.Object, tokenService.Object, _unitOfWork.Object);
 
         // Act
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -101,9 +103,9 @@ public class AuthServiceTests
         // Arrange
         var userRepository = new Mock<IUserRepository>();
         var tokenService = new Mock<IJwtTokenService>();
-        userRepository.Setup(repo => repo.GetUserByEmailAsync("test@example.com"))
+        userRepository.Setup(repo => repo.GetUserWithRolesForAuthentication("test@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateUser());
-        var service = new AuthService(userRepository.Object, tokenService.Object);
+        var service = new AuthService(userRepository.Object, tokenService.Object, _unitOfWork.Object);
         var request = CreateLoginRequest();
         request.Password = "WrongPassword1!";
 
@@ -128,8 +130,8 @@ public class AuthServiceTests
         var tokenService = new Mock<IJwtTokenService>();
         var user = CreateUser();
         user.IsActive = false;
-        userRepository.Setup(repo => repo.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
-        var service = new AuthService(userRepository.Object, tokenService.Object);
+        userRepository.Setup(repo => repo.GetUserWithRolesForAuthentication(user.Email, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        var service = new AuthService(userRepository.Object, tokenService.Object, _unitOfWork.Object);
 
         // Act
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -150,9 +152,9 @@ public class AuthServiceTests
         // Arrange
         var userRepository = new Mock<IUserRepository>();
         var tokenService = new Mock<IJwtTokenService>();
-        userRepository.Setup(repo => repo.GetUserByEmailAsync(It.IsAny<string>()))
+        userRepository.Setup(repo => repo.GetUserWithRolesForAuthentication(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
-        var service = new AuthService(userRepository.Object, tokenService.Object);
+        var service = new AuthService(userRepository.Object, tokenService.Object, _unitOfWork.Object);
 
         // Act
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -176,7 +178,6 @@ public class AuthServiceTests
             UserName = "TestUser",
             Email = "test@example.com",
             Password_Hash = BCrypt.Net.BCrypt.EnhancedHashPassword("Password1!"),
-            Role = UserRoles.Staff,
             IsActive = true
         };
     }

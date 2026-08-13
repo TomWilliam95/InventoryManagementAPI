@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -15,80 +15,90 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         }
 
         // === GET ===
-        public async Task<IEnumerable<Product>> GetAllProductsAsync()
+        public async Task<IEnumerable<Product>> GetAllProductsAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Products
+                .AsNoTracking()
                 .Include(p => p.Category)
-                .Include(p => p.Supplier).ToListAsync();
+                .Include(p => p.InventoryStocks)
+                    .ThenInclude(stock => stock.Warehouse)
+                .Include(p => p.SupplierProducts)
+                    .ThenInclude(sp => sp.Supplier)
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<Product?> GetProductAsync(int id)
+        public async Task<Product?> GetProductAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _context.Products
                 .Include(p => p.Category)
-                .Include(p => p.Supplier)
-                .FirstOrDefaultAsync(p => p.ID == id);
+                .Include(p => p.InventoryStocks)
+                    .ThenInclude(stock => stock.Warehouse)
+                .Include(p => p.SupplierProducts)
+                    .ThenInclude(sp => sp.Supplier)
+                .SingleOrDefaultAsync(p => p.ID == id, cancellationToken);
         }
-        public async Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId)
+        public async Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId, CancellationToken cancellationToken = default)
         {
             return await _context.Products
+                .AsNoTracking()
                 .Include(p => p.Category)
-                .Include(p => p.Supplier)
+                .Include(p => p.InventoryStocks)
+                    .ThenInclude(stock => stock.Warehouse)
+                .Include(p => p.SupplierProducts)
+                    .ThenInclude(sp => sp.Supplier)
                 .Where(p => p.CategoryID == categoryId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync()
+        public async Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Products
+                .AsNoTracking()
                 .Include(p => p.Category)
-                .Include(p => p.Supplier)
-                .Where(p => p.QuantityInStock < p.ReorderLevel)
-                .ToListAsync();
+                .Include(p => p.InventoryStocks)
+                    .ThenInclude(stock => stock.Warehouse)
+                .Include(p => p.SupplierProducts)
+                    .ThenInclude(sp => sp.Supplier)
+                .Where(p => p.InventoryStocks.Any(stock => stock.Quantity < stock.ReorderLevel))
+                .ToListAsync(cancellationToken);
         }
 
         // === POST ===
-        public async Task<Product> AddProductAsync(Product product)
+        public async Task<Product> AddProductAsync(Product product, CancellationToken cancellationToken = default)
         {
-            await _context.Products.AddAsync(product);
+            await _context.Products.AddAsync(product, cancellationToken);
             return product;
         }
 
         // === CHECK EXISTENCE ===
-        public async Task<bool> ProductExistsAsync(int id)
+        public async Task<bool> ProductExistsAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _context.Products.AnyAsync(p => p.ID == id);
+            return await _context.Products.AnyAsync(p => p.ID == id, cancellationToken);
         }
 
-        public async Task<bool> OtherProductNameExistsAsync(int id, string name)
+        public async Task<bool> OtherProductNameExistsAsync(int id, string name, CancellationToken cancellationToken = default)
         {
-            return await _context.Products.AnyAsync(p => p.Name == name && p.ID != id);
+            return await _context.Products.AnyAsync(p => p.Name == name && p.ID != id, cancellationToken);
         }
-        public async Task<bool> ProductNameExistsAsync(string name)
+        public async Task<bool> ProductNameExistsAsync(string name, CancellationToken cancellationToken = default)
         {
-            return await _context.Products.AnyAsync(p => p.Name == name);
+            return await _context.Products.AnyAsync(p => p.Name == name, cancellationToken);
         }
 
-        public async Task<bool> OtherProductSkuExistsAsync(int id, string sku)
+        public async Task<bool> OtherProductSkuExistsAsync(int id, string sku, CancellationToken cancellationToken = default)
         {
-            return await _context.Products.AnyAsync(p => p.Sku == sku && p.ID != id);
+            return await _context.Products.AnyAsync(p => p.Sku == sku && p.ID != id, cancellationToken);
         }
-        public async Task<bool> ProductSkuExistsAsync(string sku)
+        public async Task<bool> ProductSkuExistsAsync(string sku, CancellationToken cancellationToken = default)
         {
-            return await _context.Products.AnyAsync(p => p.Sku == sku);
+            return await _context.Products.AnyAsync(p => p.Sku == sku, cancellationToken);
         }
 
         // === CHECK ACTIVE STATUS ===
-        public async Task<bool> IsProductActiveAsync(int id)
+        public async Task<bool> IsProductActiveAsync(int id, CancellationToken cancellationToken = default)
         {
-            var product = await _context.Products.FindAsync(id);
+            var product = await _context.Products.FindAsync(id, cancellationToken);
             return product?.IsActive == true;
-        }
-
-        // === Save Changes ===
-        public async Task SaveChangesAsync()
-        {
-            await _context.SaveChangesAsync();
         }
     }
 }

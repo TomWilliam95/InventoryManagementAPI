@@ -1,4 +1,4 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 
 namespace InventoryManagementAPI.Tests.RepositoryTests
@@ -25,7 +25,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             await using var context = _fixture.CreateContext();
 
             // Begin a new database transaction to ensure that any changes made during the test can be rolled back, maintaining test isolation and preventing side effects on other tests.
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             // Create a new instance of the CategoryRepository, passing in the database context.
             var repository = new CategoryRepository(context);
@@ -36,12 +36,13 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             // Act
 
             // Call the CreateCategoryAsync method of the repository to persist the new category to the database.
-            var createdCategory = await repository.CreateCategoryAsync(category);
+            var createdCategory = await repository.CreateCategoryAsync(category, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
 
             context.ChangeTracker.Clear(); // Clear the change tracker to ensure that the next retrieval is from the database and not from the in-memory context.
 
             // Retrieve the category from the database using its ID to verify that it was successfully persisted.
-            var retrievedCategory = await context.Categories.FindAsync(createdCategory.ID);
+            var retrievedCategory = await context.Categories.FindAsync([createdCategory.ID], CancellationToken.None);
 
             // Assert
             Assert.NotNull(retrievedCategory);
@@ -58,7 +59,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             // Arrange
             // Create a new instance of the database context using the fixture's CreateContext method.
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             // Create a new Category object with the necessary properties for testing.
             var category = CreateCategory("Repository Test Category");
@@ -66,7 +67,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             // Insert category directly into the database to set up the test scenario.
             // This is done to ensure that there is an existing category in the database for the test to retrieve.
             context.Categories.Add(category);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(CancellationToken.None);
 
             context.ChangeTracker.Clear(); // Clear the change tracker to ensure that the next retrieval is from the database and not from the in-memory context.
 
@@ -76,7 +77,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             var repository = new CategoryRepository(context);
 
             // Call the GetCategoryByIdAsync method of the repository to retrieve the category from the database using its ID.
-            var retrievedCategory = await repository.GetCategoryByIdAsync(category.ID);
+            var retrievedCategory = await repository.GetCategoryByIdAsync(category.ID, CancellationToken.None);
             
             // Assert
             Assert.NotNull(retrievedCategory);
@@ -91,10 +92,10 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
             // Act
             var repository = new CategoryRepository(context);
-            var retrievedCategory = await repository.GetCategoryByIdAsync(int.MaxValue);
+            var retrievedCategory = await repository.GetCategoryByIdAsync(int.MaxValue, CancellationToken.None);
             // Assert
             Assert.Null(retrievedCategory);
         }
@@ -104,16 +105,16 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             var category = CreateCategory($"Get-all category {Guid.NewGuid():N}");
-            await context.Categories.AddAsync(category);
-            await context.SaveChangesAsync();
+            await context.Categories.AddAsync(category, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
   
             // Act
             var repository = new CategoryRepository(context);
-            var retrievedCategories = (await repository.GetAllCategoriesAsync()).ToList();
+            var retrievedCategories = (await repository.GetAllCategoriesAsync(CancellationToken.None)).ToList();
 
             // Assert
             Assert.Contains(retrievedCategories, c =>
@@ -127,16 +128,16 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             var createdCategory = CreateCategory("Test Category");
-            await context.Categories.AddAsync(createdCategory);
-            await context.SaveChangesAsync();
+            await context.Categories.AddAsync(createdCategory, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             // Act
             var repository = new CategoryRepository(context);
-            var categoryExists = await repository.CategoryExistsAsync(createdCategory.ID); // Use the ID of the created category.
+            var categoryExists = await repository.CategoryExistsAsync(createdCategory.ID, CancellationToken.None); // Use the ID of the created category.
             // Assert
             Assert.True(categoryExists);
         }
@@ -145,11 +146,11 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             // Act
             var repository = new CategoryRepository(context);
-            var categoryExists = await repository.CategoryExistsAsync(int.MaxValue); // Use a non-existent ID to check for category existence.
+            var categoryExists = await repository.CategoryExistsAsync(int.MaxValue, CancellationToken.None); // Use a non-existent ID to check for category existence.
             // Assert
             Assert.False(categoryExists);
         }
@@ -159,16 +160,16 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             var testCategory = CreateCategory("Test Category");
-            await context.Categories.AddAsync(testCategory);
-            await context.SaveChangesAsync();
+            await context.Categories.AddAsync(testCategory, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             // Act
             var repository = new CategoryRepository(context);
-            var nameExists = await repository.CategoryNameExistsASync("Test Category");
+            var nameExists = await repository.CategoryNameExistsASync("Test Category", CancellationToken.None);
 
             // Assert
             Assert.True(nameExists);
@@ -178,11 +179,11 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             // Act
             var repository = new CategoryRepository(context);
-            var nameExists = await repository.CategoryNameExistsASync("Random Category Name that doesnt exist"); // Use a non-existent category name to check for name existence.
+            var nameExists = await repository.CategoryNameExistsASync("Random Category Name that doesnt exist", CancellationToken.None); // Use a non-existent category name to check for name existence.
 
             // Assert
             Assert.False(nameExists);
@@ -193,22 +194,17 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
-            // Create two categories with the same name to test the OtherCategoryNameExistsAsync method.
-            var testCategory1 = CreateCategory("Test Category");
-            await context.Categories.AddAsync(testCategory1);
-            await context.SaveChangesAsync();
-            context.ChangeTracker.Clear();
-
-            var testCategory2 = CreateCategory("Test Category");
-            await context.Categories.AddAsync(testCategory2);
-            await context.SaveChangesAsync();
+            var existingCategory = CreateCategory("Test Category");
+            var currentCategory = CreateCategory("Current Category");
+            await context.Categories.AddRangeAsync([existingCategory, currentCategory], CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new CategoryRepository(context);
             // Act
-            var otherNameExists = await repository.OtherCategoryNameExistsAsync(testCategory2.ID, "Test Category");
+            var otherNameExists = await repository.OtherCategoryNameExistsAsync(currentCategory.ID, existingCategory.Name, CancellationToken.None);
 
             // Assert
             Assert.True(otherNameExists);
@@ -218,7 +214,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             var testCategoryList = new List<Category>
             {
@@ -227,14 +223,14 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
                 CreateCategory("Test Category 3")
             };
 
-            await context.Categories.AddRangeAsync(testCategoryList);
-            await context.SaveChangesAsync();
+            await context.Categories.AddRangeAsync(testCategoryList, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new CategoryRepository(context);
 
             // Act
-            var otherNameExists = await repository.OtherCategoryNameExistsAsync(testCategoryList[0].ID, "Test Category 1");
+            var otherNameExists = await repository.OtherCategoryNameExistsAsync(testCategoryList[0].ID, "Test Category 1", CancellationToken.None);
 
             // Assert
             Assert.False(otherNameExists);
@@ -247,12 +243,12 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
         {
             // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
 
             var testCategory = CreateCategory("Original Category");
 
-            await context.Categories.AddAsync(testCategory);
-            await context.SaveChangesAsync();
+            await context.Categories.AddAsync(testCategory, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
 
             var repository = new CategoryRepository(context);
@@ -262,11 +258,12 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             testCategory.Description = "Updated description.";
             testCategory.IsActive = false;
 
-            await repository.UpdateCategoryAsync(testCategory);
+            await repository.UpdateCategoryAsync(testCategory, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
 
             context.ChangeTracker.Clear(); // Clear the change tracker to ensure that the next retrieval is from the database and not from the in-memory context.
 
-            var retrievedCategory = await context.Categories.FindAsync(testCategory.ID);
+            var retrievedCategory = await context.Categories.FindAsync([testCategory.ID], CancellationToken.None);
             // Assert
             Assert.NotNull(retrievedCategory);
             Assert.Equal("Updated Category", retrievedCategory.Name);

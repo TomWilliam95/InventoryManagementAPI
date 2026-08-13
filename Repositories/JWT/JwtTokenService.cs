@@ -1,9 +1,11 @@
-﻿using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.CoreModels;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using InventoryManagementAPI.Models.CoreModels.UserModels;
+using InventoryManagementAPI.Models.CoreModels.RolePermissions;
 
 namespace InventoryManagementAPI.Repositories.JWT
 {
@@ -24,9 +26,13 @@ namespace InventoryManagementAPI.Repositories.JWT
                 new Claim(JwtRegisteredClaimNames.Sub, user.ID.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
-                new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName)
             };
+
+            claims.AddRange(user.UserRoles
+                .Where(ur => ur.Role.IsActive)
+                .Select(ur => 
+                new Claim(ClaimTypes.Role, ur.Role.Name)));
 
             //Create a symmetric security key using the secret key from the JWT settings
             //The key is used to sign the token and verify its authenticity
