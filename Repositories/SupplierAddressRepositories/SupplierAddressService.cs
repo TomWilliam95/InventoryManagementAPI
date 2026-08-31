@@ -1,5 +1,6 @@
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierAddressDTO_s;
+using InventoryManagementAPI.Services;
 using InventoryManagementAPI.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,28 +17,16 @@ public class SupplierAddressService : ISupplierAddressService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<ApiResponse<IEnumerable<SupplierAddressResponseDTO>>> GetAllAsync(
-        int supplierId,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<IEnumerable<SupplierAddressResponseDTO>>> GetAllAsync(int supplierId, CancellationToken ct = default)
     {
         try
         {
             if (!await _repository.SupplierExistsAsync(supplierId, ct))
-                return Err<IEnumerable<SupplierAddressResponseDTO>>(
-                    "Active supplier not found.",
-                    404
-                );
+                return Err<IEnumerable<SupplierAddressResponseDTO>>( "Active supplier not found.", 404 );
             var list = await _repository.GetAllBySupplierIdAsync(supplierId, ct);
             if (!list.Any())
-                return Err<IEnumerable<SupplierAddressResponseDTO>>(
-                    "No supplier addresses found.",
-                    404
-                );
-            return Ok<IEnumerable<SupplierAddressResponseDTO>>(
-                list.Select(Map).ToList(),
-                "Supplier addresses retrieved successfully."
-            );
+                return Err<IEnumerable<SupplierAddressResponseDTO>>( "No supplier addresses found.", 404 );
+            return Ok<IEnumerable<SupplierAddressResponseDTO>>( list.Select(Map).ToList(), "Supplier addresses retrieved successfully." );
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -45,36 +34,20 @@ public class SupplierAddressService : ISupplierAddressService
         }
         catch
         {
-            return Err<IEnumerable<SupplierAddressResponseDTO>>(
-                "Internal error occurred, failed to load supplier addresses.",
-                500
-            );
+            return Err<IEnumerable<SupplierAddressResponseDTO>>( "Internal error occurred, failed to load supplier addresses.", 500 );
         }
     }
 
-    public async Task<ApiResponse<IEnumerable<SupplierAddressResponseDTO>>> GetByTypeAsync(
-        int supplierId,
-        SupplierAddressType type,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<IEnumerable<SupplierAddressResponseDTO>>> GetByTypeAsync(int supplierId, SupplierAddressType type, CancellationToken ct = default)
     {
         try
         {
             if (!await _repository.SupplierExistsAsync(supplierId, ct))
-                return Err<IEnumerable<SupplierAddressResponseDTO>>(
-                    "Active supplier not found.",
-                    404
-                );
+                return Err<IEnumerable<SupplierAddressResponseDTO>>( "Active supplier not found.", 404 );
             var list = await _repository.GetByTypeAsync(supplierId, type, ct);
             if (!list.Any())
-                return Err<IEnumerable<SupplierAddressResponseDTO>>(
-                    "No supplier addresses of this type found.",
-                    404
-                );
-            return Ok<IEnumerable<SupplierAddressResponseDTO>>(
-                list.Select(Map).ToList(),
-                "Supplier addresses retrieved successfully."
-            );
+                return Err<IEnumerable<SupplierAddressResponseDTO>>( "No supplier addresses of this type found.", 404 );
+            return Ok<IEnumerable<SupplierAddressResponseDTO>>( list.Select(Map).ToList(), "Supplier addresses retrieved successfully." );
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -82,18 +55,11 @@ public class SupplierAddressService : ISupplierAddressService
         }
         catch
         {
-            return Err<IEnumerable<SupplierAddressResponseDTO>>(
-                "Internal error occurred, failed to load supplier addresses.",
-                500
-            );
+            return Err<IEnumerable<SupplierAddressResponseDTO>>( "Internal error occurred, failed to load supplier addresses.", 500 );
         }
     }
 
-    public async Task<ApiResponse<SupplierAddressResponseDTO>> GetByIdAsync(
-        int supplierId,
-        int addressId,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierAddressResponseDTO>> GetByIdAsync(int supplierId, int addressId, CancellationToken ct = default)
     {
         try
         {
@@ -112,11 +78,7 @@ public class SupplierAddressService : ISupplierAddressService
         }
     }
 
-    public async Task<ApiResponse<SupplierAddressResponseDTO>> CreateAsync(
-        int supplierId,
-        CreateSupplierAddressRequestDTO dto,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierAddressResponseDTO>> CreateAsync(int supplierId, CreateSupplierAddressRequestDTO dto, CancellationToken ct = default)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -127,10 +89,7 @@ public class SupplierAddressService : ISupplierAddressService
         {
             if (!await _repository.SupplierExistsAsync(supplierId, ct))
                 return Err("Active supplier not found.", 404);
-            if (
-                dto.IsPrimary
-                && await _repository.GetPrimaryByTypeAsync(supplierId, dto.Type, ct) != null
-            )
+            if ( dto.IsPrimary && await _repository.GetPrimaryByTypeAsync(supplierId, dto.Type, ct) != null )
                 return Err("The supplier already has a primary address of this type.", 400);
             var now = DateTime.UtcNow;
             var item = new SupplierAddress
@@ -162,12 +121,7 @@ public class SupplierAddressService : ISupplierAddressService
         }
     }
 
-    public async Task<ApiResponse<SupplierAddressResponseDTO>> UpdateAsync(
-        int supplierId,
-        int addressId,
-        UpdateSupplierAddressRequestDTO dto,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierAddressResponseDTO>> UpdateAsync(int supplierId, int addressId, UpdateSupplierAddressRequestDTO dto, CancellationToken ct = default)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -217,12 +171,7 @@ public class SupplierAddressService : ISupplierAddressService
         }
     }
 
-    public async Task<ApiResponse<SupplierAddressResponseDTO>> SetPrimaryAsync(
-        int supplierId,
-        int addressId,
-        UpdateSupplierAddressPrimaryRequestDTO dto,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierAddressResponseDTO>> SetPrimaryAsync(int supplierId, int addressId, UpdateSupplierAddressPrimaryRequestDTO dto, CancellationToken ct = default)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -239,10 +188,7 @@ public class SupplierAddressService : ISupplierAddressService
                 return match;
             if (item.IsPrimary == dto.IsPrimary)
                 return Err($"Address primary status is already {dto.IsPrimary}.", 400);
-            if (
-                dto.IsPrimary
-                && await _repository.GetPrimaryByTypeAsync(supplierId, item.Type, ct) != null
-            )
+            if ( dto.IsPrimary && await _repository.GetPrimaryByTypeAsync(supplierId, item.Type, ct) != null )
                 return Err("The supplier already has a primary address of this type.", 400);
             item.IsPrimary = dto.IsPrimary;
             item.Updated = DateTime.UtcNow;
@@ -263,27 +209,11 @@ public class SupplierAddressService : ISupplierAddressService
         }
     }
 
-    public Task<ApiResponse<SupplierAddressResponseDTO>> ActivateAsync(
-        int s,
-        int a,
-        UpdateSupplierAddressStatusRequestDTO dto,
-        CancellationToken ct = default
-    ) => Status(s, a, dto, true, ct);
+    public Task<ApiResponse<SupplierAddressResponseDTO>> ActivateAsync(int s, int a, UpdateSupplierAddressStatusRequestDTO dto, CancellationToken ct = default) => Status(s, a, dto, true, ct);
 
-    public Task<ApiResponse<SupplierAddressResponseDTO>> DeactivateAsync(
-        int s,
-        int a,
-        UpdateSupplierAddressStatusRequestDTO dto,
-        CancellationToken ct = default
-    ) => Status(s, a, dto, false, ct);
+    public Task<ApiResponse<SupplierAddressResponseDTO>> DeactivateAsync(int s, int a, UpdateSupplierAddressStatusRequestDTO dto, CancellationToken ct = default) => Status(s, a, dto, false, ct);
 
-    private async Task<ApiResponse<SupplierAddressResponseDTO>> Status(
-        int s,
-        int a,
-        UpdateSupplierAddressStatusRequestDTO dto,
-        bool active,
-        CancellationToken ct
-    )
+    private async Task<ApiResponse<SupplierAddressResponseDTO>> Status(int s, int a, UpdateSupplierAddressStatusRequestDTO dto, bool active, CancellationToken ct)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -291,10 +221,7 @@ public class SupplierAddressService : ISupplierAddressService
         if (rv != null)
             return rv;
         if (dto.IsActive != active)
-            return Err(
-                $"IsActive must be {active.ToString().ToLowerInvariant()} for this operation.",
-                400
-            );
+            return Err( $"IsActive must be {active.ToString().ToLowerInvariant()} for this operation.", 400 );
         try
         {
             var item = await _repository.GetByIdAsync(s, a, ct);
@@ -308,10 +235,7 @@ public class SupplierAddressService : ISupplierAddressService
             item.IsActive = active;
             item.Updated = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync(ct);
-            return Ok(
-                Map(item),
-                $"Supplier address {(active ? "activated" : "deactivated")} successfully."
-            );
+            return Ok( Map(item), $"Supplier address {(active ? "activated" : "deactivated")} successfully." );
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -347,41 +271,21 @@ public class SupplierAddressService : ISupplierAddressService
         };
 
     private static ApiResponse<T> Ok<T>(T data, string msg, int code = 200) =>
-        new()
-        {
-            Success = true,
-            Data = data,
-            Message = msg,
-            StatusCode = code,
-        };
+        ApiResponseHelper.Success(data, msg, code);
 
     private static ApiResponse<T> Err<T>(string msg, int code) =>
-        new()
-        {
-            Success = false,
-            Message = msg,
-            StatusCode = code,
-        };
+        ApiResponseHelper.Failure<T>(msg, code);
 
     private static ApiResponse<SupplierAddressResponseDTO> Err(string m, int c) =>
         Err<SupplierAddressResponseDTO>(m, c);
 
     private static ApiResponse<SupplierAddressResponseDTO>? Valid(byte[] r) =>
-        r == null || r.Length == 0 ? Err("RowVersion is required for concurrency control.", 400)
-        : r.Length != 8 ? Err("Invalid RowVersion length. Expected 8 bytes.", 400)
-        : null;
+        RowVersionHelper.ValidateFormat<SupplierAddressResponseDTO>(r);
 
     private static ApiResponse<SupplierAddressResponseDTO>? Match(byte[] a, byte[] b) =>
-        a.SequenceEqual(b)
-            ? null
-            : Err("RowVersion mismatch. The address has been modified by another process.", 409);
+        RowVersionHelper.Validate<SupplierAddressResponseDTO>(a, b);
 
-    private static ApiResponse<SupplierAddressResponseDTO>? Fields(
-        string a,
-        string c,
-        string p,
-        string country
-    ) =>
+    private static ApiResponse<SupplierAddressResponseDTO>? Fields(string a, string c, string p, string country) =>
         string.IsNullOrWhiteSpace(a)
         || string.IsNullOrWhiteSpace(c)
         || string.IsNullOrWhiteSpace(p)

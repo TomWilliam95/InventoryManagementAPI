@@ -1,5 +1,6 @@
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierProductDTO_s;
+using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagementAPI.Repositories.SupplierProductRepositories;
@@ -15,28 +16,16 @@ public class SupplierProductService : ISupplierProductService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<ApiResponse<IEnumerable<SupplierProductResponseDTO>>> GetAllBySupplierAsync(
-        int supplierId,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<IEnumerable<SupplierProductResponseDTO>>> GetAllBySupplierAsync(int supplierId, CancellationToken ct = default)
     {
         try
         {
             if (!await _repository.SupplierExistsAsync(supplierId, ct))
-                return Err<IEnumerable<SupplierProductResponseDTO>>(
-                    "Active supplier not found.",
-                    404
-                );
+                return Err<IEnumerable<SupplierProductResponseDTO>>("Active supplier not found.", 404);
             var list = await _repository.GetAllBySupplierIdAsync(supplierId, ct);
             if (!list.Any())
-                return Err<IEnumerable<SupplierProductResponseDTO>>(
-                    "No products assigned to this supplier.",
-                    404
-                );
-            return Ok<IEnumerable<SupplierProductResponseDTO>>(
-                list.Select(Map).ToList(),
-                "Supplier products retrieved successfully."
-            );
+                return Err<IEnumerable<SupplierProductResponseDTO>>("No products assigned to this supplier.", 404);
+            return Ok<IEnumerable<SupplierProductResponseDTO>>(list.Select(Map).ToList(), "Supplier products retrieved successfully.");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -44,35 +33,20 @@ public class SupplierProductService : ISupplierProductService
         }
         catch
         {
-            return Err<IEnumerable<SupplierProductResponseDTO>>(
-                "Internal error occurred, failed to load supplier products.",
-                500
-            );
+            return Err<IEnumerable<SupplierProductResponseDTO>>("Internal error occurred, failed to load supplier products.", 500);
         }
     }
 
-    public async Task<ApiResponse<IEnumerable<SupplierProductResponseDTO>>> GetAllByProductAsync(
-        int productId,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<IEnumerable<SupplierProductResponseDTO>>> GetAllByProductAsync(int productId, CancellationToken ct = default)
     {
         try
         {
             if (!await _repository.ProductExistsAsync(productId, ct))
-                return Err<IEnumerable<SupplierProductResponseDTO>>(
-                    "Active product not found.",
-                    404
-                );
+                return Err<IEnumerable<SupplierProductResponseDTO>>("Active product not found.", 404);
             var list = await _repository.GetAllByProductIdAsync(productId, ct);
             if (!list.Any())
-                return Err<IEnumerable<SupplierProductResponseDTO>>(
-                    "No suppliers assigned to this product.",
-                    404
-                );
-            return Ok<IEnumerable<SupplierProductResponseDTO>>(
-                list.Select(Map).ToList(),
-                "Product suppliers retrieved successfully."
-            );
+                return Err<IEnumerable<SupplierProductResponseDTO>>("No suppliers assigned to this product.", 404);
+            return Ok<IEnumerable<SupplierProductResponseDTO>>(list.Select(Map).ToList(), "Product suppliers retrieved successfully.");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -80,18 +54,11 @@ public class SupplierProductService : ISupplierProductService
         }
         catch
         {
-            return Err<IEnumerable<SupplierProductResponseDTO>>(
-                "Internal error occurred, failed to load product suppliers.",
-                500
-            );
+            return Err<IEnumerable<SupplierProductResponseDTO>>("Internal error occurred, failed to load product suppliers.", 500);
         }
     }
 
-    public async Task<ApiResponse<SupplierProductResponseDTO>> GetAsync(
-        int supplierId,
-        int productId,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierProductResponseDTO>> GetAsync(int supplierId, int productId, CancellationToken ct = default)
     {
         try
         {
@@ -110,11 +77,7 @@ public class SupplierProductService : ISupplierProductService
         }
     }
 
-    public async Task<ApiResponse<SupplierProductResponseDTO>> AssignAsync(
-        int supplierId,
-        CreateSupplierProductRequestDTO dto,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierProductResponseDTO>> AssignAsync(int supplierId, CreateSupplierProductRequestDTO dto, CancellationToken ct = default)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -129,15 +92,9 @@ public class SupplierProductService : ISupplierProductService
                 return Err("Active product not found.", 404);
             if (await _repository.AssignmentExistsAsync(supplierId, dto.ProductID, ct))
                 return Err("This product is already assigned to the supplier.", 400);
-            if (
-                !string.IsNullOrWhiteSpace(dto.SupplierSku)
-                && await _repository.SupplierSkuExistsAsync(supplierId, dto.SupplierSku, ct)
-            )
+            if (!string.IsNullOrWhiteSpace(dto.SupplierSku) && await _repository.SupplierSkuExistsAsync(supplierId, dto.SupplierSku, ct))
                 return Err("Supplier SKU is already used for another product.", 400);
-            if (
-                dto.IsPreferred
-                && await _repository.GetPreferredSupplierForProductAsync(dto.ProductID, ct) != null
-            )
+            if (dto.IsPreferred && await _repository.GetPreferredSupplierForProductAsync(dto.ProductID, ct) != null)
                 return Err("This product already has a preferred supplier.", 400);
             var now = DateTime.UtcNow;
             var item = new SupplierProduct
@@ -168,12 +125,7 @@ public class SupplierProductService : ISupplierProductService
         }
     }
 
-    public async Task<ApiResponse<SupplierProductResponseDTO>> UpdateAsync(
-        int supplierId,
-        int productId,
-        UpdateSupplierProductRequestDTO dto,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierProductResponseDTO>> UpdateAsync(int supplierId, int productId, UpdateSupplierProductRequestDTO dto, CancellationToken ct = default)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -191,22 +143,11 @@ public class SupplierProductService : ISupplierProductService
             var match = Match(item.RowVersion, dto.RowVersion);
             if (match != null)
                 return match;
-            if (
-                !string.IsNullOrWhiteSpace(dto.SupplierSku)
-                && await _repository.SupplierSkuExistsForOtherProductAsync(
-                    supplierId,
-                    productId,
-                    dto.SupplierSku,
-                    ct
-                )
-            )
+            if (!string.IsNullOrWhiteSpace(dto.SupplierSku) && await _repository.SupplierSkuExistsForOtherProductAsync(supplierId, productId, dto.SupplierSku, ct))
                 return Err("Supplier SKU is already used for another product.", 400);
             if (dto.IsPreferred && !item.IsPreferred)
             {
-                var preferred = await _repository.GetPreferredSupplierForProductAsync(
-                    productId,
-                    ct
-                );
+                var preferred = await _repository.GetPreferredSupplierForProductAsync(productId, ct);
                 if (preferred != null && preferred.SupplierID != supplierId)
                     return Err("This product already has a preferred supplier.", 400);
             }
@@ -233,12 +174,7 @@ public class SupplierProductService : ISupplierProductService
         }
     }
 
-    public async Task<ApiResponse<SupplierProductResponseDTO>> SetPreferredAsync(
-        int supplierId,
-        int productId,
-        UpdateSupplierProductPreferredRequestDTO dto,
-        CancellationToken ct = default
-    )
+    public async Task<ApiResponse<SupplierProductResponseDTO>> SetPreferredAsync(int supplierId, int productId, UpdateSupplierProductPreferredRequestDTO dto, CancellationToken ct = default)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -257,10 +193,7 @@ public class SupplierProductService : ISupplierProductService
                 return Err($"Preferred status is already {dto.IsPreferred}.", 400);
             if (dto.IsPreferred)
             {
-                var preferred = await _repository.GetPreferredSupplierForProductAsync(
-                    productId,
-                    ct
-                );
+                var preferred = await _repository.GetPreferredSupplierForProductAsync(productId, ct);
                 if (preferred != null && preferred.SupplierID != supplierId)
                     return Err("This product already has a preferred supplier.", 400);
             }
@@ -283,27 +216,11 @@ public class SupplierProductService : ISupplierProductService
         }
     }
 
-    public Task<ApiResponse<SupplierProductResponseDTO>> ActivateAsync(
-        int s,
-        int p,
-        UpdateSupplierProductStatusRequestDTO dto,
-        CancellationToken ct = default
-    ) => Status(s, p, dto, true, ct);
+    public Task<ApiResponse<SupplierProductResponseDTO>> ActivateAsync(int s, int p, UpdateSupplierProductStatusRequestDTO dto, CancellationToken ct = default) => Status(s, p, dto, true, ct);
 
-    public Task<ApiResponse<SupplierProductResponseDTO>> DeactivateAsync(
-        int s,
-        int p,
-        UpdateSupplierProductStatusRequestDTO dto,
-        CancellationToken ct = default
-    ) => Status(s, p, dto, false, ct);
+    public Task<ApiResponse<SupplierProductResponseDTO>> DeactivateAsync(int s, int p, UpdateSupplierProductStatusRequestDTO dto, CancellationToken ct = default) => Status(s, p, dto, false, ct);
 
-    private async Task<ApiResponse<SupplierProductResponseDTO>> Status(
-        int s,
-        int p,
-        UpdateSupplierProductStatusRequestDTO dto,
-        bool active,
-        CancellationToken ct
-    )
+    private async Task<ApiResponse<SupplierProductResponseDTO>> Status(int s, int p, UpdateSupplierProductStatusRequestDTO dto, bool active, CancellationToken ct)
     {
         if (dto == null)
             return Err("Request body is required.", 400);
@@ -311,10 +228,7 @@ public class SupplierProductService : ISupplierProductService
         if (rv != null)
             return rv;
         if (dto.IsActive != active)
-            return Err(
-                $"IsActive must be {active.ToString().ToLowerInvariant()} for this operation.",
-                400
-            );
+            return Err($"IsActive must be {active.ToString().ToLowerInvariant()} for this operation.", 400);
         try
         {
             var item = await _repository.GetAsync(s, p, ct);
@@ -328,10 +242,7 @@ public class SupplierProductService : ISupplierProductService
             item.IsActive = active;
             item.Updated = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync(ct);
-            return Ok(
-                Map(item),
-                $"Supplier product {(active ? "activated" : "deactivated")} successfully."
-            );
+            return Ok(Map(item), $"Supplier product {(active ? "activated" : "deactivated")} successfully.");
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -367,43 +278,21 @@ public class SupplierProductService : ISupplierProductService
         };
 
     private static ApiResponse<T> Ok<T>(T d, string m, int c = 200) =>
-        new()
-        {
-            Success = true,
-            Data = d,
-            Message = m,
-            StatusCode = c,
-        };
+        ApiResponseHelper.Success(d, m, c);
 
     private static ApiResponse<T> Err<T>(string m, int c) =>
-        new()
-        {
-            Success = false,
-            Message = m,
-            StatusCode = c,
-        };
+        ApiResponseHelper.Failure<T>(m, c);
 
     private static ApiResponse<SupplierProductResponseDTO> Err(string m, int c) =>
         Err<SupplierProductResponseDTO>(m, c);
 
     private static ApiResponse<SupplierProductResponseDTO>? Valid(byte[] r) =>
-        r == null || r.Length == 0 ? Err("RowVersion is required for concurrency control.", 400)
-        : r.Length != 8 ? Err("Invalid RowVersion length. Expected 8 bytes.", 400)
-        : null;
+        RowVersionHelper.ValidateFormat<SupplierProductResponseDTO>(r);
 
     private static ApiResponse<SupplierProductResponseDTO>? Match(byte[] a, byte[] b) =>
-        a.SequenceEqual(b)
-            ? null
-            : Err(
-                "RowVersion mismatch. The supplier product has been modified by another process.",
-                409
-            );
+        RowVersionHelper.Validate<SupplierProductResponseDTO>(a, b);
 
-    private static ApiResponse<SupplierProductResponseDTO>? Fields(
-        decimal cost,
-        int lead,
-        int minimum
-    ) =>
+    private static ApiResponse<SupplierProductResponseDTO>? Fields(decimal cost, int lead, int minimum) =>
         cost < 0 ? Err("Unit cost cannot be negative.", 400)
         : lead < 0 ? Err("Lead time cannot be negative.", 400)
         : minimum < 1 ? Err("Minimum order quantity must be at least 1.", 400)

@@ -20,13 +20,7 @@ public class InventoryMovementServiceTests
     private readonly Mock<IInventoryStockRepository> _stocks = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
-    private InventoryMovementService CreateService() => new(
-        _movements.Object,
-        _products.Object,
-        _users.Object,
-        _warehouses.Object,
-        _stocks.Object,
-        _unitOfWork.Object);
+ private InventoryMovementService CreateService() => new(_movements.Object, _products.Object, _users.Object, _warehouses.Object, _stocks.Object, _unitOfWork.Object);
 
     [Fact]
     public async Task GetMovementById_ExistingMovement_Returns200()

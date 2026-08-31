@@ -10,9 +10,7 @@ namespace InventoryManagementAPI.Repositories.SupplierContactRepositories
         public SupplierContactRepository(InvManDBContext context) => _context = context;
 
         public Task<SupplierContact?> GetByIdAsync(int supplierId, int contactId, CancellationToken cancellationToken = default) =>
-            _context.SupplierContacts.SingleOrDefaultAsync(
-                contact => contact.SupplierID == supplierId && contact.ID == contactId,
-                cancellationToken);
+ _context.SupplierContacts.SingleOrDefaultAsync(contact => contact.SupplierID == supplierId && contact.ID == contactId, cancellationToken);
 
         public async Task<IEnumerable<SupplierContact>> GetAllBySupplierIdAsync(int supplierId, CancellationToken cancellationToken = default) =>
             await _context.SupplierContacts.AsNoTracking()

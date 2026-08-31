@@ -1,5 +1,6 @@
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.CategoryDTO_s;
+using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagementAPI.Repositories.CategoryRepositories
@@ -22,47 +23,18 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 // Retrieve all categories from the repository
                 var categories = await _categoryRepository.GetAllCategoriesAsync(cancellationToken);
 
-                //validate if categories is null or empty
-                if (categories == null || !categories.Any())
-                {
-                    return new ApiResponse<IEnumerable<BulkCategoryResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "No categories found.",
-                        StatusCode = 404,
-                    };
-                }
-
-                //Build the response DTO list from the retrieved categories
-                var responseDtoList = categories.Select(categories => new BulkCategoryResponseDTO
-                {
-                    Name = categories.Name,
-                    Description = categories.Description,
-                    IsActive = categories.IsActive
-                }).ToList();
-
-                //Return the response DTO list in the ApiResponse
-                return new ApiResponse<IEnumerable<BulkCategoryResponseDTO>>
-                {
-                    Success = true,
-                    Message = "Categories retrieved successfully.",
-                    Data = responseDtoList,
-                    StatusCode = 200,
-                };
+                // Check if categories were found and return the appropriate response
+                return categories is { } && categories.Any()
+                    ? Success(categories.Select(MapToBulkDto), "Categories retrieved successfully.", 200)
+                    : Error<IEnumerable<BulkCategoryResponseDTO>>("No categories found.", 404);
             }
-            // Handle any exceptions that may occur while retrieving categories
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
             catch
             {
-                return new ApiResponse<IEnumerable<BulkCategoryResponseDTO>>
-                {
-                    Success = false,
-                    Message = "Internal error occurred, failed to load categories.",
-                    StatusCode = 500,
-                };
+                return Error<IEnumerable<BulkCategoryResponseDTO>>("Internal error occurred, failed to load categories.", 500);
             }
         }
 
@@ -70,12 +42,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         {
             try
             {
-                // Use the helper method to find the category by ID and handle any errors
                 var findCategoryResult = await FindCategoryById(categoryId, cancellationToken);
-                if (findCategoryResult.Category == null) return findCategoryResult.Error!;
 
-                // Return the category details in the response DTO
-                return BuildDtoResponse(findCategoryResult.Category, "Category retrieved successfully.", 200);
+                return findCategoryResult.Category is { } category
+                    ? Success(MapToSingleDto(category), "Category retrieved successfully.", 200)
+                    : findCategoryResult.Error!;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -83,7 +54,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
             catch
             {
-                return BuildCatchErrorResponse("Internal error occurred, failed to load category.");
+                return Error<SingleCategoryResponseDTO>("Internal error occurred, failed to load category.", 500);
             }
         }
 
@@ -114,7 +85,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Return the created category details in the response DTO
-                return BuildDtoResponse(createdCategory, "Category added successfully.", 201);
+                return Success(MapToSingleDto(createdCategory), "Category added successfully.", 201);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -122,7 +93,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
             catch
             {
-                return BuildCatchErrorResponse("Internal error occurred, failed to add category.");
+                return Error<SingleCategoryResponseDTO>("Internal error occurred, failed to add category.", 500);
             }
         }
 
@@ -134,7 +105,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             if (dtoValidationResponse != null) return dtoValidationResponse;
 
             // Validate the RowVersion for concurrency control
-            var rowVersionValidationResponse = ValidateRowVersion(dto.RowVersion);
+            var rowVersionValidationResponse = RowVersionHelper.ValidateFormat<SingleCategoryResponseDTO>(dto.RowVersion);
             if (rowVersionValidationResponse != null) return rowVersionValidationResponse;
 
             try
@@ -150,7 +121,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 var category = fetchCategoryResult.Category;
 
                 // Validate if the provided RowVersion matches the category's RowVersion for concurrency control
-                var validateMatchingRowVersionResult = ValidateMatchingRowVersion(category, dto.RowVersion);
+                var validateMatchingRowVersionResult = RowVersionHelper.Validate<SingleCategoryResponseDTO>(category.RowVersion, dto.RowVersion);
                 if (validateMatchingRowVersionResult != null) return validateMatchingRowVersionResult;
 
                 //Assign the updated values from the DTO to the category entity
@@ -163,11 +134,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Return the updated category details in the response DTO
-                return BuildDtoResponse(category, "Category updated successfully.", 200);
+                return Success(MapToSingleDto(category), "Category updated successfully.", 200);
             }
             catch(DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return Error<SingleCategoryResponseDTO>("Concurrency conflict occurred. The category has been modified by another user.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -175,7 +146,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
             catch
             {
-                return BuildCatchErrorResponse("Internal error occurred, failed to update category.");
+                return Error<SingleCategoryResponseDTO>("Internal error occurred, failed to update category.", 500);
             }
         }
 
@@ -183,7 +154,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         public async Task<ApiResponse<SingleCategoryResponseDTO>> ActivateCategory(int id, UpdateCategoryStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate the input DTO RowVersion for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            var validateRowVersion = RowVersionHelper.ValidateFormat<SingleCategoryResponseDTO>(dto.RowVersion);
             if (validateRowVersion != null) return validateRowVersion;
 
             try
@@ -195,7 +166,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 var category = validateCategoryResult.Category;
 
                 //Validate if the provided RowVersion matches the category's RowVersion for concurrency control
-                var validateMatchingRowVersionResult = ValidateMatchingRowVersion(category, dto.RowVersion);
+                var validateMatchingRowVersionResult = RowVersionHelper.Validate<SingleCategoryResponseDTO>(category.RowVersion, dto.RowVersion);
                 if (validateMatchingRowVersionResult != null) return validateMatchingRowVersionResult;
 
                 //Validate if the category is already active
@@ -215,11 +186,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Return the activated category details in the response DTO
-                return BuildDtoResponse(category, "Category activated successfully.", 200);
+                return Success(MapToSingleDto(category), "Category activated successfully.", 200);
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return Error<SingleCategoryResponseDTO>("Concurrency conflict occurred. The category has been modified by another user.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -227,14 +198,14 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
             catch
             {
-                return BuildCatchErrorResponse("Internal error occurred, failed to activate category.");
+                return Error<SingleCategoryResponseDTO>("Internal error occurred, failed to activate category.", 500);
             }
         }
 
         public async Task<ApiResponse<SingleCategoryResponseDTO>> DeactivateCategory(int id, UpdateCategoryStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate the input DTO RowVersion for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            var validateRowVersion = RowVersionHelper.ValidateFormat<SingleCategoryResponseDTO>(dto.RowVersion);
             if (validateRowVersion != null) return validateRowVersion;
 
             try
@@ -246,7 +217,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 var category = validateCategoryResult.Category;
 
                 //Validate if the provided RowVersion matches the category's RowVersion for concurrency control
-                var validateMatchingRowVersionResult = ValidateMatchingRowVersion(category, dto.RowVersion);
+                var validateMatchingRowVersionResult = RowVersionHelper.Validate<SingleCategoryResponseDTO>(category.RowVersion, dto.RowVersion);
                 if (validateMatchingRowVersionResult != null) return validateMatchingRowVersionResult;
 
                 //Validate if the category is already inactive
@@ -266,11 +237,11 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Return the deactivated category details in the response DTO
-                return BuildDtoResponse(category, "Category deactivated successfully.", 200);
+                return Success(MapToSingleDto(category), "Category deactivated successfully.", 200);
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return Error<SingleCategoryResponseDTO>("Concurrency conflict occurred. The category has been modified by another user.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -278,11 +249,37 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
             catch
             {
-                return BuildCatchErrorResponse("Internal error occurred, failed to deactivate category.");
+                return Error<SingleCategoryResponseDTO>("Internal error occurred, failed to deactivate category.", 500);
             }
         }
 
+        
+        
+        // === API RESPONSE BUILDERS === \\
+        private static ApiResponse<T> Success<T>(T data, string message, int statusCode = 200) =>
+            ApiResponseHelper.Success(data, message, statusCode);
 
+        private static ApiResponse<T> Error<T>(string message, int statusCode = 400) =>
+            ApiResponseHelper.Failure<T>(message, statusCode);
+
+        // === DTO MAPPERS === \\
+        private static SingleCategoryResponseDTO MapToSingleDto(Category category) =>
+            new SingleCategoryResponseDTO
+            {
+                ID = category.ID,
+                Name = category.Name,
+                Description = category.Description,
+                IsActive = category.IsActive,
+                RowVersion = category.RowVersion
+            };
+
+        private static BulkCategoryResponseDTO MapToBulkDto(Category category) =>
+            new BulkCategoryResponseDTO
+            {
+                Name = category.Name,
+                Description = category.Description,
+                IsActive = category.IsActive,
+            };
 
         // === Find Category By ID Helper Method ===
 
@@ -300,73 +297,10 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
 
             // Validate the categoryId
             if (category == null)
-            {
-                return (null, new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category not found.",
-                    StatusCode = 404,
-                });
-            }
+                return (null, Error<SingleCategoryResponseDTO>("Category not found.", 404));
+
             return (category, null);
         }
-
-
-        // === RESPONSE BUILDER METHODS ===
-        /// <summary>
-        /// Builds an ApiResponse containing the details of a single category in the response DTO.
-        /// </summary>
-        /// <param name="category">The category entity to include in the response.</param>
-        /// <param name="message">The message to include in the response.</param>
-        /// <param name="statusCode">The HTTP status code to include in the response.</param>
-        /// <returns>An ApiResponse containing the category details.</returns>
-        private ApiResponse<SingleCategoryResponseDTO> BuildDtoResponse(Category category,string message, int statusCode)
-        {
-            // Return the category details in the response DTO
-            return new ApiResponse<SingleCategoryResponseDTO>
-            {
-                Success = true,
-                Message = message,
-                Data = new SingleCategoryResponseDTO
-                {
-                    ID = category.ID,
-                    Name = category.Name,
-                    Description = category.Description,
-                    IsActive = category.IsActive,
-                    RowVersion = category.RowVersion
-                },
-                StatusCode = statusCode,
-            };
-        }
-
-        /// <summary>
-        /// Builds an ApiResponse for error scenarios, indicating a failure with a provided message and a 500 status code.
-        /// </summary>
-        /// <param name="message">The error message to include in the response.</param>
-        /// <returns>An ApiResponse indicating a failure.</returns>
-        private ApiResponse<SingleCategoryResponseDTO> BuildCatchErrorResponse(string message)
-        {
-            return new ApiResponse<SingleCategoryResponseDTO>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = 500,
-            };
-        }
-        /// <summary>
-        /// Builds an ApiResponse for concurrency error scenarios, indicating a failure with a specific message and a 409 status code.
-        /// </summary>
-        /// <returns>An ApiResponse indicating a concurrency error.</returns>
-        private ApiResponse<SingleCategoryResponseDTO> BuildConcurrencyCatchErrorResponse()
-        {
-            return new ApiResponse<SingleCategoryResponseDTO>
-            {
-                Success = false,
-                Message = "Concurrency error occurred, failed to update category.",
-                StatusCode = 409, // Conflict
-            };
-        }
-
 
         // === VALIDATION METHODS ===
         /// <summary>
@@ -379,14 +313,8 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         private ApiResponse<SingleCategoryResponseDTO>? ValidateDtoExists(object? dto)
         {
             if (dto == null)
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Request body is required.",
-                    StatusCode = 400,
-                };
-            }
+                return Error<SingleCategoryResponseDTO>("Request body is required.", 400);
+
             return null;
         }
 
@@ -399,24 +327,12 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateNewCategoryName(string categoryName, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(categoryName))
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category name is required.",
-                    StatusCode = 400,
-                };
-            }
+                return Error<SingleCategoryResponseDTO>("Category name is required.", 400);
+
             // Validate if a category with the same name already exists
             if (await _categoryRepository.CategoryNameExistsASync(categoryName, cancellationToken))
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category with the same name already exists.",
-                    StatusCode = 400,
-                };
-            }
+                return Error<SingleCategoryResponseDTO>("Category with the same name already exists.", 400);
+
             return null;
         }
 
@@ -430,76 +346,12 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         private async Task<ApiResponse<SingleCategoryResponseDTO>?> ValidateUpdatedCategoryName(int id, string categoryName, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(categoryName))
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category name is required.",
-                    StatusCode = 400,
-                };
-            }
+                return Error<SingleCategoryResponseDTO>("Category name is required.", 400);
+
             // Validate if a category with the same name already exists
             if (await _categoryRepository.OtherCategoryNameExistsAsync(id, categoryName, cancellationToken))
-            {
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Category with the same name already exists.",
-                    StatusCode = 400,
-                };
-            }
-            return null;
-        }
+                return Error<SingleCategoryResponseDTO>("Category with the same name already exists.", 400);
 
-        /// <summary>
-        /// Validates the provided RowVersion for concurrency control. It checks if the RowVersion is null, empty, or has an invalid length (not 8 bytes).
-        /// </summary>
-        /// <param name="rowVersion">The RowVersion to validate.</param>
-        /// <returns>Returns an ApiResponse indicating a failure if the RowVersion is invalid, otherwise null.</returns>
-        private ApiResponse<SingleCategoryResponseDTO>? ValidateRowVersion(byte[] rowVersion)
-        {
-            if (rowVersion == null || rowVersion.Length == 0)
-            {
-                // If the RowVersion is null or empty, return a validation error response
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion is required for concurrency control.",
-                    StatusCode = 400,
-                };
-            }
-            if (rowVersion.Length != 8)
-            {
-                // If the RowVersion length is not 8 bytes, return a validation error response
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid RowVersion length. Expected 8 bytes.",
-                    StatusCode = 400,
-                };
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Validates if the provided RowVersion matches the RowVersion of the given category.
-        /// This is used for concurrency control to ensure that the category has not been modified by another process since it was last retrieved.
-        /// </summary>
-        /// <param name="category">The category to validate against.</param>
-        /// <param name="rowVersion">The RowVersion to validate.</param>
-        /// <returns>Returns an ApiResponse indicating a failure if the RowVersion does not match, otherwise null.</returns>
-        private ApiResponse<SingleCategoryResponseDTO>? ValidateMatchingRowVersion(Category category, byte[] rowVersion)
-        {
-            if (!category.RowVersion.SequenceEqual(rowVersion))
-            {
-                // If the RowVersion does not match the category's RowVersion, return a validation error response
-                return new ApiResponse<SingleCategoryResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion mismatch. The category has been modified by another process.",
-                    StatusCode = 409, // Conflict
-                };
-            }
             return null;
         }
     }

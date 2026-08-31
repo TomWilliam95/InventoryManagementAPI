@@ -3,6 +3,7 @@ using InventoryManagementAPI.Models.DTO_s.InventoryStockDTO_s;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.WarehouseRepositories;
 using Microsoft.EntityFrameworkCore;
+using InventoryManagementAPI.Services;
 
 namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
 {
@@ -34,18 +35,18 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
 
                 // Validate Inventory Stock
                 var inventoryStock = await _inventoryStockRepository.GetStockByProductAndWarehouseIDAsync(productId, warehouseId, cancellationToken);
-                if(inventoryStock == null) return BuildErrorResponse($"Inventory stock for Product ID {productId} and Warehouse ID {warehouseId} not found.", 404);
+                if(inventoryStock == null) return ApiResponseHelper.Failure<InventoryStockResponseDTO>($"Inventory stock for Product ID {productId} and Warehouse ID {warehouseId} not found.", 404);
 
                 //Map to DTO and return success response
                 var responseDTO = BuildInventoryStockResponseDTO(inventoryStock);
-                return BuildSuccessResponse(responseDTO, "Inventory stock retrieved successfully.", 200);
+                return ApiResponseHelper.Success(responseDTO, "Inventory stock retrieved successfully.");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
             catch {
-                return BuildErrorResponse("An error occurred while retrieving the inventory stock.", 500);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("An error occurred while retrieving the inventory stock.", 500);
             }
         }
 
@@ -54,10 +55,10 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             try
             {
                 var inventoryStocks = await _inventoryStockRepository.GetAllStockAsync(cancellationToken);
-                if(!inventoryStocks.Any()) return BuildBulkSuccessResponse([], "No inventory stocks found.", 200);
+                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], "No inventory stocks found.");
 
                 var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return BuildBulkSuccessResponse(responseDTOs, "Inventory stocks retrieved successfully.", 200); 
+                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks retrieved successfully."); 
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -65,7 +66,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildBulkErrorResponse("An error occurred while retrieving all inventory stocks.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving all inventory stocks.", 500);
             }
         }
 
@@ -75,13 +76,13 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             {
                 //Validate Product
                 var productResult = await GetProductAsync(productId, cancellationToken);
-                if(productResult.Error != null) return BuildBulkErrorResponse(productResult.Error.Message!, productResult.Error.StatusCode);
+                if(productResult.Error != null) return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>(productResult.Error.Message!, productResult.Error.StatusCode);
 
                 var inventoryStocks = await _inventoryStockRepository.GetAllStockByProductAsync(productId, cancellationToken);
-                if(!inventoryStocks.Any()) return BuildBulkSuccessResponse([], $"No inventory stocks found for Product ID {productId}.", 200);
+                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], $"No inventory stocks found for Product ID {productId}.");
 
                 var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return BuildBulkSuccessResponse(responseDTOs, "Inventory stocks retrieved successfully.", 200); 
+                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks retrieved successfully."); 
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -89,7 +90,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildBulkErrorResponse("An error occurred while retrieving inventory stocks by product ID.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving inventory stocks by product ID.", 500);
             }
         }
 
@@ -99,13 +100,13 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             {
                 //Validate Warehouse
                 var warehouseResult = await GetWarehouseAsync(warehouseId, cancellationToken);
-                if(warehouseResult.Error != null) return BuildBulkErrorResponse(warehouseResult.Error.Message!, warehouseResult.Error.StatusCode);
+                if(warehouseResult.Error != null) return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>(warehouseResult.Error.Message!, warehouseResult.Error.StatusCode);
 
                 var inventoryStocks = await _inventoryStockRepository.GetAllStockByWarehouseAsync(warehouseId, cancellationToken);
-                if(!inventoryStocks.Any()) return BuildBulkSuccessResponse([], $"No inventory stocks found for Warehouse ID {warehouseId}.", 200);
+                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], $"No inventory stocks found for Warehouse ID {warehouseId}.");
 
                 var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return BuildBulkSuccessResponse(responseDTOs, "Inventory stocks retrieved successfully.", 200); 
+                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks retrieved successfully."); 
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -113,7 +114,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildBulkErrorResponse("An error occurred while retrieving inventory stocks by warehouse ID.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving inventory stocks by warehouse ID.", 500);
             }
         }
 
@@ -122,10 +123,10 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             try
             {
                 var inventoryStocks = await _inventoryStockRepository.GetStockBelowReorderLevelAsync(cancellationToken);
-                if(!inventoryStocks.Any()) return BuildBulkSuccessResponse([], "No inventory stocks found below reorder level.", 200);
+                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], "No inventory stocks found below reorder level.");
 
                 var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return BuildBulkSuccessResponse(responseDTOs, "Inventory stocks below reorder level retrieved successfully.", 200);
+                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks below reorder level retrieved successfully.");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -133,7 +134,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildBulkErrorResponse("An error occurred while retrieving inventory stocks below reorder level.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving inventory stocks below reorder level.", 500);
             }
         }
 
@@ -151,7 +152,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
 
                 // Check if the inventory stock already exists for the given product and warehouse
                 var existingStock = await _inventoryStockRepository.GetStockByProductAndWarehouseIDAsync(dto.ProductID, dto.WarehouseID, cancellationToken);
-                if(existingStock != null) return BuildErrorResponse($"Inventory stock for Product ID {dto.ProductID} and Warehouse ID {dto.WarehouseID} already exists.", 409);
+                if(existingStock != null) return ApiResponseHelper.Failure<InventoryStockResponseDTO>($"Inventory stock for Product ID {dto.ProductID} and Warehouse ID {dto.WarehouseID} already exists.", 409);
 
                 // Create new inventory stock
                 var newStock = new InventoryStock
@@ -172,11 +173,11 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
                 
                 // Map to DTO and return success response
                 var responseDTO = BuildInventoryStockResponseDTO(newStock);
-                return BuildSuccessResponse(responseDTO, "Inventory stock created successfully.", 201);
+                return ApiResponseHelper.Success(responseDTO, "Inventory stock created successfully.", 201);
             }
             catch (DbUpdateException)
             {
-                return BuildErrorResponse("Inventory stock already exists for this product and warehouse.", 409);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("Inventory stock already exists for this product and warehouse.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -184,7 +185,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildErrorResponse("An error occurred while creating the inventory stock.", 500);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("An error occurred while creating the inventory stock.", 500);
             }
         }
 
@@ -196,7 +197,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
                 var stockResult = await GetInventoryStockByIdAsync(inventoryStockId, cancellationToken);
                 if(stockResult.Error != null) return stockResult.Error;
 
-                var concurrencyError = ValidateRowVersion(stockResult.Stock!, dto.RowVersion);
+                var concurrencyError = RowVersionHelper.Validate<InventoryStockResponseDTO>(stockResult.Stock!.RowVersion, dto.RowVersion);
                 if (concurrencyError != null) return concurrencyError;
 
                 // Update the reorder level
@@ -206,11 +207,11 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
 
                 // Map to DTO and return success response
                 var responseDTO = BuildInventoryStockResponseDTO(stockResult.Stock);
-                return BuildSuccessResponse(responseDTO, "Reorder level updated successfully.", 200);
+                return ApiResponseHelper.Success(responseDTO, "Reorder level updated successfully.");
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildErrorResponse("Inventory stock was modified by another request.", 409);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("Inventory stock was modified by another request.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -218,7 +219,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildErrorResponse("An error occurred while updating the reorder level.", 500);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("An error occurred while updating the reorder level.", 500);
             }
         }
 
@@ -230,10 +231,10 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
                 var stockResult = await GetInventoryStockByIdAsync(inventoryStockId, cancellationToken);
                 if (stockResult.Error != null) return stockResult.Error;
 
-                var concurrencyError = ValidateRowVersion(stockResult.Stock!, dto.RowVersion);
+                var concurrencyError = RowVersionHelper.Validate<InventoryStockResponseDTO>(stockResult.Stock!.RowVersion, dto.RowVersion);
                 if (concurrencyError != null) return concurrencyError;
-                if (!dto.IsActive) return BuildErrorResponse("IsActive must be true when activating inventory stock.", 400);
-                if (stockResult.Stock!.IsActive) return BuildErrorResponse("Inventory stock is already active.", 400);
+                if (!dto.IsActive) return ApiResponseHelper.Failure<InventoryStockResponseDTO>("IsActive must be true when activating inventory stock.", 400);
+                if (stockResult.Stock!.IsActive) return ApiResponseHelper.Failure<InventoryStockResponseDTO>("Inventory stock is already active.", 400);
 
                 // Activate the inventory stock
                 stockResult.Stock!.IsActive = true;
@@ -242,11 +243,11 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
 
                 // Map to DTO and return success response
                 var responseDTO = BuildInventoryStockResponseDTO(stockResult.Stock);
-                return BuildSuccessResponse(responseDTO, "Inventory stock activated successfully.", 200);
+                return ApiResponseHelper.Success(responseDTO, "Inventory stock activated successfully.");
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildErrorResponse("Inventory stock was modified by another request.", 409);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("Inventory stock was modified by another request.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -254,7 +255,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildErrorResponse("An error occurred while activating the inventory stock.", 500);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("An error occurred while activating the inventory stock.", 500);
             }
         }
 
@@ -265,21 +266,21 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
                 //Validate Inventory Stock
                 var stockResult = await GetInventoryStockByIdAsync(inventoryStockId, cancellationToken);
                 if (stockResult.Error != null) return stockResult.Error;
-                var concurrencyError = ValidateRowVersion(stockResult.Stock!, dto.RowVersion);
+                var concurrencyError = RowVersionHelper.Validate<InventoryStockResponseDTO>(stockResult.Stock!.RowVersion, dto.RowVersion);
                 if (concurrencyError != null) return concurrencyError;
-                if (dto.IsActive) return BuildErrorResponse("IsActive must be false when deactivating inventory stock.", 400);
-                if (!stockResult.Stock!.IsActive) return BuildErrorResponse("Inventory stock is already inactive.", 400);
+                if (dto.IsActive) return ApiResponseHelper.Failure<InventoryStockResponseDTO>("IsActive must be false when deactivating inventory stock.", 400);
+                if (!stockResult.Stock!.IsActive) return ApiResponseHelper.Failure<InventoryStockResponseDTO>("Inventory stock is already inactive.", 400);
                 // Deactivate the inventory stock
                 stockResult.Stock!.IsActive = false;
                 stockResult.Stock.Updated = DateTime.UtcNow;
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 // Map to DTO and return success response
                 var responseDTO = BuildInventoryStockResponseDTO(stockResult.Stock);
-                return BuildSuccessResponse(responseDTO, "Inventory stock deactivated successfully.", 200);
+                return ApiResponseHelper.Success(responseDTO, "Inventory stock deactivated successfully.");
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildErrorResponse("Inventory stock was modified by another request.", 409);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("Inventory stock was modified by another request.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -287,7 +288,7 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return BuildErrorResponse("An error occurred while deactivating the inventory stock.", 500);
+                return ApiResponseHelper.Failure<InventoryStockResponseDTO>("An error occurred while deactivating the inventory stock.", 500);
             }
         }
 
@@ -297,45 +298,23 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
         private async Task<(ApiResponse<InventoryStockResponseDTO>? Error, Product? Product)> GetProductAsync(int productId, CancellationToken cancellationToken = default)
         {
             var product = await _productRepository.GetProductAsync(productId, cancellationToken);
-
-            if(product == null)
-            {
-                return (new ApiResponse<InventoryStockResponseDTO>
-                {
-                    Success = false,
-                    Message = $"Product with ID {productId} not found.",
-                    StatusCode = 404
-                }, null);
-            }
-            return (null, product);
+            return product is { }
+            ? (null, product)
+            : (ApiResponseHelper.Failure<InventoryStockResponseDTO>($"Product with ID {productId} not found.", 404), null);
         }
         private async Task<(ApiResponse<InventoryStockResponseDTO>? Error, Warehouse? Warehouse)> GetWarehouseAsync(int warehouseId, CancellationToken cancellationToken = default)
         {
             var warehouse = await _warehouseRepository.GetWarehouseByIdAsync(warehouseId, cancellationToken);
-            if(warehouse == null)
-            {
-                return (new ApiResponse<InventoryStockResponseDTO>
-                {
-                    Success = false,
-                    Message = $"Warehouse with ID {warehouseId} not found.",
-                    StatusCode = 404
-                }, null);
-            }
-            return (null, warehouse);
+            return warehouse is { }
+            ? (null, warehouse)
+            : (ApiResponseHelper.Failure<InventoryStockResponseDTO>($"Warehouse with ID {warehouseId} not found.", 404), null);
         }
         private async Task<(ApiResponse<InventoryStockResponseDTO>? Error, InventoryStock? Stock)> GetInventoryStockByIdAsync(int stockId, CancellationToken cancellationToken = default)
         {
             var stock = await _inventoryStockRepository.GetStockByIdAsync(stockId, cancellationToken);
-            if(stock == null)
-            {
-                return (new ApiResponse<InventoryStockResponseDTO>
-                {
-                    Success = false,
-                    Message = $"Inventory stock with ID {stockId} not found.",
-                    StatusCode = 404
-                }, null);
-            }
-            return (null, stock);
+            return stock is { } 
+            ? (null, stock)
+            : (ApiResponseHelper.Failure<InventoryStockResponseDTO>($"Inventory stock with ID {stockId} not found.", 404), null);
         }
 
 
@@ -376,55 +355,5 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             };
         }
 
-        private ApiResponse<InventoryStockResponseDTO> BuildSuccessResponse(InventoryStockResponseDTO data, string message, int statusCode)
-        {
-            return new ApiResponse<InventoryStockResponseDTO>
-            {
-                Success = true,
-                Data = data,
-                Message = message,
-                StatusCode = statusCode
-            };
-        }
-        private ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>> BuildBulkSuccessResponse(IEnumerable<BulkInventoryStockResponseDTO> data, string message, int statusCode)
-        {
-            return new ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>
-            {
-                Success = true,
-                Data = data,
-                Message = message,
-                StatusCode = statusCode
-            };
-        }
-
-
-        private ApiResponse<InventoryStockResponseDTO> BuildErrorResponse(string message, int statusCode)
-        {
-            return new ApiResponse<InventoryStockResponseDTO>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = statusCode
-            };
-        }
-        private ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>> BuildBulkErrorResponse(string message, int statusCode)
-        {
-            return new ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = statusCode
-            };
-        }
-
-        private ApiResponse<InventoryStockResponseDTO>? ValidateRowVersion(InventoryStock stock, byte[] rowVersion)
-        {
-            if (rowVersion.Length == 0)
-                return BuildErrorResponse("RowVersion is required.", 400);
-
-            return stock.RowVersion.SequenceEqual(rowVersion)
-                ? null
-                : BuildErrorResponse("Inventory stock was modified by another request.", 409);
-        }
     }
 }

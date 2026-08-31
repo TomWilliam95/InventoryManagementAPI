@@ -14,11 +14,7 @@ public class InventoryStockServiceTests
     private readonly Mock<IWarehouseRepository> _warehouses = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
-    private InventoryStockService CreateService() => new(
-        _stocks.Object,
-        _products.Object,
-        _warehouses.Object,
-        _unitOfWork.Object);
+ private InventoryStockService CreateService() => new(_stocks.Object, _products.Object, _warehouses.Object, _unitOfWork.Object);
 
     [Fact]
     public async Task GetAllInventoryStocks_MapsDetailsAndReorderStatus()

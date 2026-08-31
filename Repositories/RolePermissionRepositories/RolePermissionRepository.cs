@@ -30,10 +30,7 @@ namespace InventoryManagementAPI.Repositories.RolePermissionRepositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task AssignPermissionToRoleAsync(
-            int roleId,
-            int permissionId,
-            CancellationToken cancellationToken = default)
+ public async Task AssignPermissionToRoleAsync(int roleId, int permissionId, CancellationToken cancellationToken = default)
         {
             await _context.RolePermissions.AddAsync(new RolePermission
             {
@@ -42,15 +39,10 @@ namespace InventoryManagementAPI.Repositories.RolePermissionRepositories
             }, cancellationToken);
         }
 
-        public async Task<bool> RemovePermissionFromRoleAsync(
-            int roleId,
-            int permissionId,
-            CancellationToken cancellationToken = default)
+ public async Task<bool> RemovePermissionFromRoleAsync(int roleId, int permissionId, CancellationToken cancellationToken = default)
         {
             var rolePermission = await _context.RolePermissions
-                .SingleOrDefaultAsync(
-                    rp => rp.RoleID == roleId && rp.PermissionID == permissionId,
-                    cancellationToken);
+ .SingleOrDefaultAsync(rp => rp.RoleID == roleId && rp.PermissionID == permissionId, cancellationToken);
 
             if (rolePermission is null)
                 return false;

@@ -34,8 +34,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         {
             return await _context.Users
                 .AsNoTracking()
-                .Where(userRole => userRole.UserRoles.Any(
-                    userRole => userRole.Role.Name == roleName))
+ .Where(userRole => userRole.UserRoles.Any(userRole => userRole.Role.Name == roleName))
                 .ToListAsync(cancellationToken);
         }
 

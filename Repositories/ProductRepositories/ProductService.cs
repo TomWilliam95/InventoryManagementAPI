@@ -4,6 +4,7 @@ using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using Microsoft.EntityFrameworkCore;
+using InventoryManagementAPI.Services;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositories
 {
@@ -40,7 +41,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseBulk("Internal error occurred, failed to load all products.");
+                return ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("Internal error occurred, failed to load all products.", 500);
             }
         }
 
@@ -61,7 +62,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseSingle("Internal error occurred, failed to load product.");
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Internal error occurred, failed to load product.", 500);
             }
         }
 
@@ -95,7 +96,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseBulk("Internal error occurred, failed to load products by category.");
+                return ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("Internal error occurred, failed to load products by category.", 500);
             }
         }
 
@@ -119,7 +120,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseBulk("Internal error occurred, failed to load products below reorder level.");
+                return ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("Internal error occurred, failed to load products below reorder level.", 500);
             }
         }
 
@@ -171,7 +172,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 var createdProductWithDetails = await _productRepo.GetProductAsync(createdProduct.ID, cancellationToken);
                 if (createdProductWithDetails == null)
                 {
-                    return BuildCatchErrorResponseSingle("Product was created but could not be retrieved.");
+                    return ApiResponseHelper.Failure<SingleProductResponseDTO>("Product was created but could not be retrieved.", 500);
                 }
 
                 // Return a created response with the new product details
@@ -183,7 +184,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseSingle("Internal error occurred, failed to create product.");
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Internal error occurred, failed to create product.", 500);
             }
         }
 
@@ -195,7 +196,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             if (validateDtoResult != null) return validateDtoResult;
 
             // Validate that the RowVersion is provided for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            var validateRowVersion = RowVersionHelper.ValidateFormat<SingleProductResponseDTO>(dto.RowVersion);
             if (validateRowVersion != null) return validateRowVersion;
 
             //validate the required fields before proceeding with the update
@@ -209,7 +210,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 if (updateProductExistsResult.Product == null) return updateProductExistsResult.Error!;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
-                var validateRowVersionMatch = ValidateMatchRowVersion(updateProductExistsResult.Product, dto.RowVersion);
+                var validateRowVersionMatch = RowVersionHelper.Validate<SingleProductResponseDTO>(updateProductExistsResult.Product.RowVersion, dto.RowVersion);
                 if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
                 var validateExistenceResult = await UpdateValidateDtoFieldsExist(updateProductExistsResult.Product, dto, cancellationToken);
@@ -233,7 +234,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 // Check if the updated product could be retrieved successfully
                 if (findUpdatedProduct == null)
                 {
-                    return BuildCatchErrorResponseSingle("Product was updated but could not be retrieved.");
+                    return ApiResponseHelper.Failure<SingleProductResponseDTO>("Product was updated but could not be retrieved.", 500);
                 }
 
                 // Return a successful response with the updated product details
@@ -241,7 +242,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Concurrency error occurred, failed to update product details.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -249,7 +250,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product details.");
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Internal error occurred, failed to update product details.", 500);
             }
         }
 
@@ -270,7 +271,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
 
             // Validate that the RowVersion is provided for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            var validateRowVersion = RowVersionHelper.ValidateFormat<SingleProductResponseDTO>(dto.RowVersion);
             if (validateRowVersion != null) return validateRowVersion;
 
             try
@@ -280,7 +281,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 if (validateProductResult.Product == null) return validateProductResult.Error!;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
-                var validateRowVersionMatch = ValidateMatchRowVersion(validateProductResult.Product, dto.RowVersion);
+                var validateRowVersionMatch = RowVersionHelper.Validate<SingleProductResponseDTO>(validateProductResult.Product.RowVersion, dto.RowVersion);
                 if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
                 // Update the price and save the change
@@ -293,7 +294,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Concurrency error occurred, failed to update product details.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -301,7 +302,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseSingle("Internal error occurred, failed to update product price.");
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Internal error occurred, failed to update product price.", 500);
             }
         }
 
@@ -309,7 +310,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         public async Task<ApiResponse<SingleProductResponseDTO>> ActivateProduct(int id, UpdateProductStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate that the RowVersion is provided for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            var validateRowVersion = RowVersionHelper.ValidateFormat<SingleProductResponseDTO>(dto.RowVersion);
             if (validateRowVersion != null) return validateRowVersion;
 
             try
@@ -320,7 +321,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 var product = productExistsResult.Product;
 
                 //Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
-                var validateRowVersionMatch = ValidateMatchRowVersion(product, dto.RowVersion);
+                var validateRowVersionMatch = RowVersionHelper.Validate<SingleProductResponseDTO>(product.RowVersion, dto.RowVersion);
                 if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
                 // Return a bad request response if the product is already active
@@ -344,7 +345,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Concurrency error occurred, failed to update product details.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -352,14 +353,14 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseSingle("Internal error occurred, failed to activate product.");
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Internal error occurred, failed to activate product.", 500);
             }
         }
 
         public async Task<ApiResponse<SingleProductResponseDTO>> DeactivateProduct(int id, UpdateProductStatusRequestDTO dto, CancellationToken cancellationToken = default)
         {
             // Validate that the RowVersion is provided for concurrency control
-            var validateRowVersion = ValidateRowVersion(dto.RowVersion);
+            var validateRowVersion = RowVersionHelper.ValidateFormat<SingleProductResponseDTO>(dto.RowVersion);
             if (validateRowVersion != null) return validateRowVersion;
 
             try
@@ -370,7 +371,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 var product = productExistsResult.Product;
 
                 // Validates that the RowVersion provided in the DTO matches the RowVersion of the product in the database for concurrency control
-                var validateRowVersionMatch = ValidateMatchRowVersion(product, dto.RowVersion);
+                var validateRowVersionMatch = RowVersionHelper.Validate<SingleProductResponseDTO>(product.RowVersion, dto.RowVersion);
                 if (validateRowVersionMatch != null) return validateRowVersionMatch;
 
                 // Return a bad request response if the product is already inactive
@@ -394,7 +395,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Concurrency error occurred, failed to update product details.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -402,7 +403,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return BuildCatchErrorResponseSingle("Internal error occurred, failed to deactivate product.");
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>("Internal error occurred, failed to deactivate product.", 500);
             }
         }
 
@@ -648,31 +649,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// </summary>
         /// <param name="rowVersion">The RowVersion byte array to validate.</param>
         /// <returns>An ApiResponse indicating the result of the validation.</returns>
-        private ApiResponse<SingleProductResponseDTO>? ValidateRowVersion(byte[] rowVersion)
-        {
-            //Validate that the RowVersion is provided for concurrency control
-            if (rowVersion == null || rowVersion.Length == 0)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "No RowVersion provided, unable to perform update",
-                    StatusCode = 400
-                };
-            }
-            //Validate that the RowVersion is exactly 8 bytes long, as expected for concurrency control
-            if (rowVersion.Length != 8)
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "Invalid RowVersion provided, unable to perform update",
-                    StatusCode = 400
-                };
-            }
-
-            return null;
-        }
 
         /// <summary>
         /// Validates that the provided RowVersion matches the RowVersion of the product in the database to ensure concurrency control.
@@ -680,19 +656,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// <param name="product">The product entity from the database.</param>
         /// <param name="rowVersion">The RowVersion byte array to validate.</param>
         /// <returns>An ApiResponse indicating the result of the validation.</returns>
-        private ApiResponse<SingleProductResponseDTO>? ValidateMatchRowVersion(Product product, byte[] rowVersion)
-        {
-            if (!product.RowVersion.SequenceEqual(rowVersion))
-            {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion mismatch, the product has been modified by another process.",
-                    StatusCode = 409
-                };
-            }
-            return null;
-        }
 
         // === RESPONSE HELPER METHOD ===
 
@@ -712,19 +675,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         {
             if (product.Category is null)
             {
-                return new ApiResponse<SingleProductResponseDTO>
-                {
-                    Success = false,
-                    Message = $"{message}, failed to retrieve category details",
-                    StatusCode = 500
-                };
+                return ApiResponseHelper.Failure<SingleProductResponseDTO>($"{message}, failed to retrieve category details", 500);
             }
 
-            return new ApiResponse<SingleProductResponseDTO>
-            {
-                Success = true,
-                Message = message,
-                Data = new SingleProductResponseDTO
+            return ApiResponseHelper.Success(new SingleProductResponseDTO
                 {
                     ID = product.ID,
                     Sku = product.Sku,
@@ -735,9 +689,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     Price = product.Price,
                     IsActive = product.IsActive,
                     RowVersion = product.RowVersion
-                },
-                StatusCode = statusCode
-            };
+                }, message, statusCode);
         }
 
         /// <summary>
@@ -745,28 +697,10 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// </summary>
         /// <param name="message">The error message to include in the response.</param>
         /// <returns>An ApiResponse indicating the internal error.</returns>
-        private ApiResponse<SingleProductResponseDTO> BuildCatchErrorResponseSingle(string message)
-        {
-            return new ApiResponse<SingleProductResponseDTO>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = 500
-            };
-        }
         /// <summary>
         /// Builds an error response for a single product operation, indicating that a concurrency error occurred during the update.
         /// </summary>
         /// <returns>An ApiResponse indicating the concurrency error.</returns>
-        private ApiResponse<SingleProductResponseDTO> BuildConcurrencyCatchErrorResponse()
-        {
-            return new ApiResponse<SingleProductResponseDTO>
-            {
-                Success = false,
-                Message = "Concurrency error occurred, failed to update product details.",
-                StatusCode = 409
-            };
-        }
 
         /// <summary>
         /// Builds a successful response for bulk product operations, including a list of products and a success message.
@@ -776,13 +710,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// <returns>An ApiResponse indicating the successful operation.</returns>
         private ApiResponse<IEnumerable<BulkProductResponseDTO>> BuildBulkProductResponse(IEnumerable<BulkProductResponseDTO> productDtoList, string message)
         {
-            return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-            {
-                Success = true,
-                Message = message,
-                Data = productDtoList,
-                StatusCode = 200
-            };
+            return ApiResponseHelper.Success<IEnumerable<BulkProductResponseDTO>>(productDtoList, message);
         }
 
         /// <summary>
@@ -790,14 +718,5 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// </summary>
         /// <param name="message">The error message to include in the response.</param>
         /// <returns>An ApiResponse indicating the internal error.</returns>
-        private ApiResponse<IEnumerable<BulkProductResponseDTO>> BuildCatchErrorResponseBulk(string message)
-        {
-            return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = 500
-            };
-        } 
     }
 }

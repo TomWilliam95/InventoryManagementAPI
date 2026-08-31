@@ -74,8 +74,7 @@ public class EntityConcurrencyTests : IClassFixture<SqlServerFixture>
 
             // Attempt to update the category in contextB, which has a stale RowVersion, and expect a concurrency exception.
             categoryB.Description = "Stale category description";
-            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
-                () => contextB.SaveChangesAsync(CancellationToken.None));
+ await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => contextB.SaveChangesAsync(CancellationToken.None));
 
             // Create a new context to verify the final state of the category in the database.
             await using var verifyContext = _fixture.CreateContext();
@@ -144,8 +143,7 @@ public class EntityConcurrencyTests : IClassFixture<SqlServerFixture>
             await contextA.SaveChangesAsync(CancellationToken.None);
 
             supplierB.Website = "https://stale.example.com";
-            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
-                () => contextB.SaveChangesAsync(CancellationToken.None));
+ await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => contextB.SaveChangesAsync(CancellationToken.None));
 
             // Assert: a fresh context confirms request B did not overwrite request A.
             await using var verifyContext = _fixture.CreateContext();
@@ -210,8 +208,7 @@ public class EntityConcurrencyTests : IClassFixture<SqlServerFixture>
             await contextA.SaveChangesAsync(CancellationToken.None);
 
             userB.UserName = "StaleUserName";
-            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
-                () => contextB.SaveChangesAsync(CancellationToken.None));
+ await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => contextB.SaveChangesAsync(CancellationToken.None));
 
             // Assert against a fresh, untracked read of the database state.
             await using var verifyContext = _fixture.CreateContext();
@@ -287,8 +284,7 @@ public class EntityConcurrencyTests : IClassFixture<SqlServerFixture>
             await contextA.SaveChangesAsync(CancellationToken.None);
 
             productB.Name = "Stale product name";
-            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
-                () => contextB.SaveChangesAsync(CancellationToken.None));
+ await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => contextB.SaveChangesAsync(CancellationToken.None));
 
             // Assert: read through a third context to avoid either request's cache.
             await using var verifyContext = _fixture.CreateContext();

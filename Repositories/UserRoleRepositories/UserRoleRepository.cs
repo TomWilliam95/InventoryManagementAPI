@@ -12,9 +12,7 @@ namespace InventoryManagementAPI.Repositories.UserRoleRepositories
             _context = context;
         }
 
-        public async Task<IReadOnlyList<Role>> GetUserRolesByUserIdAsync(
-            int userId,
-            CancellationToken cancellationToken = default)
+ public async Task<IReadOnlyList<Role>> GetUserRolesByUserIdAsync(int userId, CancellationToken cancellationToken = default)
         {
             return await _context.UserRoles.AsNoTracking()
                 .Where(ur => ur.UserID == userId)
@@ -22,9 +20,7 @@ namespace InventoryManagementAPI.Repositories.UserRoleRepositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IReadOnlyList<User>> GetUsersByRoleIdAsync(
-            int roleId,
-            CancellationToken cancellationToken = default)
+ public async Task<IReadOnlyList<User>> GetUsersByRoleIdAsync(int roleId, CancellationToken cancellationToken = default)
         {
             return await _context.UserRoles.AsNoTracking()
                 .Where(ur => ur.RoleID == roleId)
@@ -32,10 +28,7 @@ namespace InventoryManagementAPI.Repositories.UserRoleRepositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task AssignUserRoleAsync(
-            int userId,
-            int roleId,
-            CancellationToken cancellationToken = default)
+ public async Task AssignUserRoleAsync(int userId, int roleId, CancellationToken cancellationToken = default)
         {
             await _context.UserRoles.AddAsync(new UserRole
             {
@@ -44,14 +37,9 @@ namespace InventoryManagementAPI.Repositories.UserRoleRepositories
             }, cancellationToken);
         }
 
-        public async Task<bool> RemoveUserRoleAsync(
-            int userId,
-            int roleId,
-            CancellationToken cancellationToken = default)
+ public async Task<bool> RemoveUserRoleAsync(int userId, int roleId, CancellationToken cancellationToken = default)
         {
-            var userRole = await _context.UserRoles.SingleOrDefaultAsync(
-                ur => ur.UserID == userId && ur.RoleID == roleId,
-                cancellationToken);
+ var userRole = await _context.UserRoles.SingleOrDefaultAsync(ur => ur.UserID == userId && ur.RoleID == roleId, cancellationToken);
 
             if (userRole is null)
                 return false;
@@ -60,15 +48,10 @@ namespace InventoryManagementAPI.Repositories.UserRoleRepositories
             return true;
         }
 
-        public async Task<bool> UserRoleExistsAsync(
-            int userId,
-            int roleId,
-            CancellationToken cancellationToken = default)
+ public async Task<bool> UserRoleExistsAsync(int userId, int roleId, CancellationToken cancellationToken = default)
         {
             return await _context.UserRoles.AsNoTracking()
-                .AnyAsync(
-                    ur => ur.UserID == userId && ur.RoleID == roleId,
-                    cancellationToken);
+ .AnyAsync(ur => ur.UserID == userId && ur.RoleID == roleId, cancellationToken);
         }
     }
 }

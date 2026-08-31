@@ -249,8 +249,7 @@ public class UserServiceTests
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
         // Act
-        var result = await service.UpdateUserEmailAsync(
-            1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -270,8 +269,7 @@ public class UserServiceTests
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
         // Act
-        var result = await service.UpdateUserEmailAsync(
-            1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 2, "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 2, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -293,8 +291,7 @@ public class UserServiceTests
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
         // Act
-        var result = await service.UpdateUserEmailAsync(
-            1, new UpdateUserEmailRequestDTO { Email = "used@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "used@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -314,8 +311,7 @@ public class UserServiceTests
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
         // Act
-        var result = await service.UpdateUserNameAsync(
-            1, new UpdateUserNameRequestDTO { UserName = "bad name", RowVersion = CreateRowVersion() }, 1, "Staff");
+ var result = await service.UpdateUserNameAsync(1, new UpdateUserNameRequestDTO { UserName = "bad name", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         // Assert
         Assert.NotNull(result);
@@ -476,11 +472,7 @@ public class UserServiceTests
         var repository = new Mock<IUserRepository>();
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
-        var result = await service.UpdateUserEmailAsync(
-            1,
-            new UpdateUserEmailRequestDTO { Email = "new@example.com" },
-            1,
-            "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "new@example.com" }, 1, "Staff");
 
         Assert.False(result.Success);
         Assert.Equal(400, result.StatusCode);
@@ -494,11 +486,7 @@ public class UserServiceTests
         var repository = new Mock<IUserRepository>();
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
-        var result = await service.UpdateUserEmailAsync(
-            1,
-            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = [1, 2, 3, 4] },
-            1,
-            "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = [1, 2, 3, 4] }, 1, "Staff");
 
         Assert.False(result.Success);
         Assert.Equal(400, result.StatusCode);
@@ -513,11 +501,7 @@ public class UserServiceTests
         repository.Setup(repo => repo.GetUserByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(CreateUser());
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
-        var result = await service.UpdateUserEmailAsync(
-            1,
-            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = [8, 7, 6, 5, 4, 3, 2, 1] },
-            1,
-            "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = [8, 7, 6, 5, 4, 3, 2, 1] }, 1, "Staff");
 
         Assert.False(result.Success);
         Assert.Equal(409, result.StatusCode);
@@ -532,11 +516,7 @@ public class UserServiceTests
         _unitOfWork.Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new DbUpdateConcurrencyException());
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
-        var result = await service.UpdateUserEmailAsync(
-            1,
-            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() },
-            1,
-            "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         Assert.False(result.Success);
         Assert.Equal(409, result.StatusCode);
@@ -555,11 +535,7 @@ public class UserServiceTests
             .Returns(Task.CompletedTask);
         var service = new UserService(repository.Object, _roleRepository.Object, _userRoleRepository.Object, _unitOfWork.Object);
 
-        var result = await service.UpdateUserEmailAsync(
-            1,
-            new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() },
-            1,
-            "Staff");
+ var result = await service.UpdateUserEmailAsync(1, new UpdateUserEmailRequestDTO { Email = "new@example.com", RowVersion = CreateRowVersion() }, 1, "Staff");
 
         Assert.True(result.Success);
         Assert.Equal(200, result.StatusCode);

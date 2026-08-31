@@ -123,12 +123,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var existingProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
-            var existingMovement = CreateMovement(
-                MovementType.StockIn,
-                5,
-                "Movement for another product",
-                existingProduct.InventoryStocks.Single().ID,
-                testUser.ID);
+ var existingMovement = CreateMovement(MovementType.StockIn, 5, "Movement for another product", existingProduct.InventoryStocks.Single().ID, testUser.ID);
             await context.InventoryMovements.AddAsync(existingMovement, CancellationToken.None);
             await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
@@ -202,12 +197,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testProduct = await CreateTestProductSupplierCategory(context);
             var existingUser = await CreateTestUser(context);
-            var existingMovement = CreateMovement(
-                MovementType.StockIn,
-                5,
-                "Movement for another user",
-                testProduct.InventoryStocks.Single().ID,
-                existingUser.ID);
+ var existingMovement = CreateMovement(MovementType.StockIn, 5, "Movement for another user", testProduct.InventoryStocks.Single().ID, existingUser.ID);
             await context.InventoryMovements.AddAsync(existingMovement, CancellationToken.None);
             await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
@@ -275,12 +265,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
-            var saleMovement = CreateMovement(
-                MovementType.Sale,
-                5,
-                "Non-matching sale movement",
-                testProduct.InventoryStocks.Single().ID,
-                testUser.ID);
+ var saleMovement = CreateMovement(MovementType.Sale, 5, "Non-matching sale movement", testProduct.InventoryStocks.Single().ID, testUser.ID);
             await context.InventoryMovements.AddAsync(saleMovement, CancellationToken.None);
             await context.SaveChangesAsync(CancellationToken.None);
             context.ChangeTracker.Clear();
@@ -333,12 +318,7 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
 
             var testProduct = await CreateTestProductSupplierCategory(context);
             var testUser = await CreateTestUser(context);
-            var currentMovement = CreateMovement(
-                MovementType.StockIn,
-                5,
-                "Movement outside requested range",
-                testProduct.InventoryStocks.Single().ID,
-                testUser.ID);
+ var currentMovement = CreateMovement(MovementType.StockIn, 5, "Movement outside requested range", testProduct.InventoryStocks.Single().ID, testUser.ID);
             currentMovement.Created = DateTime.UtcNow;
             await context.InventoryMovements.AddAsync(currentMovement, CancellationToken.None);
             await context.SaveChangesAsync(CancellationToken.None);
