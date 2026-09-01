@@ -1,4 +1,6 @@
+using InventoryManagementAPI.Models.Contracts.Products;
 using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.Shared;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -15,16 +17,68 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         }
 
         // === GET ===
-        public async Task<IEnumerable<Product>> GetAllProductsAsync(CancellationToken cancellationToken = default)
+        public async Task<PagedData<Product>> GetProductsAsync(ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
-            return await _context.Products
+            var products = _context.Products
                 .AsNoTracking()
                 .Include(p => p.Category)
                 .Include(p => p.InventoryStocks)
                     .ThenInclude(stock => stock.Warehouse)
                 .Include(p => p.SupplierProducts)
-                    .ThenInclude(sp => sp.Supplier)
-                .ToListAsync(cancellationToken);
+                    .ThenInclude(sp => sp.Supplier).AsQueryable();
+
+            if(!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var search = query.Search.Trim().ToLower();
+
+                products = products.Where(p => p.Name.ToLower().Contains(search) || p.Sku.ToLower().Contains(search));
+            }
+            if(query.CategoryId.HasValue)
+            {
+                products = products.Where(p => p.CategoryID == query.CategoryId.Value);
+            }
+            if(query.IsActive.HasValue)
+            {
+                products = products.Where(p => p.IsActive == query.IsActive.Value);
+            }
+            if(query.MinPrice.HasValue)
+            {
+                products = products.Where(p => p.Price >= query.MinPrice.Value);
+            }
+            if (query.MaxPrice.HasValue)
+            {
+                products = products.Where(p => p.Price <= query.MaxPrice.Value);
+            }
+
+            //Count total items before pagination
+            var totalItems = await products.CountAsync(cancellationToken);
+            
+            // Sorting
+            var sortBy = query.SortBy.Trim().ToLowerInvariant();
+            var descending = query.SortDirection.Trim().ToLowerInvariant() == "desc";
+
+            products = sortBy switch
+            {
+                "price" when descending => products.OrderByDescending(p => p.Price).ThenBy(p => p.ID),
+                "price" => products.OrderBy(p => p.Price).ThenBy(p => p.ID),
+                "sku" when descending => products.OrderByDescending(p => p.Sku).ThenBy(p => p.ID),
+                "sku" => products.OrderBy(p => p.Sku).ThenBy(p => p.ID),
+                "name" when descending => products.OrderByDescending(p => p.Name).ThenBy(p => p.ID),
+                "name" => products.OrderBy(p => p.Name).ThenBy(p => p.ID),
+                "created" when descending => products.OrderByDescending(p => p.Created).ThenBy(p => p.ID),
+                "created" => products.OrderBy(p => p.Created).ThenBy(p => p.ID),
+                "id" when descending => products.OrderByDescending(p => p.ID),
+                _ => products.OrderBy(p => p.ID),
+            };
+
+            var recordsToSkip = (query.Page - 1) * query.PageSize;
+            var productList = await products.Skip(recordsToSkip).Take(query.PageSize).ToListAsync(cancellationToken);
+
+            return new PagedData<Product>
+            {
+                Items = productList,
+                TotalItems = totalItems
+            };
         }
 
         public async Task<Product?> GetProductAsync(int id, CancellationToken cancellationToken = default)

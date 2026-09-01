@@ -1,6 +1,8 @@
+using InventoryManagementAPI.Models.Contracts.Products;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositories
 {
@@ -8,7 +10,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
     {
         // === GET ===
         Task<ApiResponse<SingleProductResponseDTO>> GetSingleProduct(int productId, CancellationToken cancellationToken = default);
-        Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetAllProducts(CancellationToken cancellationToken = default);
+        Task<ApiResponse<PagedResult<BulkProductResponseDTO>>> GetProducts(ProductQueryParameters query, CancellationToken cancellationToken = default);
         Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId, CancellationToken cancellationToken = default);
         Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel(CancellationToken cancellationToken = default);
 

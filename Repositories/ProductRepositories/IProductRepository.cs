@@ -1,12 +1,14 @@
+using InventoryManagementAPI.Models.Contracts.Products;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositorys
 {
     public interface IProductRepository
     {
         // === GET ===
-        Task<IEnumerable<Product>> GetAllProductsAsync(CancellationToken cancellationToken = default);
+        Task<PagedData<Product>> GetProductsAsync(ProductQueryParameters query, CancellationToken cancellationToken = default);
         Task<Product?> GetProductAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync(CancellationToken cancellationToken = default);
