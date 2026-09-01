@@ -452,7 +452,12 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         private (IEnumerable<BulkProductResponseDTO>? Products, ApiResponse<PagedResult<BulkProductResponseDTO>>? Error) ValidateProductGroupExists(IEnumerable<Product> products)
         {
             if (products == null || !products.Any())
-                return (null, ApiResponseHelper.Failure<PagedResult<BulkProductResponseDTO>>("No Products Found", 404));
+                return (null, ApiResponseHelper.Success<PagedResult<BulkProductResponseDTO>>(new PagedResult<BulkProductResponseDTO> { 
+                    Items = new List<BulkProductResponseDTO>(),
+                    Page = 1,
+                    PageSize = 0,
+                    TotalItems = 0,
+                }, "No Products Found, Returned Empty Product List", 200));
 
             return (products.Select(p => new BulkProductResponseDTO
             {
