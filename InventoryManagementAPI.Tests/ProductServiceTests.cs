@@ -1,6 +1,8 @@
+using InventoryManagementAPI.Models.Contracts.Products;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
+using InventoryManagementAPI.Models.Shared;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
@@ -58,28 +60,61 @@ public class ProductServiceTests
     }
 
     [Fact]
-    public async Task GetAllProducts_ProductsExist_Returns200()
+    public async Task GetProducts_ProductsExist_Returns200()
     {
-        _products.Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateProduct(), CreateProduct(2)]);
+        var query = new ProductQueryParameters
+        {
+            Page = 1,
+            PageSize = 20
+        };
 
-        var result = await CreateService().GetAllProducts();
+        _products.Setup(repository => repository.GetProductsAsync(It.IsAny<ProductQueryParameters>() ,It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedData<Product>
+            {
+                Items = [CreateProduct(), CreateProduct(2)],
+                TotalItems = 2
+            });
+
+        var result = await CreateService().GetProducts(query);
 
         Assert.True(result.Success);
-        Assert.Equal(2, result.Data!.Count());
+        Assert.Equal(2, result.Data!.Items.Count());
+        Assert.Equal(1, result.Data.Page);
+        Assert.Equal(20, result.Data.PageSize);
+        Assert.Equal(2, result.Data.TotalItems);
+        Assert.Equal(1, result.Data.TotalPages);
+        Assert.False(result.Data.HasPreviousPage);
+        Assert.False(result.Data.HasNextPage);
     }
 
     [Fact]
-    public async Task GetAllProducts_NoProducts_Returns404()
+    public async Task GetProducts_NoProductsMatchingQuery_ReturnsEmptyPageResult200()
     {
-        _products.Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        var query = new ProductQueryParameters
+        {
+            Page = 1,
+            PageSize = 20,
+            Search = "NonExistentProduct"
+        };
 
-        var result = await CreateService().GetAllProducts();
+        _products.Setup(repository => repository.GetProductsAsync(It.IsAny<ProductQueryParameters>() ,It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedData<Product>
+            {
+                Items = [],
+                TotalItems = 0
+            });
 
-        Assert.False(result.Success);
-        Assert.Equal(404, result.StatusCode);
-        Assert.Equal("No Products Found", result.Message);
+        var result = await CreateService().GetProducts(query);
+
+        Assert.True(result.Success);
+        Assert.Equal(200, result.StatusCode);
+
+        Assert.NotNull(result.Data);
+        Assert.Empty(result.Data.Items);
+        Assert.Equal(0, result.Data.TotalItems);
+        Assert.Equal(0, result.Data.TotalPages);
+        Assert.False(result.Data.HasPreviousPage);
+        Assert.False(result.Data.HasNextPage);
     }
 
     [Fact]

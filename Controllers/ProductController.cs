@@ -5,6 +5,7 @@ using InventoryManagementAPI.Models.CoreModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using InventoryManagementAPI.Models.Contracts.Products;
 
 namespace InventoryManagementAPI.Controllers
 {
@@ -28,9 +29,10 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetAllProducts(CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetAllProducts([FromQuery] ProductQueryParameters query 
+            , CancellationToken cancellationToken = default)
         {
-            var products = await _productService.GetAllProducts(cancellationToken);
+            var products = await _productService.GetProducts(query, cancellationToken);
             return StatusCode(products.StatusCode, products);
         }
 

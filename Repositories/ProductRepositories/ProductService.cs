@@ -5,6 +5,8 @@ using InventoryManagementAPI.Repositories.CategoryRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using Microsoft.EntityFrameworkCore;
 using InventoryManagementAPI.Services;
+using InventoryManagementAPI.Models.Shared;
+using InventoryManagementAPI.Models.Contracts.Products;
 
 namespace InventoryManagementAPI.Repositories.ProductRepositories
 {
@@ -21,19 +23,28 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         }
 
         // === GET ===
-        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetAllProducts(CancellationToken cancellationToken = default)
+        public async Task<ApiResponse<PagedResult<BulkProductResponseDTO>>> GetProducts(ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieve all products from the repository
-                var productList = await _productRepo.GetAllProductsAsync(cancellationToken);
+                var productList = await _productRepo.GetProductsAsync(query, cancellationToken);
 
                 // Validate that the product list is not empty and return a response accordingly
-                var productListResult = ValidateProductGroupExists(productList);
+                var productListResult = ValidateProductGroupExists(productList.Items);
                 if (productListResult.Products == null) return productListResult.Error!;
 
+                //Build the paged result with the product list and pagination details
+                var page = new PagedResult<BulkProductResponseDTO>
+                {
+                    Items = productListResult.Products,
+                    Page = query.Page,
+                    PageSize = query.PageSize,
+                    TotalItems = productList.TotalItems,
+                };
+
                 // Return a successful response with the product list
-                return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved All Products");
+                return ApiResponseHelper.Success<PagedResult<BulkProductResponseDTO>>(page, "Successfully Retrieved All Products", 200);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -41,7 +52,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("Internal error occurred, failed to load all products.", 500);
+                return ApiResponseHelper.Failure<PagedResult<BulkProductResponseDTO>>("Internal error occurred, failed to load all products.", 500);
             }
         }
 
@@ -84,11 +95,11 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 var productList = await _productRepo.GetProductsByCategoryAsync(categoryId, cancellationToken);
 
                 // Check if the product list is empty and return a response accordingly
-                var productListResult = ValidateProductGroupExists(productList);
+                var productListResult = ValidateProductGroupExists1(productList);
                 if (productListResult.Products == null) return productListResult.Error!;
 
                 // Return a successful response with the product list for the specified category
-                return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products By Category");
+                return ApiResponseHelper.Success<IEnumerable<BulkProductResponseDTO>>(productListResult.Products, "Successfully Retrieved Products By Category", 200);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -108,11 +119,11 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 var reorderList = await _productRepo.GetProductsBelowReorderLevelAsync(cancellationToken);
 
                 // Check if any products need reordering and return a not found response if none exist
-                var productListResult = ValidateProductGroupExists(reorderList);
+                var productListResult = ValidateProductGroupExists1(reorderList);
                 if (productListResult.Products == null) return productListResult.Error!;
 
                 // Return a successful response with all products that are below their reorder level
-                return BuildBulkProductResponse(productListResult.Products, "Successfully Retrieved Products Below Reorder Level");
+                return ApiResponseHelper.Success<IEnumerable<BulkProductResponseDTO>>(productListResult.Products, "Successfully Retrieved Products Below Reorder Level", 200);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -438,17 +449,33 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         /// <param name="products">The collection of products to validate.</param>
         /// <returns>A tuple containing a collection of BulkProductResponseDTO objects and null if products exist;
         /// otherwise, null and an ApiResponse indicating failure.</returns>
-        private (IEnumerable<BulkProductResponseDTO>? Products, ApiResponse<IEnumerable<BulkProductResponseDTO>>? Error) ValidateProductGroupExists(IEnumerable<Product> products)
+        private (IEnumerable<BulkProductResponseDTO>? Products, ApiResponse<PagedResult<BulkProductResponseDTO>>? Error) ValidateProductGroupExists(IEnumerable<Product> products)
         {
             if (products == null || !products.Any())
+                return (null, ApiResponseHelper.Success<PagedResult<BulkProductResponseDTO>>(new PagedResult<BulkProductResponseDTO> { 
+                    Items = new List<BulkProductResponseDTO>(),
+                    Page = 1,
+                    PageSize = 0,
+                    TotalItems = 0,
+                }, "No Products Found, Returned Empty Product List", 200));
+
+            return (products.Select(p => new BulkProductResponseDTO
             {
-                return (null, new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                {
-                    Success = false,
-                    Message = "No Products Found",
-                    StatusCode = 404
-                });
-            }
+                ID = p.ID,
+                Sku = p.Sku,
+                Name = p.Name,
+                Price = p.Price,
+                IsActive = p.IsActive
+            }).ToList(), null);
+        }
+
+        // LAZY LOADING VERSION OF THE ABOVE METHOD, USED FOR GETTING PRODUCTS BY CATEGORY AND BELOW REORDER LEVEL
+        // NEEDS TO BE REFACTORED TO USE THE ABOVE METHOD, BUT FOR NOW THIS IS A QUICK FIX
+        private (IEnumerable<BulkProductResponseDTO>? Products, ApiResponse<IEnumerable<BulkProductResponseDTO>>? Error) ValidateProductGroupExists1(IEnumerable<Product> products)
+        {
+            if (products == null || !products.Any())
+                return (null, ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("No Products Found", 404));
+
             return (products.Select(p => new BulkProductResponseDTO
             {
                 ID = p.ID,
@@ -644,19 +671,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             return null;
         }
 
-        /// <summary>
-        /// Validates that the provided RowVersion byte array is not null and has the expected length for concurrency control.
-        /// </summary>
-        /// <param name="rowVersion">The RowVersion byte array to validate.</param>
-        /// <returns>An ApiResponse indicating the result of the validation.</returns>
-
-        /// <summary>
-        /// Validates that the provided RowVersion matches the RowVersion of the product in the database to ensure concurrency control.
-        /// </summary>
-        /// <param name="product">The product entity from the database.</param>
-        /// <param name="rowVersion">The RowVersion byte array to validate.</param>
-        /// <returns>An ApiResponse indicating the result of the validation.</returns>
-
         // === RESPONSE HELPER METHOD ===
 
         /// <summary>
@@ -691,32 +705,5 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                     RowVersion = product.RowVersion
                 }, message, statusCode);
         }
-
-        /// <summary>
-        /// Builds an error response for a single product operation, indicating that an internal error occurred.
-        /// </summary>
-        /// <param name="message">The error message to include in the response.</param>
-        /// <returns>An ApiResponse indicating the internal error.</returns>
-        /// <summary>
-        /// Builds an error response for a single product operation, indicating that a concurrency error occurred during the update.
-        /// </summary>
-        /// <returns>An ApiResponse indicating the concurrency error.</returns>
-
-        /// <summary>
-        /// Builds a successful response for bulk product operations, including a list of products and a success message.
-        /// </summary>
-        /// <param name="productDtoList">The list of product DTOs to include in the response.</param>
-        /// <param name="message">The success message to include in the response.</param>
-        /// <returns>An ApiResponse indicating the successful operation.</returns>
-        private ApiResponse<IEnumerable<BulkProductResponseDTO>> BuildBulkProductResponse(IEnumerable<BulkProductResponseDTO> productDtoList, string message)
-        {
-            return ApiResponseHelper.Success<IEnumerable<BulkProductResponseDTO>>(productDtoList, message);
-        }
-
-        /// <summary>
-        /// Builds an error response for bulk product operations, indicating that an internal error occurred.
-        /// </summary>
-        /// <param name="message">The error message to include in the response.</param>
-        /// <returns>An ApiResponse indicating the internal error.</returns>
     }
 }
