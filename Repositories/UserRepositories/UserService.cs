@@ -5,6 +5,7 @@ using InventoryManagementAPI.Models.DTO_s.UserDTO_s;
 using InventoryManagementAPI.Repositories.UserRoleRepositories;
 using InventoryManagementAPI.Repositories.UserRoles;
 using Microsoft.EntityFrameworkCore;
+using InventoryManagementAPI.Services;
 using System.Net.Mail;
 
 namespace InventoryManagementAPI.Repositories.UserRepositories
@@ -40,7 +41,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildBulkCatchErrorResponse("Internal error occurred, failed to load all users.");
+                return ApiResponseHelper.Failure<IEnumerable<UserResponseDTO>>("Internal error occurred, failed to load all users.", 500);
             }
         }
 
@@ -69,7 +70,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to load user by email.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to load user by email.", 500);
             }
         }
 
@@ -88,7 +89,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to load user by ID.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to load user by ID.", 500);
             }
         }
 
@@ -117,7 +118,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildBulkCatchErrorResponse("Internal error occurred, failed to load users by role.");
+                return ApiResponseHelper.Failure<IEnumerable<UserResponseDTO>>("Internal error occurred, failed to load users by role.", 500);
             }
         }
 
@@ -151,7 +152,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 var staffRole = await _roleRepository.GetRoleByNameAsync("Staff", cancellationToken);
                 if (staffRole == null || !staffRole.IsActive)
                 {
-                    return BuildSingleCatchErrorResponse("Internal error occurred, failed to assign staff role.");
+                    return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to assign staff role.", 500);
                 }
 
                 newUser.UserRoles.Add(new UserRole
@@ -174,7 +175,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to create user.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to create user.", 500);
             }
         }
 
@@ -187,7 +188,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             var validateDtoExists = ValidateDtoExists(emailRequest, "Email update request data is missing.");
             if (validateDtoExists != null) return validateDtoExists;
 
-            var rowVersionValidation = ValidateRowVersion(emailRequest.RowVersion);
+            var rowVersionValidation = RowVersionHelper.ValidateFormat<UserResponseDTO>(emailRequest.RowVersion);
             if (rowVersionValidation != null) return rowVersionValidation;
 
             // Validates the new email format using a simple check for the presence of "@" and "." characters.
@@ -214,7 +215,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User;
 
-                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, emailRequest.RowVersion);
+                var matchingRowVersionValidation = RowVersionHelper.Validate<UserResponseDTO>(user.RowVersion, emailRequest.RowVersion);
                 if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 if (!string.Equals(user.Email, emailRequest.Email, StringComparison.OrdinalIgnoreCase)
@@ -238,7 +239,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<UserResponseDTO>("Concurrency error occurred, failed to update user. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -246,7 +247,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user email.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to update user email.", 500);
             }
         }
 
@@ -256,7 +257,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             var dtoValidation = ValidateDtoExists(nameRequest, "UserName update request data is missing.");
             if (dtoValidation != null) return dtoValidation;
 
-            var rowVersionValidation = ValidateRowVersion(nameRequest.RowVersion);
+            var rowVersionValidation = RowVersionHelper.ValidateFormat<UserResponseDTO>(nameRequest.RowVersion);
             if (rowVersionValidation != null) return rowVersionValidation;
 
             // Validates the new username for length and character requirements (alphanumeric, no spaces).
@@ -283,7 +284,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User!;
 
-                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, nameRequest.RowVersion);
+                var matchingRowVersionValidation = RowVersionHelper.Validate<UserResponseDTO>(user.RowVersion, nameRequest.RowVersion);
                 if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 // Saves the updated username to the user object and persists the changes to the repository.
@@ -295,7 +296,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<UserResponseDTO>("Concurrency error occurred, failed to update user. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -303,7 +304,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user name.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to update user name.", 500);
             }
         }
 
@@ -313,7 +314,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             var dtoValidation = ValidateDtoExists(passwordRequest, "Password update request data is missing.");
             if (dtoValidation != null) return dtoValidation;
 
-            var rowVersionValidation = ValidateRowVersion(passwordRequest.RowVersion);
+            var rowVersionValidation = RowVersionHelper.ValidateFormat<UserResponseDTO>(passwordRequest.RowVersion);
             if (rowVersionValidation != null) return rowVersionValidation;
 
             // Validates the new password for complexity requirements (length, uppercase, lowercase, digit, special character).
@@ -353,7 +354,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 // Assigns the user from the result tuple to a variable for easier access
                 var user = result.User!;
 
-                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, passwordRequest.RowVersion);
+                var matchingRowVersionValidation = RowVersionHelper.Validate<UserResponseDTO>(user.RowVersion, passwordRequest.RowVersion);
                 if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 // Validates the current password provided by the user against the stored password hash using BCrypt's EnhancedVerify method.
@@ -375,7 +376,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<UserResponseDTO>("Concurrency error occurred, failed to update user. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -383,14 +384,11 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to update user password.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to update user password.", 500);
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> AssignUserRoleAsync(
-            int userId,
-            int roleId,
-            CancellationToken cancellationToken = default)
+ public async Task<ApiResponse<UserResponseDTO>> AssignUserRoleAsync(int userId, int roleId, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -400,10 +398,10 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 var role = await _roleRepository.GetRoleAsync(roleId, cancellationToken);
                 if (role is null)
-                    return BuildRoleMembershipError("Role not found.", 404);
+                    return ApiResponseHelper.Failure<UserResponseDTO>("Role not found.", 404);
 
                 if (!role.IsActive)
-                    return BuildRoleMembershipError("Inactive roles cannot be assigned.", 409);
+                    return ApiResponseHelper.Failure<UserResponseDTO>("Inactive roles cannot be assigned.", 409);
 
                 if (await _userRoleRepository.UserRoleExistsAsync(userId, roleId, cancellationToken))
                     return BuildUserResponse(user, "User already has this role.", 200);
@@ -415,7 +413,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch (DbUpdateException)
             {
-                return BuildRoleMembershipError("The role assignment could not be completed because the membership changed concurrently.", 409);
+                return ApiResponseHelper.Failure<UserResponseDTO>("The role assignment could not be completed because the membership changed concurrently.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -423,14 +421,11 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to assign user role.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to assign user role.", 500);
             }
         }
 
-        public async Task<ApiResponse<UserResponseDTO>> RemoveUserRoleAsync(
-            int userId,
-            int roleId,
-            CancellationToken cancellationToken = default)
+ public async Task<ApiResponse<UserResponseDTO>> RemoveUserRoleAsync(int userId, int roleId, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -440,7 +435,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 var role = await _roleRepository.GetRoleAsync(roleId, cancellationToken);
                 if (role is null)
-                    return BuildRoleMembershipError("Role not found.", 404);
+                    return ApiResponseHelper.Failure<UserResponseDTO>("Role not found.", 404);
 
                 var removed = await _userRoleRepository.RemoveUserRoleAsync(userId, roleId, cancellationToken);
                 if (!removed)
@@ -451,7 +446,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch (DbUpdateException)
             {
-                return BuildRoleMembershipError("The role removal could not be completed because the membership changed concurrently.", 409);
+                return ApiResponseHelper.Failure<UserResponseDTO>("The role removal could not be completed because the membership changed concurrently.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -459,7 +454,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to remove user role.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to remove user role.", 500);
             }
         }
 
@@ -469,7 +464,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             var dtoValidation = ValidateDtoExists(statusRequest, "User status update request data is missing.");
             if (dtoValidation != null) return dtoValidation;
 
-            var rowVersionValidation = ValidateRowVersion(statusRequest.RowVersion);
+            var rowVersionValidation = RowVersionHelper.ValidateFormat<UserResponseDTO>(statusRequest.RowVersion);
             if (rowVersionValidation != null) return rowVersionValidation;
 
             try
@@ -480,7 +475,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
 
                 var user = userExists.User;
 
-                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, statusRequest.RowVersion);
+                var matchingRowVersionValidation = RowVersionHelper.Validate<UserResponseDTO>(user.RowVersion, statusRequest.RowVersion);
                 if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 // Return a bad request response if the user is already active
@@ -504,7 +499,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<UserResponseDTO>("Concurrency error occurred, failed to update user. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -512,7 +507,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to activate user.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to activate user.", 500);
             }
         }
 
@@ -521,7 +516,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             var dtoValidation = ValidateDtoExists(statusRequest, "User status update request data is missing.");
             if (dtoValidation != null) return dtoValidation;
 
-            var rowVersionValidation = ValidateRowVersion(statusRequest.RowVersion);
+            var rowVersionValidation = RowVersionHelper.ValidateFormat<UserResponseDTO>(statusRequest.RowVersion);
             if (rowVersionValidation != null) return rowVersionValidation;
 
             try
@@ -531,7 +526,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
                 if (userExists.User == null) return userExists.Error!;
                 var user = userExists.User;
 
-                var matchingRowVersionValidation = ValidateMatchingRowVersion(user, statusRequest.RowVersion);
+                var matchingRowVersionValidation = RowVersionHelper.Validate<UserResponseDTO>(user.RowVersion, statusRequest.RowVersion);
                 if (matchingRowVersionValidation != null) return matchingRowVersionValidation;
 
                 // Return a bad request response if the user is already inactive
@@ -555,7 +550,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return BuildConcurrencyCatchErrorResponse();
+                return ApiResponseHelper.Failure<UserResponseDTO>("Concurrency error occurred, failed to update user. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -563,7 +558,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             }
             catch
             {
-                return BuildSingleCatchErrorResponse("Internal error occurred, failed to deactivate user.");
+                return ApiResponseHelper.Failure<UserResponseDTO>("Internal error occurred, failed to deactivate user.", 500);
             }
         }
 
@@ -688,45 +683,6 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
             return null;
         }
 
-        private static ApiResponse<UserResponseDTO>? ValidateRowVersion(byte[]? rowVersion)
-        {
-            if (rowVersion == null || rowVersion.Length == 0)
-            {
-                return new ApiResponse<UserResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion is required for concurrency control.",
-                    StatusCode = 400
-                };
-            }
-
-            if (rowVersion.Length != 8)
-            {
-                return new ApiResponse<UserResponseDTO>
-                {
-                    Success = false,
-                    Message = "RowVersion must be exactly 8 bytes.",
-                    StatusCode = 400
-                };
-            }
-
-            return null;
-        }
-
-        private static ApiResponse<UserResponseDTO>? ValidateMatchingRowVersion(User user, byte[] rowVersion)
-        {
-            if (!user.RowVersion.SequenceEqual(rowVersion))
-            {
-                return new ApiResponse<UserResponseDTO>
-                {
-                    Success = false,
-                    Message = "The user has been modified by another process. Please reload and try again.",
-                    StatusCode = 409
-                };
-            }
-
-            return null;
-        }
 
         private static bool IsValidEmail(string email)
         {
@@ -758,49 +714,7 @@ namespace InventoryManagementAPI.Repositories.UserRepositories
         }
         private ApiResponse<UserResponseDTO> BuildUserResponse(User user, string message, int statusCode)
         {
-            return new ApiResponse<UserResponseDTO>
-            {
-                Success = true,
-                Message = message,
-                Data = MapToUserResponseDto(user),
-                StatusCode = statusCode
-            };
-        }
-        private ApiResponse<IEnumerable<UserResponseDTO>> BuildBulkCatchErrorResponse(string message)
-        {
-            return new ApiResponse<IEnumerable<UserResponseDTO>>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = 500,
-            };
-        }
-        private ApiResponse<UserResponseDTO> BuildSingleCatchErrorResponse(string message)
-        {
-            return new ApiResponse<UserResponseDTO>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = 500,
-            };
-        }
-        private static ApiResponse<UserResponseDTO> BuildRoleMembershipError(string message, int statusCode)
-        {
-            return new ApiResponse<UserResponseDTO>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = statusCode
-            };
-        }
-        private ApiResponse<UserResponseDTO> BuildConcurrencyCatchErrorResponse()
-        {
-            return new ApiResponse<UserResponseDTO>
-            {
-                Success = false,
-                Message = "Concurrency error occurred, failed to update user. Please try again.",
-                StatusCode = 409,
-            };
+            return ApiResponseHelper.Success(MapToUserResponseDto(user), message, statusCode);
         }
     }
 }

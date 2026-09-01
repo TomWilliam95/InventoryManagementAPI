@@ -212,12 +212,7 @@ namespace InventoryManagementAPI.Tests
             Assert.Equal("Category added successfully.", result.Message);
 
             // Verify that the repository's CreateCategoryAsync method was called exactly once with the expected category
-            repository.Verify(
-                repo => repo.CreateCategoryAsync(
-                    It.Is<Category>(c =>
-                    c.Name == "Toys" &&
-                    c.Description == "Fun Stuff"), It.IsAny<CancellationToken>()),
-                Times.Once);
+ repository.Verify(repo => repo.CreateCategoryAsync(It.Is<Category>(c => c.Name == "Toys" && c.Description == "Fun Stuff"), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]

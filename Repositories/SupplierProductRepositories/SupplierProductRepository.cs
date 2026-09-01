@@ -45,9 +45,7 @@ namespace InventoryManagementAPI.Repositories.SupplierProductRepositories
                 .AnyAsync(item => item.SupplierID == supplierId && item.SupplierSku == supplierSku, cancellationToken);
 
         public Task<bool> SupplierSkuExistsForOtherProductAsync(int supplierId, int productId, string supplierSku, CancellationToken cancellationToken = default) =>
-            _context.SupplierProducts.AsNoTracking().AnyAsync(
-                item => item.SupplierID == supplierId && item.ProductID != productId && item.SupplierSku == supplierSku,
-                cancellationToken);
+ _context.SupplierProducts.AsNoTracking().AnyAsync(item => item.SupplierID == supplierId && item.ProductID != productId && item.SupplierSku == supplierSku, cancellationToken);
 
         public Task<bool> SupplierExistsAsync(int supplierId, CancellationToken cancellationToken = default) =>
             _context.Suppliers.AsNoTracking().AnyAsync(supplier => supplier.ID == supplierId && supplier.IsActive, cancellationToken);

@@ -1,5 +1,6 @@
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierContactDTO_s;
+using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagementAPI.Repositories.SupplierContactRepositories;
@@ -15,28 +16,16 @@ public class SupplierContactService : ISupplierContactService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<ApiResponse<IEnumerable<SupplierContactResponseDTO>>> GetAllAsync(
-        int supplierId,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<ApiResponse<IEnumerable<SupplierContactResponseDTO>>> GetAllAsync(int supplierId, CancellationToken cancellationToken = default)
     {
         try
         {
             if (!await _repository.SupplierExistsAsync(supplierId, cancellationToken))
-                return Error<IEnumerable<SupplierContactResponseDTO>>(
-                    "Active supplier not found.",
-                    404
-                );
+                return ApiResponseHelper.Failure<IEnumerable<SupplierContactResponseDTO>>("Active supplier not found.", 404);
             var contacts = await _repository.GetAllBySupplierIdAsync(supplierId, cancellationToken);
             if (!contacts.Any())
-                return Error<IEnumerable<SupplierContactResponseDTO>>(
-                    "No supplier contacts found.",
-                    404
-                );
-            return Success<IEnumerable<SupplierContactResponseDTO>>(
-                contacts.Select(Map).ToList(),
-                "Supplier contacts retrieved successfully."
-            );
+                return ApiResponseHelper.Failure<IEnumerable<SupplierContactResponseDTO>>("No supplier contacts found.", 404);
+            return ApiResponseHelper.Success<IEnumerable<SupplierContactResponseDTO>>(contacts.Select(Map).ToList(), "Supplier contacts retrieved successfully.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -44,25 +33,18 @@ public class SupplierContactService : ISupplierContactService
         }
         catch
         {
-            return Error<IEnumerable<SupplierContactResponseDTO>>(
-                "Internal error occurred, failed to load supplier contacts.",
-                500
-            );
+            return ApiResponseHelper.Failure<IEnumerable<SupplierContactResponseDTO>>("Internal error occurred, failed to load supplier contacts.", 500);
         }
     }
 
-    public async Task<ApiResponse<SupplierContactResponseDTO>> GetByIdAsync(
-        int supplierId,
-        int contactId,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<ApiResponse<SupplierContactResponseDTO>> GetByIdAsync(int supplierId, int contactId, CancellationToken cancellationToken = default)
     {
         try
         {
             var contact = await _repository.GetByIdAsync(supplierId, contactId, cancellationToken);
             return contact == null
-                ? Error("Supplier contact not found.", 404)
-                : Success(Map(contact), "Supplier contact retrieved successfully.");
+                ? ApiResponseHelper.Failure<SupplierContactResponseDTO>("Supplier contact not found.", 404)
+                : ApiResponseHelper.Success(Map(contact), "Supplier contact retrieved successfully.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -70,26 +52,25 @@ public class SupplierContactService : ISupplierContactService
         }
         catch
         {
-            return Error("Internal error occurred, failed to load supplier contact.", 500);
+            return ApiResponseHelper.Failure<SupplierContactResponseDTO>("Internal error occurred, failed to load supplier contact.", 500);
         }
     }
 
-    public async Task<ApiResponse<SupplierContactResponseDTO>> GetPrimaryAsync(
-        int supplierId,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<ApiResponse<SupplierContactResponseDTO>> GetPrimaryAsync(int supplierId, CancellationToken cancellationToken = default)
     {
         try
         {
             if (!await _repository.SupplierExistsAsync(supplierId, cancellationToken))
-                return Error("Active supplier not found.", 404);
-            var contact = await _repository.GetPrimaryBySupplierIdAsync(
-                supplierId,
-                cancellationToken
-            );
+                return ApiResponseHelper.Failure<SupplierContactResponseDTO>("Active supplier not found.", 404);
+
+            var contact = await _repository.GetPrimaryBySupplierIdAsync(supplierId, cancellationToken);
+
             return contact == null
-                ? Error("Primary supplier contact not found.", 404)
-                : Success(Map(contact), "Primary supplier contact retrieved successfully.");
+                // If no primary contact is found, return a 404 response with a message indicating that the primary supplier contact was not found.
+                ? ApiResponseHelper.Failure<SupplierContactResponseDTO>("Primary supplier contact not found.", 404)
+                // If a primary contact is found, return a success response with the mapped contact data
+                // and a message indicating that the primary supplier contact was retrieved successfully.
+                : ApiResponseHelper.Success(Map(contact), "Primary supplier contact retrieved successfully.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -97,42 +78,27 @@ public class SupplierContactService : ISupplierContactService
         }
         catch
         {
-            return Error("Internal error occurred, failed to load primary supplier contact.", 500);
+            return ApiResponseHelper.Failure<SupplierContactResponseDTO>("Internal error occurred, failed to load primary supplier contact.", 500);
         }
     }
 
-    public async Task<ApiResponse<SupplierContactResponseDTO>> CreateAsync(
-        int supplierId,
-        CreateSupplierContactRequestDTO dto,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<ApiResponse<SupplierContactResponseDTO>> CreateAsync(int supplierId, CreateSupplierContactRequestDTO dto, CancellationToken cancellationToken = default)
     {
         if (dto == null)
-            return Error("Request body is required.", 400);
+            return ApiResponseHelper.Failure<SupplierContactResponseDTO>("Request body is required.", 400);
         if (string.IsNullOrWhiteSpace(dto.Name))
-            return Error("Contact name is required.", 400);
+            return ApiResponseHelper.Failure<SupplierContactResponseDTO>("Contact name is required.", 400);
         try
         {
             if (!await _repository.SupplierExistsAsync(supplierId, cancellationToken))
-                return Error("Active supplier not found.", 404);
-            if (
-                !string.IsNullOrWhiteSpace(dto.Email)
-                && await _repository.EmailExistsForSupplierAsync(
-                    supplierId,
-                    dto.Email,
-                    cancellationToken
-                )
-            )
-                return Error(
-                    "This email is already used by another contact for the supplier.",
-                    400
-                );
-            if (
-                dto.IsPrimary
-                && await _repository.GetPrimaryBySupplierIdAsync(supplierId, cancellationToken)
-                    != null
-            )
-                return Error("The supplier already has a primary contact.", 400);
+                return ApiResponseHelper.Failure<SupplierContactResponseDTO>("Active supplier not found.", 404);
+
+            if (!string.IsNullOrWhiteSpace(dto.Email) && await _repository.EmailExistsForSupplierAsync(supplierId, dto.Email, cancellationToken))
+                return ApiResponseHelper.Failure<SupplierContactResponseDTO>("This email is already used by another contact for the supplier.", 400);
+
+            if (dto.IsPrimary && await _repository.GetPrimaryBySupplierIdAsync(supplierId, cancellationToken) != null)
+                return ApiResponseHelper.Failure<SupplierContactResponseDTO>("The supplier already has a primary contact.", 400);
+
             var now = DateTime.UtcNow;
             var contact = new SupplierContact
             {
@@ -149,7 +115,7 @@ public class SupplierContactService : ISupplierContactService
             };
             await _repository.AddAsync(contact, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Success(Map(contact), "Supplier contact created successfully.", 201);
+            return ApiResponseHelper.Success<SupplierContactResponseDTO>(Map(contact), "Supplier contact created successfully.", 201);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -161,12 +127,7 @@ public class SupplierContactService : ISupplierContactService
         }
     }
 
-    public async Task<ApiResponse<SupplierContactResponseDTO>> UpdateAsync(
-        int supplierId,
-        int contactId,
-        UpdateSupplierContactRequestDTO dto,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<ApiResponse<SupplierContactResponseDTO>> UpdateAsync(int supplierId, int contactId, UpdateSupplierContactRequestDTO dto, CancellationToken cancellationToken = default)
     {
         if (dto == null)
             return Error("Request body is required.", 400);
@@ -183,25 +144,9 @@ public class SupplierContactService : ISupplierContactService
             var match = Match(contact.RowVersion, dto.RowVersion);
             if (match != null)
                 return match;
-            if (
-                !string.IsNullOrWhiteSpace(dto.Email)
-                && await _repository.EmailExistsForOtherContactAsync(
-                    supplierId,
-                    contactId,
-                    dto.Email,
-                    cancellationToken
-                )
-            )
-                return Error(
-                    "This email is already used by another contact for the supplier.",
-                    400
-                );
-            if (
-                dto.IsPrimary
-                && !contact.IsPrimary
-                && await _repository.GetPrimaryBySupplierIdAsync(supplierId, cancellationToken)
-                    != null
-            )
+            if (!string.IsNullOrWhiteSpace(dto.Email) && await _repository.EmailExistsForOtherContactAsync(supplierId, contactId, dto.Email, cancellationToken))
+                return Error("This email is already used by another contact for the supplier.", 400);
+            if (dto.IsPrimary && !contact.IsPrimary && await _repository.GetPrimaryBySupplierIdAsync(supplierId, cancellationToken) != null)
                 return Error("The supplier already has a primary contact.", 400);
             contact.SupplierAddressID = dto.SupplierAddressID;
             contact.Name = dto.Name.Trim();
@@ -227,19 +172,9 @@ public class SupplierContactService : ISupplierContactService
         }
     }
 
-    public Task<ApiResponse<SupplierContactResponseDTO>> SetPrimaryAsync(
-        int supplierId,
-        int contactId,
-        UpdateSupplierContactPrimaryRequestDTO dto,
-        CancellationToken cancellationToken = default
-    ) => SetPrimaryInternalAsync(supplierId, contactId, dto, cancellationToken);
+    public Task<ApiResponse<SupplierContactResponseDTO>> SetPrimaryAsync(int supplierId, int contactId, UpdateSupplierContactPrimaryRequestDTO dto, CancellationToken cancellationToken = default) => SetPrimaryInternalAsync(supplierId, contactId, dto, cancellationToken);
 
-    private async Task<ApiResponse<SupplierContactResponseDTO>> SetPrimaryInternalAsync(
-        int supplierId,
-        int contactId,
-        UpdateSupplierContactPrimaryRequestDTO dto,
-        CancellationToken ct
-    )
+    private async Task<ApiResponse<SupplierContactResponseDTO>> SetPrimaryInternalAsync(int supplierId, int contactId, UpdateSupplierContactPrimaryRequestDTO dto, CancellationToken ct)
     {
         if (dto == null)
             return Error("Request body is required.", 400);
@@ -256,10 +191,7 @@ public class SupplierContactService : ISupplierContactService
                 return match;
             if (contact.IsPrimary == dto.IsPrimary)
                 return Error($"Contact primary status is already {dto.IsPrimary}.", 400);
-            if (
-                dto.IsPrimary
-                && await _repository.GetPrimaryBySupplierIdAsync(supplierId, ct) != null
-            )
+            if (dto.IsPrimary && await _repository.GetPrimaryBySupplierIdAsync(supplierId, ct) != null)
                 return Error("The supplier already has a primary contact.", 400);
             contact.IsPrimary = dto.IsPrimary;
             contact.Updated = DateTime.UtcNow;
@@ -280,27 +212,11 @@ public class SupplierContactService : ISupplierContactService
         }
     }
 
-    public Task<ApiResponse<SupplierContactResponseDTO>> ActivateAsync(
-        int supplierId,
-        int contactId,
-        UpdateSupplierContactStatusRequestDTO dto,
-        CancellationToken cancellationToken = default
-    ) => SetStatusAsync(supplierId, contactId, dto, true, cancellationToken);
+    public Task<ApiResponse<SupplierContactResponseDTO>> ActivateAsync(int supplierId, int contactId, UpdateSupplierContactStatusRequestDTO dto, CancellationToken cancellationToken = default) => SetStatusAsync(supplierId, contactId, dto, true, cancellationToken);
 
-    public Task<ApiResponse<SupplierContactResponseDTO>> DeactivateAsync(
-        int supplierId,
-        int contactId,
-        UpdateSupplierContactStatusRequestDTO dto,
-        CancellationToken cancellationToken = default
-    ) => SetStatusAsync(supplierId, contactId, dto, false, cancellationToken);
+    public Task<ApiResponse<SupplierContactResponseDTO>> DeactivateAsync(int supplierId, int contactId, UpdateSupplierContactStatusRequestDTO dto, CancellationToken cancellationToken = default) => SetStatusAsync(supplierId, contactId, dto, false, cancellationToken);
 
-    private async Task<ApiResponse<SupplierContactResponseDTO>> SetStatusAsync(
-        int supplierId,
-        int contactId,
-        UpdateSupplierContactStatusRequestDTO dto,
-        bool active,
-        CancellationToken ct
-    )
+    private async Task<ApiResponse<SupplierContactResponseDTO>> SetStatusAsync(int supplierId, int contactId, UpdateSupplierContactStatusRequestDTO dto, bool active, CancellationToken ct)
     {
         if (dto == null)
             return Error("Request body is required.", 400);
@@ -308,10 +224,7 @@ public class SupplierContactService : ISupplierContactService
         if (rv != null)
             return rv;
         if (dto.IsActive != active)
-            return Error(
-                $"IsActive must be {active.ToString().ToLowerInvariant()} for this operation.",
-                400
-            );
+            return Error($"IsActive must be {active.ToString().ToLowerInvariant()} for this operation.", 400);
         try
         {
             var contact = await _repository.GetByIdAsync(supplierId, contactId, ct);
@@ -321,17 +234,11 @@ public class SupplierContactService : ISupplierContactService
             if (match != null)
                 return match;
             if (contact.IsActive == active)
-                return Error(
-                    $"Supplier contact is already {(active ? "active" : "inactive")}.",
-                    400
-                );
+                return Error($"Supplier contact is already {(active ? "active" : "inactive")}.", 400);
             contact.IsActive = active;
             contact.Updated = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync(ct);
-            return Success(
-                Map(contact),
-                $"Supplier contact {(active ? "activated" : "deactivated")} successfully."
-            );
+            return Success(Map(contact), $"Supplier contact {(active ? "activated" : "deactivated")} successfully.");
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -347,12 +254,7 @@ public class SupplierContactService : ISupplierContactService
         }
     }
 
-    public async Task<ApiResponse<bool>> DeleteAsync(
-        int supplierId,
-        int contactId,
-        DeleteSupplierContactRequestDTO dto,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<ApiResponse<bool>> DeleteAsync(int supplierId, int contactId, DeleteSupplierContactRequestDTO dto, CancellationToken cancellationToken = default)
     {
         if (dto == null)
             return Error<bool>("Request body is required.", 400);
@@ -364,20 +266,14 @@ public class SupplierContactService : ISupplierContactService
             if (contact == null)
                 return Error<bool>("Supplier contact not found.", 404);
             if (!contact.RowVersion.SequenceEqual(dto.RowVersion))
-                return Error<bool>(
-                    "RowVersion mismatch. The contact has been modified by another process.",
-                    409
-                );
+                return Error<bool>("RowVersion mismatch. The contact has been modified by another process.", 409);
             _repository.Remove(contact);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Success(true, "Supplier contact deleted successfully.");
         }
         catch (DbUpdateConcurrencyException)
         {
-            return Error<bool>(
-                "Concurrency error occurred, failed to delete supplier contact.",
-                409
-            );
+            return Error<bool>("Concurrency error occurred, failed to delete supplier contact.", 409);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -407,36 +303,16 @@ public class SupplierContactService : ISupplierContactService
         };
 
     private static ApiResponse<T> Success<T>(T data, string message, int code = 200) =>
-        new()
-        {
-            Success = true,
-            Data = data,
-            Message = message,
-            StatusCode = code,
-        };
+        ApiResponseHelper.Success(data, message, code);
 
     private static ApiResponse<T> Error<T>(string message, int code) =>
-        new()
-        {
-            Success = false,
-            Message = message,
-            StatusCode = code,
-        };
+        ApiResponseHelper.Failure<T>(message, code);
 
     private static ApiResponse<SupplierContactResponseDTO> Error(string message, int code) =>
-        Error<SupplierContactResponseDTO>(message, code);
+        ApiResponseHelper.Failure<SupplierContactResponseDTO>(message, code);
 
-    private static ApiResponse<SupplierContactResponseDTO>? Validate(byte[] row) =>
-        row == null || row.Length == 0
-            ? Error("RowVersion is required for concurrency control.", 400)
-        : row.Length != 8 ? Error("Invalid RowVersion length. Expected 8 bytes.", 400)
-        : null;
+    private static ApiResponse<SupplierContactResponseDTO>? Validate(byte[] rowVersion) =>
+        RowVersionHelper.ValidateFormat<SupplierContactResponseDTO>(rowVersion);
 
-    private static ApiResponse<SupplierContactResponseDTO>? Match(
-        byte[] current,
-        byte[] supplied
-    ) =>
-        current.SequenceEqual(supplied)
-            ? null
-            : Error("RowVersion mismatch. The contact has been modified by another process.", 409);
+    private static ApiResponse<SupplierContactResponseDTO>? Match(byte[] current, byte[] supplied) => RowVersionHelper.Validate<SupplierContactResponseDTO>(current, supplied);
 }

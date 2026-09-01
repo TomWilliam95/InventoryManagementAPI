@@ -94,10 +94,7 @@ public class ProductRepositoryTests : IClassFixture<SqlServerFixture>
         Assert.False(await repository.OtherProductSkuExistsAsync(product.ID, product.Sku, CancellationToken.None));
     }
 
-    private static async Task<Product> AddProductAsync(
-        Services.InvManDBContext context,
-        int quantity = 10,
-        int reorderLevel = 5)
+ private static async Task<Product> AddProductAsync(Services.InvManDBContext context, int quantity = 10, int reorderLevel = 5)
     {
         var category = await AddCategoryAsync(context);
         var warehouse = new Warehouse

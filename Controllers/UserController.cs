@@ -69,10 +69,7 @@ namespace InventoryManagementAPI.Controllers
         // === USER ROLES ===
         [HttpPut("{userId:int}/roles/{roleId:int}")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> AssignUserRole(
-            int userId,
-            int roleId,
-            CancellationToken cancellationToken)
+ public async Task<ActionResult<ApiResponse<UserResponseDTO>>> AssignUserRole(int userId, int roleId, CancellationToken cancellationToken)
         {
             var result = await _userService.AssignUserRoleAsync(userId, roleId, cancellationToken);
             return StatusCode(result.StatusCode, result);
@@ -80,10 +77,7 @@ namespace InventoryManagementAPI.Controllers
 
         [HttpDelete("{userId:int}/roles/{roleId:int}")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<ApiResponse<UserResponseDTO>>> RemoveUserRole(
-            int userId,
-            int roleId,
-            CancellationToken cancellationToken)
+ public async Task<ActionResult<ApiResponse<UserResponseDTO>>> RemoveUserRole(int userId, int roleId, CancellationToken cancellationToken)
         {
             var result = await _userService.RemoveUserRoleAsync(userId, roleId, cancellationToken);
             return StatusCode(result.StatusCode, result);

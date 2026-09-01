@@ -8,6 +8,7 @@ using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.UserRepositories;
 using InventoryManagementAPI.Repositories.WarehouseRepositories;
 using Microsoft.EntityFrameworkCore;
+using InventoryManagementAPI.Services;
 
 namespace InventoryManagementAPI.Repositories.InvMovementRepositories
 {
@@ -83,7 +84,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnErrorResponse("Internal error occurred, failed to load inventory movement.", 500);
+                return ApiResponseHelper.Failure<InventoryMovementResponseDTO>("Internal error occurred, failed to load inventory movement.", 500);
             }
         }
 
@@ -103,7 +104,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnBulkErrorResponse("Internal error occurred, failed to load inventory movements.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<InventoryMovementResponseDTO>>("Internal error occurred, failed to load inventory movements.", 500);
             }
         }
 
@@ -136,7 +137,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnBulkErrorResponse("Internal error occurred, failed to load product movement history.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<InventoryMovementResponseDTO>>("Internal error occurred, failed to load product movement history.", 500);
             }
         }
 
@@ -168,7 +169,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnBulkErrorResponse("Internal error occurred, failed to load user movement history.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<InventoryMovementResponseDTO>>("Internal error occurred, failed to load user movement history.", 500);
             }
         }
         public async Task<ApiResponse<IEnumerable<InventoryMovementResponseDTO>>> GetMovementsByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
@@ -208,7 +209,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnBulkErrorResponse("Internal error occurred, failed to load movement history by date range.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<InventoryMovementResponseDTO>>("Internal error occurred, failed to load movement history by date range.", 500);
             }
         }
         public async Task<ApiResponse<IEnumerable<InventoryMovementResponseDTO>>> GetMovementsByMovementTypeAsync(MovementType movementType, CancellationToken cancellationToken = default)
@@ -238,7 +239,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnBulkErrorResponse("Internal error occurred, failed to load movement history by movement type.", 500);
+                return ApiResponseHelper.Failure<IEnumerable<InventoryMovementResponseDTO>>("Internal error occurred, failed to load movement history by movement type.", 500);
             }
         }
 
@@ -311,7 +312,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return ReturnErrorResponse("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
+                return ApiResponseHelper.Failure<InventoryMovementResponseDTO>("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -319,7 +320,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnErrorResponse("Internal error occurred, failed to record inventory adjustment.", 500);
+                return ApiResponseHelper.Failure<InventoryMovementResponseDTO>("Internal error occurred, failed to record inventory adjustment.", 500);
             }
         }
 
@@ -376,7 +377,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return ReturnErrorResponse("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
+                return ApiResponseHelper.Failure<InventoryMovementResponseDTO>("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -384,7 +385,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnErrorResponse("Internal error occurred, failed to record stock in movement.", 500);
+                return ApiResponseHelper.Failure<InventoryMovementResponseDTO>("Internal error occurred, failed to record stock in movement.", 500);
             }
         }
 
@@ -443,7 +444,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch (DbUpdateConcurrencyException)
             {
-                return ReturnErrorResponse("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
+                return ApiResponseHelper.Failure<InventoryMovementResponseDTO>("Concurrency error occurred while recording inventory adjustment. Please try again.", 409);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -451,7 +452,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             }
             catch
             {
-                return ReturnErrorResponse("Internal error occurred, failed to record stock out movement.", 500);
+                return ApiResponseHelper.Failure<InventoryMovementResponseDTO>("Internal error occurred, failed to record stock out movement.", 500);
             }
         }
 
@@ -604,48 +605,27 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             if (product == null)
             {
                 // Return an error response if the product is not found
-                return (null, null, new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Product not found.",
-                    StatusCode = 404
-                });
+                return (null, null, ApiResponseHelper.Failure<InventoryMovementResponseDTO>($"Product with ID {dto.ProductID} not found.", 404));
             }
             // Check if the product is active before proceeding
             if (!await _productRepository.IsProductActiveAsync(product.ID, cancellationToken))
             {
                 // Return an error response if the product is not active
-                return (null, null, new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Product is not active.",
-                    StatusCode = 400
-                });
+                return (null, null, ApiResponseHelper.Failure<InventoryMovementResponseDTO>($"Product with ID {dto.ProductID} is not active.", 400));
             }
 
             var warehouse = await _warehouseRepository.GetWarehouseByIdAsync(dto.WarehouseID, cancellationToken);
             if (warehouse == null)
             {
-                // Return an error response if the user is not found
-                return (null, null, new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Warehouse not found.",
-                    StatusCode = 404
-                });
+                // Return an error response if the warehouse is not found
+                return (null, null, ApiResponseHelper.Failure<InventoryMovementResponseDTO>($"Warehouse with ID {dto.WarehouseID} not found.", 404));
             }
             // Check if the warehouse is active before proceeding
             if (!await _warehouseRepository.IsWarehouseActiveAsync(warehouse.ID, cancellationToken))
             {
                 // Return an error response if the warehouse is not active
-                return (null, null, new ApiResponse<InventoryMovementResponseDTO>
-                {
-                    Success = false,
-                    Message = "Warehouse is not active.",
-                    StatusCode = 400
-                });
+                return (null, null, ApiResponseHelper.Failure<InventoryMovementResponseDTO>($"Warehouse with ID {dto.WarehouseID} is not active.", 400));
             }
-            ;
 
             // If both product and user are found and active, return them along with a null error response
             //Return error as null, since both product and user are found successfully, and skip the error handling
@@ -657,8 +637,9 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
         /// Creates an InventoryMovement entity based on the provided DTO and product.
         /// Creates an object of InventoryMovement, which is used for ApiResponse and database update.
         /// </summary>
-        /// <param name="dto"></param>
-        /// <param name="product"></param>
+        /// <param name="dto">The DTO containing the details for the inventory movement.</param>
+        /// <param name="inventoryStock">The inventory stock associated with the movement.</param>
+        /// <param name="user">The user performing the movement.</param>
         /// <returns></returns>
         private InventoryMovement CreateInventoryMovement(CreateInventoryMovementRequestDTO dto, InventoryStock inventoryStock, User user)
         {
@@ -735,12 +716,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             // Validate if any movements were found
             if (movements == null || !movements.Any())
             {
-                return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
-                {
-                    Success = false,
-                    Message = "No movements found.",
-                    StatusCode = 404
-                };
+                return ApiResponseHelper.Failure<IEnumerable<InventoryMovementResponseDTO>>("No inventory movements found.", 404);
             }
 
             // Map the movements to the response DTOs
@@ -769,34 +745,7 @@ namespace InventoryManagementAPI.Repositories.InvMovementRepositories
             });
 
             // Return the response with the list of movements
-            return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
-            {
-                Success = true,
-                Message = "Movements retrieved successfully.",
-                Data = movementResponse,
-                StatusCode = 200
-            };
-        }
-
-        //CATCH ERROR RESPONSE BUILDERS!!!
-        private ApiResponse<InventoryMovementResponseDTO> ReturnErrorResponse(string message, int statusCode)
-        {
-            return new ApiResponse<InventoryMovementResponseDTO>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = statusCode
-            };
-        }
-
-        private ApiResponse<IEnumerable<InventoryMovementResponseDTO>> ReturnBulkErrorResponse(string message, int statusCode)
-        {
-            return new ApiResponse<IEnumerable<InventoryMovementResponseDTO>>
-            {
-                Success = false,
-                Message = message,
-                StatusCode = statusCode
-            };
+            return ApiResponseHelper.Success<IEnumerable<InventoryMovementResponseDTO>>(movementResponse, "Movements retrieved successfully.", 200);
         }
     }
 }

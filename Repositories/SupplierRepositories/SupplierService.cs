@@ -1,6 +1,7 @@
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.SupplierDTO_s;
 using Microsoft.EntityFrameworkCore;
+using InventoryManagementAPI.Services;
 
 namespace InventoryManagementAPI.Repositories.SupplierRepositories;
 
@@ -15,19 +16,14 @@ public class SupplierService : ISupplierService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync(
-        CancellationToken cancellationToken = default
-    )
+ public async Task<ApiResponse<IEnumerable<SupplierResponseDTO>>> GetAllSuppliersAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             var suppliers = await _supplierRepository.GetAllSuppliersAsync(cancellationToken);
             if (!suppliers.Any())
                 return Error<IEnumerable<SupplierResponseDTO>>("No suppliers found.", 404);
-            return Success<IEnumerable<SupplierResponseDTO>>(
-                suppliers.Select(MapToResponse).ToList(),
-                "Suppliers retrieved successfully."
-            );
+ return Success<IEnumerable<SupplierResponseDTO>>(suppliers.Select(MapToResponse).ToList(), "Suppliers retrieved successfully.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -35,24 +31,15 @@ public class SupplierService : ISupplierService
         }
         catch
         {
-            return Error<IEnumerable<SupplierResponseDTO>>(
-                "Internal error occurred, failed to load suppliers.",
-                500
-            );
+ return Error<IEnumerable<SupplierResponseDTO>>("Internal error occurred, failed to load suppliers.", 500);
         }
     }
 
-    public async Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(
-        int supplierId,
-        CancellationToken cancellationToken = default
-    )
+ public async Task<ApiResponse<SupplierResponseDTO>> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var supplier = await _supplierRepository.GetSupplierByIdAsync(
-                supplierId,
-                cancellationToken
-            );
+ var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId, cancellationToken);
             return supplier == null
                 ? Error("Supplier not found.", 404)
                 : Success(MapToResponse(supplier), "Supplier retrieved successfully.");
@@ -67,10 +54,7 @@ public class SupplierService : ISupplierService
         }
     }
 
-    public async Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(
-        CreateSupplierRequestDTO dto,
-        CancellationToken cancellationToken = default
-    )
+ public async Task<ApiResponse<SupplierResponseDTO>> CreateSupplierAsync(CreateSupplierRequestDTO dto, CancellationToken cancellationToken = default)
     {
         if (dto == null)
             return Error("Request body is required.", 400);
@@ -104,37 +88,24 @@ public class SupplierService : ISupplierService
         }
     }
 
-    public async Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(
-        int supplierId,
-        UpdateSupplierRequestDTO dto,
-        CancellationToken cancellationToken = default
-    )
+ public async Task<ApiResponse<SupplierResponseDTO>> UpdateSupplierAsync(int supplierId, UpdateSupplierRequestDTO dto, CancellationToken cancellationToken = default)
     {
         if (dto == null)
             return Error("Request body is required.", 400);
-        var rowError = ValidateRowVersion(dto.RowVersion);
+        var rowError = RowVersionHelper.ValidateFormat<SupplierResponseDTO>(dto.RowVersion);
         if (rowError != null)
             return rowError;
         if (string.IsNullOrWhiteSpace(dto.Name))
             return Error("Supplier name is required.", 400);
         try
         {
-            var supplier = await _supplierRepository.GetSupplierByIdAsync(
-                supplierId,
-                cancellationToken
-            );
+ var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId, cancellationToken);
             if (supplier == null)
                 return Error("Supplier not found.", 404);
-            var matchError = ValidateMatchingRowVersion(supplier.RowVersion, dto.RowVersion);
+            var matchError = RowVersionHelper.Validate<SupplierResponseDTO>(supplier.RowVersion, dto.RowVersion);
             if (matchError != null)
                 return matchError;
-            if (
-                await _supplierRepository.SupplierNameExistsForOtherSupplierAsync(
-                    supplierId,
-                    dto.Name,
-                    cancellationToken
-                )
-            )
+ if (await _supplierRepository.SupplierNameExistsForOtherSupplierAsync(supplierId, dto.Name, cancellationToken))
                 return Error("A supplier with the same name already exists.", 400);
 
             supplier.Name = dto.Name.Trim();
@@ -158,44 +129,25 @@ public class SupplierService : ISupplierService
         }
     }
 
-    public Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(
-        int supplierId,
-        UpdateSupplierStatusRequestDTO dto,
-        CancellationToken cancellationToken = default
-    ) => SetStatusAsync(supplierId, dto, true, cancellationToken);
+ public Task<ApiResponse<SupplierResponseDTO>> ActivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto, CancellationToken cancellationToken = default) => SetStatusAsync(supplierId, dto, true, cancellationToken);
 
-    public Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(
-        int supplierId,
-        UpdateSupplierStatusRequestDTO dto,
-        CancellationToken cancellationToken = default
-    ) => SetStatusAsync(supplierId, dto, false, cancellationToken);
+ public Task<ApiResponse<SupplierResponseDTO>> DeactivateSupplierAsync(int supplierId, UpdateSupplierStatusRequestDTO dto, CancellationToken cancellationToken = default) => SetStatusAsync(supplierId, dto, false, cancellationToken);
 
-    private async Task<ApiResponse<SupplierResponseDTO>> SetStatusAsync(
-        int supplierId,
-        UpdateSupplierStatusRequestDTO dto,
-        bool isActive,
-        CancellationToken cancellationToken
-    )
+ private async Task<ApiResponse<SupplierResponseDTO>> SetStatusAsync(int supplierId, UpdateSupplierStatusRequestDTO dto, bool isActive, CancellationToken cancellationToken)
     {
         if (dto == null)
             return Error("Request body is required.", 400);
-        var rowError = ValidateRowVersion(dto.RowVersion);
+        var rowError = RowVersionHelper.ValidateFormat<SupplierResponseDTO>(dto.RowVersion);
         if (rowError != null)
             return rowError;
         if (dto.IsActive != isActive)
-            return Error(
-                $"IsActive must be {isActive.ToString().ToLowerInvariant()} for this operation.",
-                400
-            );
+ return Error($"IsActive must be {isActive.ToString().ToLowerInvariant()} for this operation.", 400);
         try
         {
-            var supplier = await _supplierRepository.GetSupplierByIdAsync(
-                supplierId,
-                cancellationToken
-            );
+ var supplier = await _supplierRepository.GetSupplierByIdAsync(supplierId, cancellationToken);
             if (supplier == null)
                 return Error("Supplier not found.", 404);
-            var matchError = ValidateMatchingRowVersion(supplier.RowVersion, dto.RowVersion);
+            var matchError = RowVersionHelper.Validate<SupplierResponseDTO>(supplier.RowVersion, dto.RowVersion);
             if (matchError != null)
                 return matchError;
             if (supplier.IsActive == isActive)
@@ -203,10 +155,7 @@ public class SupplierService : ISupplierService
             supplier.IsActive = isActive;
             supplier.Updated = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Success(
-                MapToResponse(supplier),
-                $"Supplier {(isActive ? "activated" : "deactivated")} successfully."
-            );
+ return Success(MapToResponse(supplier), $"Supplier {(isActive ? "activated" : "deactivated")} successfully.");
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -253,17 +202,4 @@ public class SupplierService : ISupplierService
     private static ApiResponse<SupplierResponseDTO> Error(string message, int statusCode) =>
         Error<SupplierResponseDTO>(message, statusCode);
 
-    private static ApiResponse<SupplierResponseDTO>? ValidateRowVersion(byte[] rowVersion) =>
-        rowVersion == null || rowVersion.Length == 0
-            ? Error("RowVersion is required for concurrency control.", 400)
-        : rowVersion.Length != 8 ? Error("Invalid RowVersion length. Expected 8 bytes.", 400)
-        : null;
-
-    private static ApiResponse<SupplierResponseDTO>? ValidateMatchingRowVersion(
-        byte[] current,
-        byte[] supplied
-    ) =>
-        current.SequenceEqual(supplied)
-            ? null
-            : Error("RowVersion mismatch. The supplier has been modified by another process.", 409);
 }

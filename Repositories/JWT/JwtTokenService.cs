@@ -50,13 +50,7 @@ namespace InventoryManagementAPI.Repositories.JWT
             //The JwtSecurityToken class represents a JSON Web Token and provides methods for creating and validating tokens
             //The issuer and audience are also specified to indicate the intended recipient of the token
             
-            var token = new JwtSecurityToken(
-                issuer: _jwtSettings.Issuer,
-                audience: _jwtSettings.Audience,
-                claims: claims,
-                expires: expiration,
-                signingCredentials: creds
-            );
+ var token = new JwtSecurityToken(issuer: _jwtSettings.Issuer, audience: _jwtSettings.Audience, claims: claims, expires: expiration, signingCredentials: creds);
 
             //Return the serialized token as a string
             //The WriteToken method of the JwtSecurityTokenHandler class is used to serialize the token into a string format that can be sent to the client

@@ -15,10 +15,7 @@ public class ProductServiceTests
     private readonly Mock<ICategoryRepository> _categories = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
-    private ProductService CreateService() => new(
-        _products.Object,
-        _categories.Object,
-        _unitOfWork.Object);
+ private ProductService CreateService() => new(_products.Object, _categories.Object, _unitOfWork.Object);
 
     [Fact]
     public async Task GetSingleProduct_ExistingProduct_Returns200()
