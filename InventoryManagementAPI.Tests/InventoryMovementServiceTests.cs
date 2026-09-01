@@ -131,7 +131,7 @@ public class InventoryMovementServiceTests
 
         Assert.False(result.Success);
         Assert.Equal(404, result.StatusCode);
-        Assert.Equal("Warehouse not found.", result.Message);
+        Assert.Equal("Warehouse with ID 1 not found.", result.Message);
     }
 
     [Fact]

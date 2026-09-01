@@ -266,8 +266,10 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
                 //Validate Inventory Stock
                 var stockResult = await GetInventoryStockByIdAsync(inventoryStockId, cancellationToken);
                 if (stockResult.Error != null) return stockResult.Error;
+
                 var concurrencyError = RowVersionHelper.Validate<InventoryStockResponseDTO>(stockResult.Stock!.RowVersion, dto.RowVersion);
                 if (concurrencyError != null) return concurrencyError;
+
                 if (dto.IsActive) return ApiResponseHelper.Failure<InventoryStockResponseDTO>("IsActive must be false when deactivating inventory stock.", 400);
                 if (!stockResult.Stock!.IsActive) return ApiResponseHelper.Failure<InventoryStockResponseDTO>("Inventory stock is already inactive.", 400);
                 // Deactivate the inventory stock
