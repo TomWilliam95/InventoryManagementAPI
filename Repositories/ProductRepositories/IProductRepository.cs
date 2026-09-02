@@ -10,8 +10,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositorys
         // === GET ===
         Task<PagedData<Product>> GetProductsAsync(ProductQueryParameters query, CancellationToken cancellationToken = default);
         Task<Product?> GetProductAsync(int id, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync(CancellationToken cancellationToken = default);
+        Task<PagedData<Product>> GetProductsByCategoryAsync(int categoryId, ProductQueryParameters query, CancellationToken cancellationToken = default);
+        Task<PagedData<Product>> GetProductsBelowReorderLevelAsync(ProductQueryParameters query, CancellationToken cancellationToken = default);
 
         // === POST ===
         Task<Product> AddProductAsync(Product product, CancellationToken cancellationToken = default);

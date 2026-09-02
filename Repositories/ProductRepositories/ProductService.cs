@@ -77,29 +77,31 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId, CancellationToken cancellationToken = default)
+        public async Task<ApiResponse<PagedResult<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId, ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Check if the category exists using the category repository
                 if (!await _categoryRepo.CategoryExistsAsync(categoryId, cancellationToken))
-                {
-                    return new ApiResponse<IEnumerable<BulkProductResponseDTO>>
-                    {
-                        Success = false,
-                        Message = "Category Not Found",
-                        StatusCode = 404
-                    };
-                }
+                    return ApiResponseHelper.Failure<PagedResult<BulkProductResponseDTO>>("Category does not exist", 404);
+
                 // Retrieve the list of products for the specified category from the product repository
-                var productList = await _productRepo.GetProductsByCategoryAsync(categoryId, cancellationToken);
+                var productList = await _productRepo.GetProductsByCategoryAsync(categoryId, query, cancellationToken);
 
                 // Check if the product list is empty and return a response accordingly
-                var productListResult = ValidateProductGroupExists1(productList);
+                var productListResult = ValidateProductGroupExists(productList.Items);
                 if (productListResult.Products == null) return productListResult.Error!;
 
+                var page = new PagedResult<BulkProductResponseDTO>
+                {
+                    Items = productListResult.Products,
+                    Page = query.Page,
+                    PageSize = query.PageSize,
+                    TotalItems = productList.TotalItems,
+                };
+
                 // Return a successful response with the product list for the specified category
-                return ApiResponseHelper.Success<IEnumerable<BulkProductResponseDTO>>(productListResult.Products, "Successfully Retrieved Products By Category", 200);
+                return ApiResponseHelper.Success<PagedResult<BulkProductResponseDTO>>(page, "Successfully Retrieved Products By Category", 200);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -107,23 +109,31 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("Internal error occurred, failed to load products by category.", 500);
+                return ApiResponseHelper.Failure<PagedResult<BulkProductResponseDTO>>("Internal error occurred, failed to load products by category.", 500);
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel(CancellationToken cancellationToken = default)
+        public async Task<ApiResponse<PagedResult<BulkProductResponseDTO>>> GetProductsBelowReorderLevel(ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieve all products where the current stock is below the configured reorder level
-                var reorderList = await _productRepo.GetProductsBelowReorderLevelAsync(cancellationToken);
+                var reorderList = await _productRepo.GetProductsBelowReorderLevelAsync(query, cancellationToken);
 
                 // Check if any products need reordering and return a not found response if none exist
-                var productListResult = ValidateProductGroupExists1(reorderList);
+                var productListResult = ValidateProductGroupExists(reorderList.Items);
                 if (productListResult.Products == null) return productListResult.Error!;
 
                 // Return a successful response with all products that are below their reorder level
-                return ApiResponseHelper.Success<IEnumerable<BulkProductResponseDTO>>(productListResult.Products, "Successfully Retrieved Products Below Reorder Level", 200);
+                return ApiResponseHelper.Success<PagedResult<BulkProductResponseDTO>>(new PagedResult<BulkProductResponseDTO>
+                {
+                    Items = productListResult.Products,
+                    Page = query.Page,
+                    PageSize = query.PageSize,
+                    TotalItems = reorderList.TotalItems,
+                }, 
+                "Successfully Retrieved Products Below Reorder Level", 
+                200);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -131,7 +141,7 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
             }
             catch
             {
-                return ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("Internal error occurred, failed to load products below reorder level.", 500);
+                return ApiResponseHelper.Failure<PagedResult<BulkProductResponseDTO>>("Internal error occurred, failed to load products below reorder level.", 500);
             }
         }
 
@@ -468,24 +478,6 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
                 IsActive = p.IsActive
             }).ToList(), null);
         }
-
-        // LAZY LOADING VERSION OF THE ABOVE METHOD, USED FOR GETTING PRODUCTS BY CATEGORY AND BELOW REORDER LEVEL
-        // NEEDS TO BE REFACTORED TO USE THE ABOVE METHOD, BUT FOR NOW THIS IS A QUICK FIX
-        private (IEnumerable<BulkProductResponseDTO>? Products, ApiResponse<IEnumerable<BulkProductResponseDTO>>? Error) ValidateProductGroupExists1(IEnumerable<Product> products)
-        {
-            if (products == null || !products.Any())
-                return (null, ApiResponseHelper.Failure<IEnumerable<BulkProductResponseDTO>>("No Products Found", 404));
-
-            return (products.Select(p => new BulkProductResponseDTO
-            {
-                ID = p.ID,
-                Sku = p.Sku,
-                Name = p.Name,
-                Price = p.Price,
-                IsActive = p.IsActive
-            }).ToList(), null);
-        }
-
         /// <summary>
         /// Validates the provided DTO object is not null.
         /// </summary>

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using InventoryManagementAPI.Models.Contracts.Products;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Controllers
 {
@@ -29,7 +30,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetAllProducts([FromQuery] ProductQueryParameters query 
+        public async Task<ActionResult<ApiResponse<PagedResult<BulkProductResponseDTO>>>> GetAllProducts([FromQuery] ProductQueryParameters query 
             , CancellationToken cancellationToken = default)
         {
             var products = await _productService.GetProducts(query, cancellationToken);
@@ -37,16 +38,18 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpGet("~/api/categories/{categoryId:int}/products")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetProductsByCategory(int categoryId, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ApiResponse<PagedResult<BulkProductResponseDTO>>>> GetProductsByCategory(int categoryId,
+            [FromQuery] ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
-            var products = await _productService.GetProductsByCategory(categoryId, cancellationToken);
+            var products = await _productService.GetProductsByCategory(categoryId, query, cancellationToken);
             return StatusCode(products.StatusCode, products);
         }
 
         [HttpGet("below-reorder-level")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkProductResponseDTO>>>> GetProductsBelowReorderLevel(CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ApiResponse<PagedResult<BulkProductResponseDTO>>>> GetProductsBelowReorderLevel([FromQuery] ProductQueryParameters query, 
+            CancellationToken cancellationToken = default)
         {
-            var products = await _productService.GetProductsBelowReorderLevel(cancellationToken);
+            var products = await _productService.GetProductsBelowReorderLevel(query, cancellationToken);
             return StatusCode(products.StatusCode, products);
         }
 

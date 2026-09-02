@@ -352,7 +352,28 @@ namespace InventoryManagementAPI.Services
             modelBuilder.Entity<SalesOrder>().Property(order => order.Created).HasDefaultValueSql("GETDATE()");
             modelBuilder.Entity<SalesOrder>().Property(order => order.Updated).HasDefaultValueSql("GETDATE()");
 
- modelBuilder.Entity<Role>().HasData(new Role { ID = 1, Name = "Admin", Description = "Administrator role with full permissions", IsActive = true, Created = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), Updated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), }, new Role { ID = 2, Name = "Manager", Description = "Manager role with stock management permissions and limited administrative capabilities", IsActive = true, Created = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), Updated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), }, new Role { ID = 3, Name = "Staff", Description = "Standard staff role with limited permissions", IsActive = true, Created = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), Updated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), });
+            modelBuilder.Entity<Role>().HasData(
+                new Role { 
+                    ID = 1, 
+                    Name = "Admin", 
+                    Description = "Administrator role with full permissions", 
+                    IsActive = true, 
+                    Created = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 
+                    Updated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), },
+                
+                new Role { 
+                    ID = 2, 
+                    Name = "Manager", 
+                    Description = "Manager role with stock management permissions and limited administrative capabilities", 
+                    IsActive = true, Created = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 
+                    Updated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), }, 
+
+                new Role { 
+                    ID = 3, Name = "Staff", 
+                    Description = "Standard staff role with limited permissions", 
+                    IsActive = true, 
+                    Created = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 
+                    Updated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), });
 
             base.OnModelCreating(modelBuilder);
         }
