@@ -21,64 +21,9 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         {
             var products = _context.Products
                 .AsNoTracking()
-                .Include(p => p.Category)
-                .Include(p => p.InventoryStocks)
-                    .ThenInclude(stock => stock.Warehouse)
-                .Include(p => p.SupplierProducts)
-                    .ThenInclude(sp => sp.Supplier).AsQueryable();
+                .AsQueryable();
 
-            if(!string.IsNullOrWhiteSpace(query.Search))
-            {
-                var search = query.Search.Trim().ToLower();
-
-                products = products.Where(p => p.Name.ToLower().Contains(search) || p.Sku.ToLower().Contains(search));
-            }
-            if(query.CategoryId.HasValue)
-            {
-                products = products.Where(p => p.CategoryID == query.CategoryId.Value);
-            }
-            if(query.IsActive.HasValue)
-            {
-                products = products.Where(p => p.IsActive == query.IsActive.Value);
-            }
-            if(query.MinPrice.HasValue)
-            {
-                products = products.Where(p => p.Price >= query.MinPrice.Value);
-            }
-            if (query.MaxPrice.HasValue)
-            {
-                products = products.Where(p => p.Price <= query.MaxPrice.Value);
-            }
-
-            //Count total items before pagination
-            var totalItems = await products.CountAsync(cancellationToken);
-            
-            // Sorting
-            var sortBy = query.SortBy.Trim().ToLowerInvariant();
-            var descending = query.SortDirection.Trim().ToLowerInvariant() == "desc";
-
-            products = sortBy switch
-            {
-                "price" when descending => products.OrderByDescending(p => p.Price).ThenBy(p => p.ID),
-                "price" => products.OrderBy(p => p.Price).ThenBy(p => p.ID),
-                "sku" when descending => products.OrderByDescending(p => p.Sku).ThenBy(p => p.ID),
-                "sku" => products.OrderBy(p => p.Sku).ThenBy(p => p.ID),
-                "name" when descending => products.OrderByDescending(p => p.Name).ThenBy(p => p.ID),
-                "name" => products.OrderBy(p => p.Name).ThenBy(p => p.ID),
-                "created" when descending => products.OrderByDescending(p => p.Created).ThenBy(p => p.ID),
-                "created" => products.OrderBy(p => p.Created).ThenBy(p => p.ID),
-                "id" when descending => products.OrderByDescending(p => p.ID),
-                _ => products.OrderBy(p => p.ID),
-            };
-
-            var recordsToSkip = (query.Page - 1) * query.PageSize;
-            var productList = await products.Skip(recordsToSkip).Take(query.PageSize).ToListAsync(cancellationToken);
-
-            return new PagedData<Product>
-            {
-                Items = productList,
-                TotalItems = totalItems
-            };
+            return await GetPagedProductsAsync(products, query, cancellationToken);
         }
 
         public async Task<Product?> GetProductAsync(int id, CancellationToken cancellationToken = default)
@@ -91,30 +36,24 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
                     .ThenInclude(sp => sp.Supplier)
                 .SingleOrDefaultAsync(p => p.ID == id, cancellationToken);
         }
-        public async Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId, CancellationToken cancellationToken = default)
+        public async Task<PagedData<Product>> GetProductsByCategoryAsync(int categoryId, ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
-            return await _context.Products
+            var products = _context.Products
                 .AsNoTracking()
-                .Include(p => p.Category)
-                .Include(p => p.InventoryStocks)
-                    .ThenInclude(stock => stock.Warehouse)
-                .Include(p => p.SupplierProducts)
-                    .ThenInclude(sp => sp.Supplier)
                 .Where(p => p.CategoryID == categoryId)
-                .ToListAsync(cancellationToken);
+                .AsQueryable();
+
+            return await GetPagedProductsAsync(products, query, cancellationToken);
         }
 
-        public async Task<IEnumerable<Product>> GetProductsBelowReorderLevelAsync(CancellationToken cancellationToken = default)
+        public async Task<PagedData<Product>> GetProductsBelowReorderLevelAsync(ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
-            return await _context.Products
+            var products = _context.Products
                 .AsNoTracking()
-                .Include(p => p.Category)
-                .Include(p => p.InventoryStocks)
-                    .ThenInclude(stock => stock.Warehouse)
-                .Include(p => p.SupplierProducts)
-                    .ThenInclude(sp => sp.Supplier)
                 .Where(p => p.InventoryStocks.Any(stock => stock.Quantity < stock.ReorderLevel))
-                .ToListAsync(cancellationToken);
+                .AsQueryable();
+
+            return await GetPagedProductsAsync(products, query, cancellationToken);
         }
 
         // === POST ===
@@ -153,6 +92,65 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
         {
             var product = await _context.Products.FindAsync(id, cancellationToken);
             return product?.IsActive == true;
+        }
+
+
+        // === HELPER METHODS ===\\
+        /// This method applies filtering, sorting, and pagination to the IQueryable<Product> based on the provided ProductQueryParameters.
+        public async Task<PagedData<Product>> GetPagedProductsAsync(IQueryable<Product> products, ProductQueryParameters query, CancellationToken cancellationToken = default)
+        {
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var search = query.Search.Trim().ToLower();
+
+                products = products.Where(p => p.Name.ToLower().Contains(search) || p.Sku.ToLower().Contains(search));
+            }
+            if (query.CategoryId.HasValue)
+            {
+                products = products.Where(p => p.CategoryID == query.CategoryId.Value);
+            }
+            if (query.IsActive.HasValue)
+            {
+                products = products.Where(p => p.IsActive == query.IsActive.Value);
+            }
+            if (query.MinPrice.HasValue)
+            {
+                products = products.Where(p => p.Price >= query.MinPrice.Value);
+            }
+            if (query.MaxPrice.HasValue)
+            {
+                products = products.Where(p => p.Price <= query.MaxPrice.Value);
+            }
+
+            //Count total items before pagination
+            var totalItems = await products.CountAsync(cancellationToken);
+
+            // Sorting
+            var sortBy = query.SortBy.Trim().ToLowerInvariant();
+            var descending = query.SortDirection.Trim().ToLowerInvariant() == "desc";
+
+            products = sortBy switch
+            {
+                "price" when descending => products.OrderByDescending(p => p.Price).ThenBy(p => p.ID),
+                "price" => products.OrderBy(p => p.Price).ThenBy(p => p.ID),
+                "sku" when descending => products.OrderByDescending(p => p.Sku).ThenBy(p => p.ID),
+                "sku" => products.OrderBy(p => p.Sku).ThenBy(p => p.ID),
+                "name" when descending => products.OrderByDescending(p => p.Name).ThenBy(p => p.ID),
+                "name" => products.OrderBy(p => p.Name).ThenBy(p => p.ID),
+                "created" when descending => products.OrderByDescending(p => p.Created).ThenBy(p => p.ID),
+                "created" => products.OrderBy(p => p.Created).ThenBy(p => p.ID),
+                "id" when descending => products.OrderByDescending(p => p.ID),
+                _ => products.OrderBy(p => p.ID),
+            };
+
+            var recordsToSkip = (query.Page - 1) * query.PageSize;
+            var productList = await products.Skip(recordsToSkip).Take(query.PageSize).ToListAsync(cancellationToken);
+
+            return new PagedData<Product>
+            {
+                Items = productList,
+                TotalItems = totalItems
+            };
         }
     }
 }

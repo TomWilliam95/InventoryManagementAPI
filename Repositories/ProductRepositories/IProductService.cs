@@ -11,8 +11,8 @@ namespace InventoryManagementAPI.Repositories.ProductRepositories
         // === GET ===
         Task<ApiResponse<SingleProductResponseDTO>> GetSingleProduct(int productId, CancellationToken cancellationToken = default);
         Task<ApiResponse<PagedResult<BulkProductResponseDTO>>> GetProducts(ProductQueryParameters query, CancellationToken cancellationToken = default);
-        Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId, CancellationToken cancellationToken = default);
-        Task<ApiResponse<IEnumerable<BulkProductResponseDTO>>> GetProductsBelowReorderLevel(CancellationToken cancellationToken = default);
+        Task<ApiResponse<PagedResult<BulkProductResponseDTO>>> GetProductsByCategory(int categoryId, ProductQueryParameters query, CancellationToken cancellationToken = default);
+        Task<ApiResponse<PagedResult<BulkProductResponseDTO>>> GetProductsBelowReorderLevel(ProductQueryParameters query, CancellationToken cancellationToken = default);
 
         // === POST ===
         Task<ApiResponse<SingleProductResponseDTO>> AddProduct(CreateProductRequestDTO dto, CancellationToken cancellationToken = default);

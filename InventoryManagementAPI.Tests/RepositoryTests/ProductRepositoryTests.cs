@@ -158,14 +158,26 @@ public class ProductRepositoryTests : IClassFixture<SqlServerFixture>
     {
         await using var context = _fixture.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
-        var product = await AddProductAsync(context);
+        var products = await AddQueryProductsAsync(context);
+        await AddProductAsync(context);
         context.ChangeTracker.Clear();
 
-        var result = (await new ProductRepository(context)
-            .GetProductsByCategoryAsync(product.CategoryID, CancellationToken.None)).ToList();
+        var result = await new ProductRepository(context).GetProductsByCategoryAsync(
+            products[0].CategoryID,
+            new ProductQueryParameters
+            {
+                Page = 2,
+                PageSize = 2,
+                SortBy = "name",
+                SortDirection = "asc"
+            },
+            CancellationToken.None);
 
-        Assert.Contains(result, candidate => candidate.ID == product.ID);
-        Assert.All(result, candidate => Assert.Equal(product.CategoryID, candidate.CategoryID));
+        Assert.Equal(5, result.TotalItems);
+        Assert.Equal(
+            products.OrderBy(product => product.Name).ThenBy(product => product.ID).Skip(2).Take(2).Select(product => product.ID),
+            result.Items.Select(product => product.ID));
+        Assert.All(result.Items, candidate => Assert.Equal(products[0].CategoryID, candidate.CategoryID));
     }
 
     [Fact]
@@ -173,12 +185,17 @@ public class ProductRepositoryTests : IClassFixture<SqlServerFixture>
     {
         await using var context = _fixture.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
-        var product = await AddProductAsync(context, quantity: 4, reorderLevel: 5);
+        var belowReorderLevel = await AddProductAsync(context, quantity: 4, reorderLevel: 5);
+        var atReorderLevel = await AddProductAsync(context, quantity: 5, reorderLevel: 5);
         context.ChangeTracker.Clear();
 
-        var result = await new ProductRepository(context).GetProductsBelowReorderLevelAsync(CancellationToken.None);
+        var result = await new ProductRepository(context).GetProductsBelowReorderLevelAsync(
+            new ProductQueryParameters { Page = 1, PageSize = 100 },
+            CancellationToken.None);
 
-        Assert.Contains(result, candidate => candidate.ID == product.ID);
+        Assert.Equal(1, result.TotalItems);
+        Assert.Equal(belowReorderLevel.ID, Assert.Single(result.Items).ID);
+        Assert.DoesNotContain(result.Items, candidate => candidate.ID == atReorderLevel.ID);
     }
 
     [Fact]
