@@ -1,3 +1,4 @@
+using InventoryManagementAPI.Models.Contracts.Categories;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
 
@@ -100,29 +101,118 @@ namespace InventoryManagementAPI.Tests.RepositoryTests
             Assert.Null(retrievedCategory);
         }
 
-        [Fact]
-        public async Task GetAllCategoriesAsync_CategoryExists_ReturnsCategory()
+        [Theory]
+        [InlineData(1, 2, 2)]
+        [InlineData(2, 2, 2)]
+        [InlineData(3, 2, 1)]
+        [InlineData(4, 2, 0)]
+        public async Task GetCategoriesAsync_PaginatesSortedMatchesAndPreservesTotal(int page, int pageSize, int expectedCount)
         {
-            // Arrange
             await using var context = _fixture.CreateContext();
-            await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
-
-            var category = CreateCategory($"Get-all category {Guid.NewGuid():N}");
-            await context.Categories.AddAsync(category, CancellationToken.None);
-            await context.SaveChangesAsync(CancellationToken.None);
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            var categories = await AddQueryCategoriesAsync(context);
             context.ChangeTracker.Clear();
-  
-            // Act
-            var repository = new CategoryRepository(context);
-            var retrievedCategories = (await repository.GetAllCategoriesAsync(CancellationToken.None)).ToList();
 
-            // Assert
-            Assert.Contains(retrievedCategories, c =>
-                c.ID == category.ID &&
-                c.Name == category.Name);
+            var result = await new CategoryRepository(context).GetCategoriesAsync(new CategoryQueryParameters
+            {
+                Search = "query", Page = page, PageSize = pageSize
+            });
+
+            Assert.Equal(5, result.TotalItems);
+            Assert.Equal(expectedCount, result.Items.Count());
+            Assert.Equal(categories.Take(5).OrderBy(c => c.Name).Skip((page - 1) * pageSize).Take(pageSize).Select(c => c.ID),
+                result.Items.Select(c => c.ID));
+            Assert.Empty(context.ChangeTracker.Entries<Category>());
         }
 
+        [Theory]
+        [InlineData("name", "asc", new[] { 1, 3, 4, 2, 0 })]
+        [InlineData("name", "desc", new[] { 0, 2, 4, 3, 1 })]
+        [InlineData("id", "asc", new[] { 0, 1, 2, 3, 4 })]
+        [InlineData("id", "desc", new[] { 4, 3, 2, 1, 0 })]
+        [InlineData("created", "asc", new[] { 1, 2, 3, 4, 0 })]
+        [InlineData("created", "desc", new[] { 0, 4, 3, 1, 2 })]
+        [InlineData(" CREATED ", " DESC ", new[] { 0, 4, 3, 1, 2 })]
+        [InlineData("unknown", "asc", new[] { 1, 3, 4, 2, 0 })]
+        public async Task GetCategoriesAsync_SortsWithStableIdTieBreaker(string sortBy, string direction, int[] expectedIndexes)
+        {
+            await using var context = _fixture.CreateContext();
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            var categories = await AddQueryCategoriesAsync(context);
+            context.ChangeTracker.Clear();
 
+            var result = await new CategoryRepository(context).GetCategoriesAsync(new CategoryQueryParameters
+            {
+                Search = "query", SortBy = sortBy, SortDirection = direction
+            });
+
+            Assert.Equal(5, result.TotalItems);
+            Assert.Equal(expectedIndexes.Select(index => categories[index].ID), result.Items.Select(c => c.ID));
+        }
+
+        [Theory]
+        [InlineData("  QUERY ALPHA  ", null, new[] { 1 })]
+        [InlineData("  SPECIAL DESCRIPTION  ", null, new[] { 2 })]
+        [InlineData("query", true, new[] { 0, 2, 4 })]
+        [InlineData("query", false, new[] { 1, 3 })]
+        [InlineData("special description", false, new int[] { })]
+        [InlineData("does-not-exist", null, new int[] { })]
+        [InlineData(null, null, new[] { 0, 1, 2, 3, 4, 5 })]
+        [InlineData("   ", null, new[] { 0, 1, 2, 3, 4, 5 })]
+        public async Task GetCategoriesAsync_FiltersByNameDescriptionAndStatus(string? search, bool? isActive, int[] expectedIndexes)
+        {
+            await using var context = _fixture.CreateContext();
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            var categories = await AddQueryCategoriesAsync(context);
+            context.ChangeTracker.Clear();
+
+            var result = await new CategoryRepository(context).GetCategoriesAsync(new CategoryQueryParameters
+            {
+                Search = search, IsActive = isActive, SortBy = "id"
+            });
+
+            Assert.Equal(expectedIndexes.Length, result.TotalItems);
+            Assert.Equal(expectedIndexes.Select(index => categories[index].ID), result.Items.Select(c => c.ID));
+        }
+
+        [Fact]
+        public async Task GetCategoriesAsync_CombinedFiltersApplyBeforePagination()
+        {
+            await using var context = _fixture.CreateContext();
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            var categories = await AddQueryCategoriesAsync(context);
+            context.ChangeTracker.Clear();
+
+            var result = await new CategoryRepository(context).GetCategoriesAsync(new CategoryQueryParameters
+            {
+                Search = "query", IsActive = true, SortBy = "name", SortDirection = "desc", Page = 2, PageSize = 1
+            });
+
+            Assert.Equal(3, result.TotalItems);
+            Assert.Equal(categories[2].ID, Assert.Single(result.Items).ID);
+        }
+
+        private static async Task<Category[]> AddQueryCategoriesAsync(InventoryManagementAPI.Services.InvManDBContext context)
+        {
+            var categories = new[]
+            {
+                CreateCategory("Query Zulu"), CreateCategory("Query Alpha"),
+                CreateCategory("Query Echo"), CreateCategory("Query Bravo"),
+                CreateCategory("Query Delta"), CreateCategory("Unrelated")
+            };
+            var created = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var days = new[] { 4, 0, 0, 1, 2, 3 };
+            for (var index = 0; index < categories.Length; index++)
+            {
+                categories[index].Created = created.AddDays(days[index]);
+                categories[index].IsActive = index % 2 == 0;
+                categories[index].Description = index == 2 ? "Special description" : null;
+                // Save separately so identity order is explicit for sorting assertions.
+                context.Categories.Add(categories[index]);
+                await context.SaveChangesAsync();
+            }
+            return categories;
+        }
         [Fact]
         public async Task CategoryExistsAsync_ExistingCategory_ReturnsTrue()
         {

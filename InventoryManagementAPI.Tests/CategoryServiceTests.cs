@@ -1,3 +1,5 @@
+using InventoryManagementAPI.Models.Contracts.Categories;
+using InventoryManagementAPI.Models.Shared;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.CategoryDTO_s;
 using InventoryManagementAPI.Repositories.CategoryRepositories;
@@ -110,77 +112,186 @@ namespace InventoryManagementAPI.Tests
         }
 
 
-        // === GetAllCategories Tests === \\
         [Fact]
-        public async Task GetAllCategories_WhenCategoriesExist_Returns200()
+        public async Task GetCategories_ForwardsQueryAndToken_ReturnsMappedPageInRepositoryOrder()
         {
-            // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
-            repository
-                .Setup(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Category>
+            using var cancellation = new CancellationTokenSource();
+            var query = new CategoryQueryParameters
+            {
+                Page = 2, PageSize = 2, Search = "tools", IsActive = false,
+                SortBy = "name", SortDirection = "desc"
+            };
+            repository.Setup(repo => repo.GetCategoriesAsync(query, cancellation.Token))
+                .ReturnsAsync(new PagedData<Category>
                 {
-                    new Category { ID = 1, Name = "Electronics" },
-                    new Category { ID = 2, Name = "Books" }
+                    Items = new[]
+                    {
+                        new Category { ID = 3, Name = "Tools Z", Description = "Heavy tools", IsActive = false },
+                        new Category { ID = 2, Name = "Tools A", Description = null, IsActive = false }
+                    },
+                    TotalItems = 5
                 });
-            // === Act === \\
-            var service = new CategoryService(repository.Object, _unitOfWork.Object);
-            var result = await service.GetAllCategories();
 
-            // === Assert === \\
-            Assert.NotNull(result);
+            var result = await new CategoryService(repository.Object, _unitOfWork.Object)
+                .GetCategories(query, cancellation.Token);
+
             Assert.True(result.Success);
             Assert.Equal(200, result.StatusCode);
             Assert.Equal("Categories retrieved successfully.", result.Message);
-
-            // Verify
-            repository.Verify(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            Assert.NotNull(result.Data);
+            Assert.Equal(2, result.Data.Page);
+            Assert.Equal(2, result.Data.PageSize);
+            Assert.Equal(5, result.Data.TotalItems);
+            Assert.Equal(3, result.Data.TotalPages);
+            Assert.True(result.Data.HasPreviousPage);
+            Assert.True(result.Data.HasNextPage);
+            Assert.Collection(result.Data.Items,
+                item =>
+                {
+                    Assert.Equal("Tools Z", item.Name);
+                    Assert.Equal("Heavy tools", item.Description);
+                    Assert.False(item.IsActive);
+                },
+                item =>
+                {
+                    Assert.Equal("Tools A", item.Name);
+                    Assert.Null(item.Description);
+                    Assert.False(item.IsActive);
+                });
+            repository.Verify(repo => repo.GetCategoriesAsync(query, cancellation.Token), Times.Once);
+            _unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
 
-        [Fact]
-        public async Task GetAllCategories_WhenNoCategoriesExist_Returns404()
+        [Theory]
+        [InlineData("name", "asc", null, null)]
+        [InlineData("name", "desc", "tools", true)]
+        [InlineData("id", "asc", "books", false)]
+        [InlineData("id", "desc", null, true)]
+        [InlineData("created", "asc", "electronics", null)]
+        [InlineData("created", "desc", "  tools  ", false)]
+        public async Task GetCategories_QueryOptions_ArePassedUnchangedToRepository(
+            string sortBy, string sortDirection, string? search, bool? isActive)
         {
-            // === Setup === \\
+            var repository = new Mock<ICategoryRepository>(MockBehavior.Strict);
+            var query = new CategoryQueryParameters
+            {
+                Page = 3, PageSize = 1, SortBy = sortBy,
+                SortDirection = sortDirection, Search = search, IsActive = isActive
+            };
+            using var cancellation = new CancellationTokenSource();
+            repository.Setup(repo => repo.GetCategoriesAsync(
+                    It.Is<CategoryQueryParameters>(q =>
+                        q.Page == 3 && q.PageSize == 1 && q.SortBy == sortBy &&
+                        q.SortDirection == sortDirection && q.Search == search && q.IsActive == isActive),
+                    cancellation.Token))
+                .ReturnsAsync(new PagedData<Category>
+                {
+                    Items = new[] { new Category { Name = "Repository result", IsActive = isActive ?? true } },
+                    TotalItems = 3
+                });
+
+            var result = await new CategoryService(repository.Object, _unitOfWork.Object)
+                .GetCategories(query, cancellation.Token);
+
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            var item = Assert.Single(result.Data.Items);
+            Assert.Equal("Repository result", item.Name);
+            Assert.Equal(isActive ?? true, item.IsActive);
+            Assert.Equal(search, query.Search);
+            Assert.Equal(sortBy, query.SortBy);
+            Assert.Equal(sortDirection, query.SortDirection);
+            Assert.Equal(isActive, query.IsActive);
+            repository.VerifyAll();
+            repository.Verify(repo => repo.GetCategoriesAsync(It.IsAny<CategoryQueryParameters>(), cancellation.Token), Times.Once);
+            repository.VerifyNoOtherCalls();
+            _unitOfWork.VerifyNoOtherCalls();
+        }
+
+        [Theory]
+        [InlineData(1, 2, 5, 2, 3, false, true)]
+        [InlineData(3, 2, 5, 1, 3, true, false)]
+        [InlineData(2, 2, 4, 2, 2, true, false)]
+        [InlineData(1, 20, 1, 1, 1, false, false)]
+        public async Task GetCategories_PageBoundaries_ReturnCorrectMetadataAndAllRepositoryItems(
+            int page, int pageSize, int totalItems, int itemCount, int totalPages,
+            bool hasPreviousPage, bool hasNextPage)
+        {
             var repository = new Mock<ICategoryRepository>();
-            repository
-                .Setup(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Category>());
+            var query = new CategoryQueryParameters { Page = page, PageSize = pageSize };
+            var categories = Enumerable.Range(1, itemCount)
+                .Select(id => new Category { ID = id, Name = $"Category {id}", IsActive = true })
+                .ToArray();
+            repository.Setup(repo => repo.GetCategoriesAsync(query, CancellationToken.None))
+                .ReturnsAsync(new PagedData<Category> { Items = categories, TotalItems = totalItems });
 
-            // === Act === \\
-            var service = new CategoryService(repository.Object, _unitOfWork.Object);
-            var result = await service.GetAllCategories();
+            var result = await new CategoryService(repository.Object, _unitOfWork.Object).GetCategories(query);
 
-            // === Assert === \\
-            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.Equal(200, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Equal(page, result.Data.Page);
+            Assert.Equal(pageSize, result.Data.PageSize);
+            Assert.Equal(totalItems, result.Data.TotalItems);
+            Assert.Equal(totalPages, result.Data.TotalPages);
+            Assert.Equal(hasPreviousPage, result.Data.HasPreviousPage);
+            Assert.Equal(hasNextPage, result.Data.HasNextPage);
+            Assert.Equal(categories.Select(category => category.Name), result.Data.Items.Select(item => item.Name));
+            repository.Verify(repo => repo.GetCategoriesAsync(query, CancellationToken.None), Times.Once);
+            _unitOfWork.VerifyNoOtherCalls();
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(5)]
+        public async Task GetCategories_EmptyPage_ReturnsNoCategoriesResponse(int totalItems)
+        {
+            var repository = new Mock<ICategoryRepository>();
+            var query = new CategoryQueryParameters { Page = 4, PageSize = 2, Search = "missing" };
+            repository.Setup(repo => repo.GetCategoriesAsync(query, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new PagedData<Category> { Items = Array.Empty<Category>(), TotalItems = totalItems });
+
+            var result = await new CategoryService(repository.Object, _unitOfWork.Object).GetCategories(query);
+
             Assert.False(result.Success);
-            Assert.Equal(404, result.StatusCode);
+            Assert.Equal(200, result.StatusCode);
             Assert.Equal("No categories found.", result.Message);
-
-            // Verify
-            repository.Verify(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            Assert.Null(result.Data);
+            repository.Verify(repo => repo.GetCategoriesAsync(query, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
-        public async Task GetAllCategories_WhenCategoryRepositoryThrowsException_Returns500()
+        public async Task GetCategories_RepositoryThrows_Returns500()
         {
-            // === Setup === \\
             var repository = new Mock<ICategoryRepository>();
-            repository
-                .Setup(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new Exception("Database error"));
-            // === Act === \\
-            var service = new CategoryService(repository.Object, _unitOfWork.Object);
-            var result = await service.GetAllCategories();
-            // === Assert === \\
-            Assert.NotNull(result);
+            var query = new CategoryQueryParameters();
+            repository.Setup(repo => repo.GetCategoriesAsync(query, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Database error"));
+
+            var result = await new CategoryService(repository.Object, _unitOfWork.Object).GetCategories(query);
+
             Assert.False(result.Success);
             Assert.Equal(500, result.StatusCode);
             Assert.Equal("Internal error occurred, failed to load categories.", result.Message);
-
-            // Verify
-            repository.Verify(repo => repo.GetAllCategoriesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            Assert.Null(result.Data);
+            repository.Verify(repo => repo.GetCategoriesAsync(query, It.IsAny<CancellationToken>()), Times.Once);
         }
 
+        [Fact]
+        public async Task GetCategories_RequestCancelled_PropagatesCancellation()
+        {
+            var repository = new Mock<ICategoryRepository>();
+            var query = new CategoryQueryParameters();
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            repository.Setup(repo => repo.GetCategoriesAsync(query, cancellation.Token))
+                .ThrowsAsync(new OperationCanceledException(cancellation.Token));
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                new CategoryService(repository.Object, _unitOfWork.Object).GetCategories(query, cancellation.Token));
+            repository.Verify(repo => repo.GetCategoriesAsync(query, cancellation.Token), Times.Once);
+        }
 
         // === AddCategory Tests === \\
         [Fact]
