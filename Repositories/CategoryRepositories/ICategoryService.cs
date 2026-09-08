@@ -1,6 +1,8 @@
+using InventoryManagementAPI.Models.Contracts.Categories;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.CategoryDTO_s;
 using InventoryManagementAPI.Models.DTO_s.ProductDTO_s.PATCH;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Repositories.CategoryRepositories
 {
@@ -8,7 +10,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
     {
         // === GET ===
         Task<ApiResponse<SingleCategoryResponseDTO>> GetSingleCategory(int categoryId, CancellationToken cancellationToken = default);
-        Task<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>> GetAllCategories(CancellationToken cancellationToken = default);
+        Task<ApiResponse<PagedResult<BulkCategoryResponseDTO>>> GetCategories(CategoryQueryParameters query, CancellationToken cancellationToken = default);
 
         // === POST ===
         Task<ApiResponse<SingleCategoryResponseDTO>> AddCategory(CreateCategoryRequestDTO dto, CancellationToken cancellationToken = default);

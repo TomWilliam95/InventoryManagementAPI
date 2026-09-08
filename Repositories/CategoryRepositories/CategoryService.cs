@@ -1,5 +1,7 @@
+using InventoryManagementAPI.Models.Contracts.Categories;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.CategoryDTO_s;
+using InventoryManagementAPI.Models.Shared;
 using InventoryManagementAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,17 +18,23 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         }
 
         // === GET ===
-        public async Task<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>> GetAllCategories(CancellationToken cancellationToken = default)
+        public async Task<ApiResponse<PagedResult<BulkCategoryResponseDTO>>> GetCategories(CategoryQueryParameters query, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Retrieve all categories from the repository
-                var categories = await _categoryRepository.GetAllCategoriesAsync(cancellationToken);
+                var categories = await _categoryRepository.GetCategoriesAsync(query, cancellationToken);
 
                 // Check if categories were found and return the appropriate response
-                return categories is { } && categories.Any()
-                    ? Success(categories.Select(MapToBulkDto), "Categories retrieved successfully.", 200)
-                    : Error<IEnumerable<BulkCategoryResponseDTO>>("No categories found.", 404);
+                return categories.Items is { } && categories.Items.Any()
+                    ? Success( new PagedResult<BulkCategoryResponseDTO>
+                    {
+                        Items = categories.Items.Select(MapToBulkDto),
+                        Page = query.Page,
+                        PageSize = query.PageSize,
+                        TotalItems = categories.TotalItems
+                    }, "Categories retrieved successfully.", 200)
+                    : Error<PagedResult<BulkCategoryResponseDTO>>("No categories found.", 200);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -34,7 +42,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
             }
             catch
             {
-                return Error<IEnumerable<BulkCategoryResponseDTO>>("Internal error occurred, failed to load categories.", 500);
+                return Error<PagedResult<BulkCategoryResponseDTO>>("Internal error occurred, failed to load categories.", 500);
             }
         }
 

@@ -1,11 +1,13 @@
+using InventoryManagementAPI.Models.Contracts.Categories;
 using InventoryManagementAPI.Models.CoreModels;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Repositories.CategoryRepositories
 {
     public interface ICategoryRepository
     {
         // === GET ===
-        Task<IEnumerable<Category>> GetAllCategoriesAsync(CancellationToken cancellationToken = default);
+        Task<PagedData<Category>> GetCategoriesAsync(CategoryQueryParameters query, CancellationToken cancellationToken = default);
         Task<Category?> GetCategoryByIdAsync(int categoryId, CancellationToken cancellationToken = default);
 
         // === POST ===

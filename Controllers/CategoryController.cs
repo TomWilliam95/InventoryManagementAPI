@@ -3,6 +3,7 @@ using InventoryManagementAPI.Repositories.CategoryRepositories;
 using Microsoft.AspNetCore.Authorization;
 using InventoryManagementAPI.Models.CoreModels;
 using Microsoft.AspNetCore.Mvc;
+using InventoryManagementAPI.Models.Contracts.Categories;
 
 namespace InventoryManagementAPI.Controllers
 {
@@ -26,9 +27,10 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>>> GetAllCategories(CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>>> GetCategories([FromQuery] CategoryQueryParameters query, 
+            CancellationToken cancellationToken = default)
         {
-            var categories = await _categoryService.GetAllCategories(cancellationToken);
+            var categories = await _categoryService.GetCategories(query,cancellationToken);
             return StatusCode(categories.StatusCode, categories);
         }
 
