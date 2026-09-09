@@ -19,6 +19,7 @@ namespace InventoryManagementAPI.Repositories.CategoryRepositories
         {
             return await _context.Categories.FindAsync(categoryId, cancellationToken);
         }
+        
         public async Task<PagedData<Category>> GetCategoriesAsync(CategoryQueryParameters query, CancellationToken cancellationToken = default)
         {
             var categoryQuery = _context.Categories

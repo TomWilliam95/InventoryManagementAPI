@@ -16,7 +16,7 @@
         public bool? IsActive { get; set; }
 
         [Required]
-        [RegularExpression("^(name| created| id)$", ErrorMessage = "SortBy must be one of the following: name, price, createdDate.")]
+        [RegularExpression("^(name|created|id)$", ErrorMessage = "SortBy must be one of the following: name, price, createdDate.")]
         public string SortBy { get; set; } = "name";
 
         [Required]

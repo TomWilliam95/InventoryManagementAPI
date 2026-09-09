@@ -4,6 +4,8 @@ using InventoryManagementAPI.Repositories.InventoryStockRepositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using InventoryManagementAPI.Models.Contracts.InventoryStocks;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Controllers
 {
@@ -19,9 +21,9 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>>> GetAllStock(CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ApiResponse<PagedResult<BulkInventoryStockResponseDTO>>>> GetAllStock([FromQuery] InventoryStockQueryParameters query, CancellationToken cancellationToken = default)
         {
-            var result = await _inventoryStockService.GetAllInventoryStocksAsync(cancellationToken);
+            var result = await _inventoryStockService.GetInventoryStocksAsync(query, cancellationToken);
             return StatusCode(result.StatusCode, result);
         }
 
@@ -29,27 +31,6 @@ namespace InventoryManagementAPI.Controllers
         public async Task<ActionResult<ApiResponse<InventoryStockResponseDTO>>> GetStockByProductAndWarehouseId(int productId, int warehouseId, CancellationToken cancellationToken = default)
         {
             var result = await _inventoryStockService.GetInventoryStockByProductAndWarehouseIdAsync(productId, warehouseId, cancellationToken);
-            return StatusCode(result.StatusCode, result);
-        }
-
-        [HttpGet("warehouse/{warehouseId:int}")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>>> GetAllStockByWarehouse(int warehouseId, CancellationToken cancellationToken = default)
-        {
-            var result = await _inventoryStockService.GetInventoryStocksByWarehouseIdAsync(warehouseId, cancellationToken);
-            return StatusCode(result.StatusCode, result);
-        }
-
-        [HttpGet("product/{productId:int}")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>>> GetAllStockByProduct(int productId, CancellationToken cancellationToken = default)
-        {
-            var result = await _inventoryStockService.GetInventoryStocksByProductIdAsync(productId, cancellationToken);
-            return StatusCode(result.StatusCode, result);
-        }
-
-        [HttpGet("below-reorder-level")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>>> GetStockBelowReorderLevel(CancellationToken cancellationToken = default)
-        {
-            var result = await _inventoryStockService.GetInventoryStocksBelowReorderLevelAsync(cancellationToken);
             return StatusCode(result.StatusCode, result);
         }
 

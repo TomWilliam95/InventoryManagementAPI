@@ -4,6 +4,8 @@ using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.WarehouseRepositories;
 using Microsoft.EntityFrameworkCore;
 using InventoryManagementAPI.Services;
+using InventoryManagementAPI.Models.Shared;
+using InventoryManagementAPI.Models.Contracts.InventoryStocks;
 
 namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
 {
@@ -50,15 +52,27 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>> GetAllInventoryStocksAsync(CancellationToken cancellationToken = default)
+        public async Task<ApiResponse<PagedResult<BulkInventoryStockResponseDTO>>> GetInventoryStocksAsync(InventoryStockQueryParameters query, CancellationToken cancellationToken = default)
         {
             try
             {
-                var inventoryStocks = await _inventoryStockRepository.GetAllStockAsync(cancellationToken);
-                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], "No inventory stocks found.");
-
-                var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks retrieved successfully."); 
+                var inventoryStocks = await _inventoryStockRepository.GetStockAsync(query, cancellationToken);
+                
+                return inventoryStocks.Items is { } && inventoryStocks.Items.Any()
+                    ? ApiResponseHelper.Success<PagedResult<BulkInventoryStockResponseDTO>>(new PagedResult<BulkInventoryStockResponseDTO>
+                    {
+                        Items = inventoryStocks.Items.Select(BuildBulkInventoryStockResponseDTO),
+                        Page = query.Page,
+                        PageSize = query.PageSize,
+                        TotalItems = inventoryStocks.TotalItems
+                    }, "Inventory stocks retrieved successfully.", 200)
+                    : ApiResponseHelper.Success<PagedResult<BulkInventoryStockResponseDTO>>(new PagedResult<BulkInventoryStockResponseDTO>
+                    {
+                        Items = Array.Empty<BulkInventoryStockResponseDTO>(),
+                        Page = query.Page,
+                        PageSize = query.PageSize,
+                        TotalItems = inventoryStocks.TotalItems
+                    }, "No inventory stocks found.", 200);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -66,77 +80,10 @@ namespace InventoryManagementAPI.Repositories.InventoryStockRepositories
             }
             catch
             {
-                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving all inventory stocks.", 500);
+                return ApiResponseHelper.Failure<PagedResult<BulkInventoryStockResponseDTO>>("An error occurred while retrieving all inventory stocks.", 500);
             }
         }
 
-        public async Task<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>> GetInventoryStocksByProductIdAsync(int productId, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                //Validate Product
-                var productResult = await GetProductAsync(productId, cancellationToken);
-                if(productResult.Error != null) return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>(productResult.Error.Message!, productResult.Error.StatusCode);
-
-                var inventoryStocks = await _inventoryStockRepository.GetAllStockByProductAsync(productId, cancellationToken);
-                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], $"No inventory stocks found for Product ID {productId}.");
-
-                var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks retrieved successfully."); 
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving inventory stocks by product ID.", 500);
-            }
-        }
-
-        public async Task<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>> GetInventoryStocksByWarehouseIdAsync(int warehouseId, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                //Validate Warehouse
-                var warehouseResult = await GetWarehouseAsync(warehouseId, cancellationToken);
-                if(warehouseResult.Error != null) return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>(warehouseResult.Error.Message!, warehouseResult.Error.StatusCode);
-
-                var inventoryStocks = await _inventoryStockRepository.GetAllStockByWarehouseAsync(warehouseId, cancellationToken);
-                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], $"No inventory stocks found for Warehouse ID {warehouseId}.");
-
-                var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks retrieved successfully."); 
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving inventory stocks by warehouse ID.", 500);
-            }
-        }
-
-        public async Task<ApiResponse<IEnumerable<BulkInventoryStockResponseDTO>>> GetInventoryStocksBelowReorderLevelAsync(CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var inventoryStocks = await _inventoryStockRepository.GetStockBelowReorderLevelAsync(cancellationToken);
-                if(!inventoryStocks.Any()) return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>([], "No inventory stocks found below reorder level.");
-
-                var responseDTOs = inventoryStocks.Select(BuildBulkInventoryStockResponseDTO);
-                return ApiResponseHelper.Success<IEnumerable<BulkInventoryStockResponseDTO>>(responseDTOs, "Inventory stocks below reorder level retrieved successfully.");
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                return ApiResponseHelper.Failure<IEnumerable<BulkInventoryStockResponseDTO>>("An error occurred while retrieving inventory stocks below reorder level.", 500);
-            }
-        }
 
         public async Task<ApiResponse<InventoryStockResponseDTO>> CreateInventoryStockAsync(CreateInventoryStockRequestDTO dto, CancellationToken cancellationToken = default)
         {

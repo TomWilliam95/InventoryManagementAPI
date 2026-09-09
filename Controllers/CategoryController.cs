@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using InventoryManagementAPI.Models.CoreModels;
 using Microsoft.AspNetCore.Mvc;
 using InventoryManagementAPI.Models.Contracts.Categories;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Controllers
 {
@@ -27,7 +28,7 @@ namespace InventoryManagementAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<BulkCategoryResponseDTO>>>> GetCategories([FromQuery] CategoryQueryParameters query, 
+        public async Task<ActionResult<ApiResponse<PagedResult<BulkCategoryResponseDTO>>>> GetCategories([FromQuery] CategoryQueryParameters query, 
             CancellationToken cancellationToken = default)
         {
             var categories = await _categoryService.GetCategories(query,cancellationToken);
