@@ -1,9 +1,11 @@
+using InventoryManagementAPI.Models.Contracts.InventoryStocks;
 using InventoryManagementAPI.Models.CoreModels;
 using InventoryManagementAPI.Models.DTO_s.InventoryStockDTO_s;
 using InventoryManagementAPI.Repositories.InventoryStockRepositories;
 using InventoryManagementAPI.Repositories.ProductRepositorys;
 using InventoryManagementAPI.Repositories.WarehouseRepositories;
 using Moq;
+using InventoryManagementAPI.Models.Shared;
 
 namespace InventoryManagementAPI.Tests;
 
@@ -14,35 +16,73 @@ public class InventoryStockServiceTests
     private readonly Mock<IWarehouseRepository> _warehouses = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
- private InventoryStockService CreateService() => new(_stocks.Object, _products.Object, _warehouses.Object, _unitOfWork.Object);
+    private InventoryStockService CreateService() => new(_stocks.Object, _products.Object, _warehouses.Object, _unitOfWork.Object);
 
-    [Fact]
-    public async Task GetAllInventoryStocks_MapsDetailsAndReorderStatus()
+    [Theory]
+    [InlineData(4, true)]
+    [InlineData(5, true)]
+    [InlineData(6, false)]
+    public async Task GetInventoryStocks_MapsDetailsAndPreservesPagination(int quantity, bool below)
     {
-        _stocks.Setup(repository => repository.GetAllStockAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateStock(quantity: 5, reorderLevel: 5)]);
+        var query = new InventoryStockQueryParameters
+        {
+            Page = 2, PageSize = 1, ProductId = 1, WarehouseId = 1,
+            Search = "Product", IsActive = true, BelowReorderLevel = true,
+            SortBy = "warehouse", SortDirection = "desc"
+        };
+        using var source = new CancellationTokenSource();
+        _stocks.Setup(r => r.GetStockAsync(query, source.Token))
+            .ReturnsAsync(new PagedData<InventoryStock>
+            {
+                Items = [CreateStock(quantity, 5)], TotalItems = 3
+            });
 
-        var result = await CreateService().GetAllInventoryStocksAsync();
-
-        Assert.True(result.Success);
-        Assert.Single(result.Data!);
-        Assert.True(result.Data!.Single().IsBelowReorderLevel);
-        Assert.Equal("SKU-1", result.Data!.Single().ProductSku);
-    }
-
-    [Fact]
-    public async Task GetAllInventoryStocks_EmptyCollection_Returns200WithEmptyData()
-    {
-        _stocks.Setup(repository => repository.GetAllStockAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-
-        var result = await CreateService().GetAllInventoryStocksAsync();
+        var result = await CreateService().GetInventoryStocksAsync(query, source.Token);
 
         Assert.True(result.Success);
         Assert.Equal(200, result.StatusCode);
-        Assert.Empty(result.Data!);
+        var page = Assert.IsType<PagedResult<BulkInventoryStockResponseDTO>>(result.Data);
+        var item = Assert.Single(page.Items);
+        Assert.Equal("SKU-1", item.ProductSku);
+        Assert.Equal("Warehouse", item.WarehouseName);
+        Assert.Equal(below, item.IsBelowReorderLevel);
+        Assert.Equal(2, page.Page);
+        Assert.Equal(1, page.PageSize);
+        Assert.Equal(3, page.TotalItems);
+        Assert.Equal(3, page.TotalPages);
+        Assert.True(page.HasNextPage);
+        _stocks.Verify(r => r.GetStockAsync(query, source.Token), Times.Once);
     }
 
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(3, 25)]
+    public async Task GetInventoryStocks_EmptyPage_PreservesTotal(int pageNumber, int total)
+    {
+        var query = new InventoryStockQueryParameters { Page = pageNumber, PageSize = 20 };
+        _stocks.Setup(r => r.GetStockAsync(query, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedData<InventoryStock> { Items = [], TotalItems = total });
+
+        var result = await CreateService().GetInventoryStocksAsync(query);
+
+        Assert.True(result.Success);
+        Assert.Equal(200, result.StatusCode);
+        Assert.Empty(result.Data!.Items);
+        Assert.Equal(pageNumber, result.Data.Page);
+        Assert.Equal(20, result.Data.PageSize);
+        Assert.Equal(total, result.Data.TotalItems);
+    }
+
+    [Fact]
+    public async Task GetInventoryStocks_RepositoryFailure_Returns500()
+    {
+        _stocks.Setup(r => r.GetStockAsync(It.IsAny<InventoryStockQueryParameters>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Database unavailable"));
+        var result = await CreateService().GetInventoryStocksAsync(new InventoryStockQueryParameters());
+        Assert.False(result.Success);
+        Assert.Equal(500, result.StatusCode);
+        Assert.Null(result.Data);
+    }
     [Fact]
     public async Task UpdateReorderLevel_StaleRowVersion_Returns409WithoutSaving()
     {
@@ -89,15 +129,15 @@ public class InventoryStockServiceTests
     }
 
     [Fact]
-    public async Task GetAllInventoryStocks_CancelledOperation_RethrowsCancellation()
+    public async Task GetInventoryStocks_CancelledOperation_RethrowsCancellation()
     {
         using var cancellationSource = new CancellationTokenSource();
         cancellationSource.Cancel();
-        _stocks.Setup(repository => repository.GetAllStockAsync(cancellationSource.Token))
+        _stocks.Setup(repository => repository.GetStockAsync(It.IsAny<InventoryStockQueryParameters>(), cancellationSource.Token))
             .ThrowsAsync(new OperationCanceledException(cancellationSource.Token));
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            CreateService().GetAllInventoryStocksAsync(cancellationSource.Token));
+            CreateService().GetInventoryStocksAsync(new InventoryStockQueryParameters(), cancellationSource.Token));
     }
 
     private static InventoryStock CreateStock(int quantity = 10, int reorderLevel = 5) => new()

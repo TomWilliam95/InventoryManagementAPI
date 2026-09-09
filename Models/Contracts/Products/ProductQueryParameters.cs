@@ -14,8 +14,7 @@ namespace InventoryManagementAPI.Models.Contracts.Products
         [StringLength(100, ErrorMessage = "Search term cannot exceed 100 characters.")]
         public string? Search { get; set; }
 
-
-        [StringLength(50, ErrorMessage = "SortBy cannot exceed 50 characters.")]
+        [Range(1, int.MaxValue, ErrorMessage = "CategoryId must be a positive integer.")]
         public int? CategoryId { get; set; }
 
         public bool? IsActive { get; set; }
@@ -30,7 +29,8 @@ namespace InventoryManagementAPI.Models.Contracts.Products
 
 
         [Required]
-        [RegularExpression("^(name| sku| price|created| id)$", ErrorMessage = "SortBy must be one of the following: name, price, createdDate.")]
+        [StringLength(50, ErrorMessage = "SortBy cannot exceed 50 characters.")]
+        [RegularExpression("^(name|sku|price|created|id)$", ErrorMessage = "SortBy must be one of the following: name, price, createdDate.")]
         public string SortBy { get; set; } = "name";
 
         [Required]
