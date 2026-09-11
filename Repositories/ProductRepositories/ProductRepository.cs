@@ -23,7 +23,7 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
                 .AsNoTracking()
                 .AsQueryable();
 
-            return await GetPagedProductsAsync(products, query, cancellationToken);
+            return await PaginationFilteringSorting(products, query, cancellationToken);
         }
 
         public async Task<Product?> GetProductAsync(int id, CancellationToken cancellationToken = default)
@@ -35,25 +35,6 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
                 .Include(p => p.SupplierProducts)
                     .ThenInclude(sp => sp.Supplier)
                 .SingleOrDefaultAsync(p => p.ID == id, cancellationToken);
-        }
-        public async Task<PagedData<Product>> GetProductsByCategoryAsync(int categoryId, ProductQueryParameters query, CancellationToken cancellationToken = default)
-        {
-            var products = _context.Products
-                .AsNoTracking()
-                .Where(p => p.CategoryID == categoryId)
-                .AsQueryable();
-
-            return await GetPagedProductsAsync(products, query, cancellationToken);
-        }
-
-        public async Task<PagedData<Product>> GetProductsBelowReorderLevelAsync(ProductQueryParameters query, CancellationToken cancellationToken = default)
-        {
-            var products = _context.Products
-                .AsNoTracking()
-                .Where(p => p.InventoryStocks.Any(stock => stock.Quantity < stock.ReorderLevel))
-                .AsQueryable();
-
-            return await GetPagedProductsAsync(products, query, cancellationToken);
         }
 
         // === POST ===
@@ -97,7 +78,7 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
 
         // === HELPER METHODS ===\\
         /// This method applies filtering, sorting, and pagination to the IQueryable<Product> based on the provided ProductQueryParameters.
-        public async Task<PagedData<Product>> GetPagedProductsAsync(IQueryable<Product> products, ProductQueryParameters query, CancellationToken cancellationToken = default)
+        public async Task<PagedData<Product>> PaginationFilteringSorting(IQueryable<Product> products, ProductQueryParameters query, CancellationToken cancellationToken = default)
         {
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
@@ -143,7 +124,13 @@ namespace InventoryManagementAPI.Repositorys.ProductRepositories
                 _ => products.OrderBy(p => p.ID),
             };
 
+            // Calculate the number of records to skip based on the current page and page size
+            // Page 1 - 1 * PageSize = 0 (skip 0 records)
+            // Page 2 - 1 * PageSize = PageSize (skip PageSize records) (skips totalt pagesize of first records)
             var recordsToSkip = (query.Page - 1) * query.PageSize;
+
+            // Fetch the paginated list of products
+            // Use ToListAsync to execute the query and retrieve the results as a list
             var productList = await products.Skip(recordsToSkip).Take(query.PageSize).ToListAsync(cancellationToken);
 
             return new PagedData<Product>

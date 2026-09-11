@@ -117,30 +117,19 @@ public class ProductServiceTests
         Assert.False(result.Data.HasNextPage);
     }
 
-    [Fact]
-    public async Task GetProductsByCategory_MissingCategory_Returns404()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(int.MaxValue)]
+    public async Task GetProducts_CategoryFilterWithNoMatches_ReturnsEmptyPage200(int categoryId)
     {
-        _categories.Setup(repository => repository.CategoryExistsAsync(int.MaxValue, It.IsAny<CancellationToken>())).ReturnsAsync(false);
-
-        var result = await CreateService().GetProductsByCategory(int.MaxValue, new ProductQueryParameters());
-
-        Assert.False(result.Success);
-        Assert.Equal(404, result.StatusCode);
-        _products.Verify(repository => repository.GetProductsByCategoryAsync(It.IsAny<int>(), It.IsAny<ProductQueryParameters>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task GetProductsByCategory_CorrectCategoryExistsNoProductsExist_Return200()
-    {
-        _categories.Setup(repository => repository.CategoryExistsAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        _products.Setup(repository => repository.GetProductsByCategoryAsync(1, It.IsAny<ProductQueryParameters>(), It.IsAny<CancellationToken>()))
+        _products.Setup(repository => repository.GetProductsAsync(It.Is<ProductQueryParameters>(query => query.CategoryId == categoryId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedData<Product>
             {
                 Items = new List<Product>(),
                 TotalItems = 0
             });
 
-        var result = await CreateService().GetProductsByCategory(1, new ProductQueryParameters());
+        var result = await CreateService().GetProducts(new ProductQueryParameters { CategoryId = categoryId });
 
         Assert.True(result.Success);
         Assert.Equal(200, result.StatusCode);
@@ -153,19 +142,18 @@ public class ProductServiceTests
     }
 
     [Fact]
-    public async Task GetProductsByCategory_ProductsExist_ReturnsMappedPagedResult()
+    public async Task GetProducts_CategoryFilter_ReturnsMappedPagedResult()
     {
-        var query = new ProductQueryParameters { Page = 2, PageSize = 2 };
+        var query = new ProductQueryParameters { CategoryId = 1, Page = 2, PageSize = 2, SortBy = "price", SortDirection = "desc" };
 
-        _categories.Setup(repository => repository.CategoryExistsAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        _products.Setup(repository => repository.GetProductsByCategoryAsync(1, query, It.IsAny<CancellationToken>()))
+        _products.Setup(repository => repository.GetProductsAsync(query, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedData<Product>
             {
                 Items = [CreateProduct(3), CreateProduct(4)],
                 TotalItems = 5
             });
 
-        var result = await CreateService().GetProductsByCategory(1, query);
+        var result = await CreateService().GetProducts(query);
 
         Assert.True(result.Success);
         Assert.Equal(200, result.StatusCode);
@@ -176,55 +164,7 @@ public class ProductServiceTests
         Assert.True(result.Data.HasPreviousPage);
         Assert.True(result.Data.HasNextPage);
         Assert.Equal([3, 4], result.Data.Items.Select(product => product.ID));
-        _products.Verify(repository => repository.GetProductsByCategoryAsync(1, query, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetProductsBelowReorderLevel_ProductsExist_Returns200()
-    {
-        var query = new ProductQueryParameters { Page = 2, PageSize = 1 };
-        _products.Setup(repository => repository.GetProductsBelowReorderLevelAsync(query, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PagedData<Product> { 
-                Items = [CreateProduct(2)],
-                TotalItems = 3
-            });
-
-        var result = await CreateService().GetProductsBelowReorderLevel(query);
-
-        Assert.NotNull(result.Data);
-        Assert.True(result.Success);
-        Assert.Equal(200, result.StatusCode);
-
-        Assert.Equal(2, result.Data.Page);
-        Assert.Equal(1, result.Data.PageSize);
-        Assert.Equal(3, result.Data.TotalItems);
-        Assert.Equal(3, result.Data.TotalPages);
-        Assert.True(result.Data.HasPreviousPage);
-        Assert.True(result.Data.HasNextPage);
-        Assert.Equal(2, Assert.Single(result.Data.Items).ID);
-        _products.Verify(repository => repository.GetProductsBelowReorderLevelAsync(query, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetProductsBelowReorderLevel_NoProductsExist_ReturnsEmptyPageResult200()
-    {
-        _products.Setup(repository => repository.GetProductsBelowReorderLevelAsync(It.IsAny<ProductQueryParameters>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PagedData<Product>
-            {
-                Items = new List<Product>(),
-                TotalItems = 0
-            });
-
-        var result = await CreateService().GetProductsBelowReorderLevel(new ProductQueryParameters());
-
-        Assert.NotNull(result.Data);
-        Assert.True(result.Success);
-        Assert.Equal(200, result.StatusCode);
-        Assert.Empty(result.Data.Items);
-        Assert.Equal(0, result.Data.TotalItems);
-        Assert.Equal(0, result.Data.TotalPages);
-        Assert.False(result.Data.HasPreviousPage);
-        Assert.False(result.Data.HasNextPage);
+        _products.Verify(repository => repository.GetProductsAsync(query, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

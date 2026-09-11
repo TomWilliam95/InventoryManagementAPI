@@ -37,23 +37,6 @@ namespace InventoryManagementAPI.Controllers
             return StatusCode(products.StatusCode, products);
         }
 
-        [HttpGet("~/api/categories/{categoryId:int}/products")]
-        public async Task<ActionResult<ApiResponse<PagedResult<BulkProductResponseDTO>>>> GetProductsByCategory(int categoryId,
-            [FromQuery] ProductQueryParameters query, CancellationToken cancellationToken = default)
-        {
-            var products = await _productService.GetProductsByCategory(categoryId, query, cancellationToken);
-            return StatusCode(products.StatusCode, products);
-        }
-
-        [HttpGet("below-reorder-level")]
-        public async Task<ActionResult<ApiResponse<PagedResult<BulkProductResponseDTO>>>> GetProductsBelowReorderLevel([FromQuery] ProductQueryParameters query, 
-            CancellationToken cancellationToken = default)
-        {
-            var products = await _productService.GetProductsBelowReorderLevel(query, cancellationToken);
-            return StatusCode(products.StatusCode, products);
-        }
-
-
         // === POST ===
         [HttpPost]
         [Authorize(Policy =("AdminOrManager"))]
