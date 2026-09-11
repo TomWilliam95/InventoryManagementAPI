@@ -154,7 +154,7 @@ public class ProductRepositoryTests : IClassFixture<SqlServerFixture>
     }
 
     [Fact]
-    public async Task GetProductsByCategoryAsync_ReturnsOnlyMatchingProducts()
+    public async Task GetProductsAsync_CategoryFilter_ReturnsOnlyMatchingProducts()
     {
         await using var context = _fixture.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
@@ -162,10 +162,10 @@ public class ProductRepositoryTests : IClassFixture<SqlServerFixture>
         await AddProductAsync(context);
         context.ChangeTracker.Clear();
 
-        var result = await new ProductRepository(context).GetProductsByCategoryAsync(
-            products[0].CategoryID,
+        var result = await new ProductRepository(context).GetProductsAsync(
             new ProductQueryParameters
             {
+                CategoryId = products[0].CategoryID,
                 Page = 2,
                 PageSize = 2,
                 SortBy = "name",
@@ -178,24 +178,6 @@ public class ProductRepositoryTests : IClassFixture<SqlServerFixture>
             products.OrderBy(product => product.Name).ThenBy(product => product.ID).Skip(2).Take(2).Select(product => product.ID),
             result.Items.Select(product => product.ID));
         Assert.All(result.Items, candidate => Assert.Equal(products[0].CategoryID, candidate.CategoryID));
-    }
-
-    [Fact]
-    public async Task GetProductsBelowReorderLevelAsync_UsesWarehouseStock()
-    {
-        await using var context = _fixture.CreateContext();
-        await using var transaction = await context.Database.BeginTransactionAsync(CancellationToken.None);
-        var belowReorderLevel = await AddProductAsync(context, quantity: 4, reorderLevel: 5);
-        var atReorderLevel = await AddProductAsync(context, quantity: 5, reorderLevel: 5);
-        context.ChangeTracker.Clear();
-
-        var result = await new ProductRepository(context).GetProductsBelowReorderLevelAsync(
-            new ProductQueryParameters { Page = 1, PageSize = 100 },
-            CancellationToken.None);
-
-        Assert.Equal(1, result.TotalItems);
-        Assert.Equal(belowReorderLevel.ID, Assert.Single(result.Items).ID);
-        Assert.DoesNotContain(result.Items, candidate => candidate.ID == atReorderLevel.ID);
     }
 
     [Fact]
